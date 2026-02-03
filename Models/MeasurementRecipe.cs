@@ -58,11 +58,49 @@ namespace MeasurementSoftware.Models
         private bool isDefault;
 
         /// <summary>
+        /// 工步测量模式：true-分步测量，false-同时测量
+        /// </summary>
+        [ObservableProperty]
+        private bool enableStepMode;
+
+        /// <summary>
+        /// 总工步数
+        /// </summary>
+        [ObservableProperty]
+        private int totalSteps = 1;
+
+        /// <summary>
+        /// 二维码绑定配置
+        /// </summary>
+        [ObservableProperty]
+        private BarcodeBindingConfig barcodeConfig = new();
+
+        /// <summary>
+        /// MES上传配置
+        /// </summary>
+        [ObservableProperty]
+        private MesUploadConfig mesConfig = new();
+
+        /// <summary>
+        /// PLC数据传输配置
+        /// </summary>
+        [ObservableProperty]
+        private PlcDataTransferConfig plcTransferConfig = new();
+
+        /// <summary>
         /// 获取所有启用的通道
         /// </summary>
         public List<MeasurementChannel> GetEnabledChannels()
         {
             return Channels.Where(c => c.IsEnabled).ToList();
+        }
+
+        /// <summary>
+        /// 获取指定工步的通道
+        /// </summary>
+        public List<MeasurementChannel> GetChannelsByStep(int stepNumber)
+        {
+            return Channels.Where(c => c.IsEnabled && c.StepNumber == stepNumber).ToList();
         }
     }
 }
