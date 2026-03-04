@@ -1,0 +1,68 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:models="clr-namespace:MeasurementSoftware.Models"
+                    xmlns:enmuList="clr-namespace:MultiProtocol.Model;assembly=MultiProtocol"
+                    xmlns:vm="clr-namespace:MeasurementSoftware.ViewModels"
+                    xmlns:ioports="clr-namespace:System.IO.Ports;assembly=System.IO.Ports"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== MultiProtocol 枚举 ===== -->
+    <ObjectDataProvider x:Key="DataTypeEnumValues"
+                        MethodName="GetValues"
+                        ObjectType="{x:Type sys:Enum}">
+        <ObjectDataProvider.MethodParameters>
+            <x:Type TypeName="enmuList:FieldType"/>
+        </ObjectDataProvider.MethodParameters>
+    </ObjectDataProvider>
+
+    <ObjectDataProvider x:Key="DataOrderValues"
+                        MethodName="GetValues"
+                        ObjectType="{x:Type sys:Enum}">
+        <ObjectDataProvider.MethodParameters>
+            <x:Type TypeName="enmuList:ByteOrder"/>
+        </ObjectDataProvider.MethodParameters>
+    </ObjectDataProvider>
+
+    <!-- ===== 串口参数枚举 ===== -->
+    <ObjectDataProvider x:Key="BaudRateValues"
+                        MethodName="GetValues"
+                        ObjectType="{x:Type sys:Enum}">
+        <ObjectDataProvider.MethodParameters>
+            <x:Type TypeName="models:BaudRate"/>
+        </ObjectDataProvider.MethodParameters>
+    </ObjectDataProvider>
+
+    <ObjectDataProvider x:Key="DataBitsValues"
+                        MethodName="GetValues"
+                        ObjectType="{x:Type sys:Enum}">
+        <ObjectDataProvider.MethodParameters>
+            <x:Type TypeName="models:DataBits"/>
+        </ObjectDataProvider.MethodParameters>
+    </ObjectDataProvider>
+
+    <ObjectDataProvider x:Key="StopBitsValues"
+                        MethodName="GetValues"
+                        ObjectType="{x:Type sys:Enum}">
+        <ObjectDataProvider.MethodParameters>
+            <x:Type TypeName="ioports:StopBits"/>
+        </ObjectDataProvider.MethodParameters>
+    </ObjectDataProvider>
+
+    <ObjectDataProvider x:Key="ParityValues"
+                        MethodName="GetValues"
+                        ObjectType="{x:Type sys:Enum}">
+        <ObjectDataProvider.MethodParameters>
+            <x:Type TypeName="ioports:Parity"/>
+        </ObjectDataProvider.MethodParameters>
+    </ObjectDataProvider>
+
+    <!-- ===== 校准方式枚举 ===== -->
+    <ObjectDataProvider x:Key="CalibrationModeValues"
+                        MethodName="GetValues"
+                        ObjectType="{x:Type sys:Enum}">
+        <ObjectDataProvider.MethodParameters>
+            <x:Type TypeName="vm:CalibrationMode"/>
+        </ObjectDataProvider.MethodParameters>
+    </ObjectDataProvider>
+
+</ResourceDictionary>

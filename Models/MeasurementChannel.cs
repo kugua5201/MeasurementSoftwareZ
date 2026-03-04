@@ -70,11 +70,11 @@ namespace MeasurementSoftware.Models
         private string dataSourceAddress = string.Empty;
 
         /// <summary>
-        /// 关联的PLC设备ID
+        /// 关联的PLC设备ID（0表示未关联）
         /// </summary>
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(PlcDeviceName))]
-        private string plcDeviceId = string.Empty;
+        private long plcDeviceId;
 
         /// <summary>
         /// 关联的数据点ID
@@ -97,12 +97,10 @@ namespace MeasurementSoftware.Models
         {
             get
             {
-                if (string.IsNullOrEmpty(PlcDeviceId))
+                if (PlcDeviceId == 0)
                     return string.Empty;
 
-                // 这里简化实现，假设ViewModel会在需要时赋值
-                // 或者通过转换器处理
-                return PlcDeviceId; // 临时返回ID，实际应通过ViewModel设置
+                return PlcDeviceId.ToString();
             }
         }
 
@@ -183,6 +181,24 @@ namespace MeasurementSoftware.Models
         private string stepName = "默认工步";
 
         /// <summary>
+        /// 校准系数A写回PLC点位ID（关联到已配置的DataPoint）
+        /// </summary>
+        [ObservableProperty]
+        private string writeBackDataPointIdA = string.Empty;
+
+        /// <summary>
+        /// 校准系数B写回PLC点位ID（关联到已配置的DataPoint）
+        /// </summary>
+        [ObservableProperty]
+        private string writeBackDataPointIdB = string.Empty;
+
+        /// <summary>
+        /// 采样数量（缓存数据大小，用于计算最大值、最小值、跳动等）
+        /// </summary>
+        [ObservableProperty]
+        private int sampleCount = 100;
+
+        /// <summary>
         /// 历史数据（用于计算最大值、最小值等）
         /// </summary>
         public List<double> HistoricalData { get; set; } = new List<double>();
@@ -202,6 +218,58 @@ namespace MeasurementSoftware.Models
             else
             {
                 Result = MeasurementResult.Fail;
+            }
+        }
+
+        private readonly object _dataLock = new object();
+
+        /// <summary>
+        /// 根据通道类型处理并更新测量值
+        /// </summary>
+        /// <param name="rawValue">原始值</param>
+        public void UpdateMeasuredValue(double rawValue)
+        {
+            lock (_dataLock)
+            {
+                HistoricalData.Add(rawValue);
+
+                // 保持缓存大小
+                if (SampleCount > 0 && HistoricalData.Count > SampleCount)
+                {
+                    HistoricalData.RemoveAt(0); // 移除最旧的数据
+                }
+
+                if (HistoricalData.Count > 0)
+                {
+                    double calculatedValue = rawValue;
+                    switch (ChannelType)
+                    {
+                        case ChannelType.结果值:
+                            calculatedValue = rawValue;
+                            break;
+                        case ChannelType.最大值:
+                            calculatedValue = HistoricalData.Max();
+                            break;
+                        case ChannelType.最小值:
+                            calculatedValue = HistoricalData.Min();
+                            break;
+                        case ChannelType.平均值:
+                            calculatedValue = HistoricalData.Average();
+                            break;
+                        case ChannelType.跳动值:
+                        case ChannelType.齿跳动值: // 齿跳动和跳动先同样处理为 Max - Min
+                            calculatedValue = HistoricalData.Max() - HistoricalData.Min();
+                            break;
+                    }
+
+                    // 保留指定小数位数
+                    StandardValue = Math.Round(calculatedValue, DecimalPlaces);
+                    //读取的原始测量值
+                    MeasuredValue = rawValue;
+                }
+
+                // 进行预判
+                CheckResult();
             }
         }
 
@@ -230,24 +298,5 @@ namespace MeasurementSoftware.Models
         }
     }
 
-    /// <summary>
-    /// 测量结果枚举
-    /// </summary>
-    public enum MeasurementResult
-    {
-        /// <summary>
-        /// 未测量
-        /// </summary>
-        NotMeasured,
 
-        /// <summary>
-        /// 合格
-        /// </summary>
-        Pass,
-
-        /// <summary>
-        /// 不合格
-        /// </summary>
-        Fail
-    }
 }

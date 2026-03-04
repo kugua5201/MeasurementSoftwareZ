@@ -11,14 +11,6 @@
         public string LastRecipePath { get; set; } = string.Empty;
 
         /// <summary>
-        /// 主窗口位置和大小
-        /// </summary>
-        public double WindowLeft { get; set; } = 100;
-        public double WindowTop { get; set; } = 100;
-        public double WindowWidth { get; set; } = 1200;
-        public double WindowHeight { get; set; } = 800;
-
-        /// <summary>
         /// 上次更新时间
         /// </summary>
         public DateTime LastUpdated { get; set; } = DateTime.Now;

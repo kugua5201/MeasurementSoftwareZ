@@ -6,6 +6,7 @@ namespace MeasurementSoftware.Models
 {
     /// <summary>
     /// 测量配方模型
+    /// 包含通道、设备、二维码等所有配置，一个配方文件 = 完整的项目配置
     /// </summary>
     public partial class MeasurementRecipe : ObservableViewModel
     {
@@ -86,6 +87,18 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private PlcDataTransferConfig plcTransferConfig = new();
+
+        /// <summary>
+        /// PLC设备列表（跟随配方保存，切换配方时设备配置一起切换）
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<PlcDevice> devices = new();
+
+        /// <summary>
+        /// 二维码扫码配置（跟随配方保存）
+        /// </summary>
+        [ObservableProperty]
+        private QrCodeConfig qrCodeConfig = new();
 
         /// <summary>
         /// 获取所有启用的通道

@@ -1,0 +1,223 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:converters="clr-namespace:MeasurementSoftware.Converters"
+                    xmlns:hc="https://handyorg.github.io/handycontrol"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        WPF 限制：MergedDictionaries 同级字典在解析阶段互不可见，
+        因此本文件必须自行合并所依赖的字典，StaticResource 才能正常解析。
+    -->
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="GlobalSizes.xaml"/>
+        <ResourceDictionary Source="GlobalConverters.xaml"/>
+        <ResourceDictionary Source="GlobalEnumSources.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <converters:PlcConfigTemplateSelector x:Key="PlcConfigTemplateSelector">
+
+        <!-- ===== 西门子 S7 ===== -->
+        <converters:PlcConfigTemplateSelector.SiemensS7Template>
+            <DataTemplate>
+                <StackPanel>
+                    <TextBlock Text="西门子 S7 通讯参数" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryBrush}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="IP 地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding IpAddress, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 hc:InfoElement.Placeholder="例如：192.168.0.1"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="端口：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
+                                          Value="{Binding Port}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="机架号：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="2" Grid.Column="1"
+                                          Value="{Binding Rack}" Minimum="0" Maximum="15"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="槽号：" VerticalAlignment="Center"/>
+                        <hc:NumericUpDown Grid.Row="3" Grid.Column="1"
+                                          Value="{Binding Slot}" Minimum="0" Maximum="31"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+            </DataTemplate>
+        </converters:PlcConfigTemplateSelector.SiemensS7Template>
+
+        <!-- ===== 三菱 MC ===== -->
+        <converters:PlcConfigTemplateSelector.MitsubishiMCTemplate>
+            <DataTemplate>
+                <StackPanel>
+                    <TextBlock Text="三菱 MC 通讯参数" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource SuccessBrush}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="IP 地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding IpAddress, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 hc:InfoElement.Placeholder="例如：192.168.0.1"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="端口：" VerticalAlignment="Center"/>
+                        <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
+                                          Value="{Binding Port}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+            </DataTemplate>
+        </converters:PlcConfigTemplateSelector.MitsubishiMCTemplate>
+
+        <!-- ===== Modbus TCP ===== -->
+        <converters:PlcConfigTemplateSelector.ModbusTCPTemplate>
+            <DataTemplate>
+                <StackPanel>
+                    <TextBlock Text="Modbus TCP 通讯参数" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource WarningBrush}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="IP 地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding IpAddress, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 hc:InfoElement.Placeholder="例如：192.168.0.1"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="端口：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
+                                          Value="{Binding Port}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="从站地址：" VerticalAlignment="Center"/>
+                        <hc:NumericUpDown Grid.Row="2" Grid.Column="1"
+                                          Value="{Binding SlaveAddress}" Minimum="1" Maximum="247"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+            </DataTemplate>
+        </converters:PlcConfigTemplateSelector.ModbusTCPTemplate>
+
+        <!-- ===== Modbus RTU ===== -->
+        <converters:PlcConfigTemplateSelector.ModbusRTUTemplate>
+            <DataTemplate>
+                <StackPanel>
+                    <TextBlock Text="Modbus RTU 通讯参数" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource DangerBrush}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- COM口 + 刷新 -->
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="COM 口：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+                            <ComboBox Style="{StaticResource ComboBoxExtend}"
+                                      ItemsSource="{Binding DataContext.AvailableComPorts, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      SelectedItem="{Binding ComPort, Mode=TwoWay}"
+                                      IsEditable="False"
+                                      Width="{StaticResource PlcFieldInputWidth}"
+                                      hc:InfoElement.Placeholder="请选择串口"
+                                      VerticalAlignment="Center"/>
+                            <Button Command="{Binding DataContext.RefreshComPortsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    Style="{StaticResource ButtonDefault}"
+                                    Width="30" Height="30" Padding="0" Margin="8,0,0,0"
+                                    VerticalAlignment="Center" ToolTip="刷新串口列表" Cursor="Hand">
+                                <Path Data="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"
+                                      Stretch="Uniform" Fill="{DynamicResource PrimaryTextBrush}" Width="14" Height="14"/>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- 波特率 -->
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="波特率：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <ComboBox Grid.Row="1" Grid.Column="1"
+                                  Style="{StaticResource ComboBoxExtend}"
+                                  ItemsSource="{Binding Source={StaticResource BaudRateValues}}"
+                                  SelectedItem="{Binding BaudRate, Mode=TwoWay}"
+                                  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayTextConverter}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <!-- 数据位 -->
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="数据位：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <ComboBox Grid.Row="2" Grid.Column="1"
+                                  Style="{StaticResource ComboBoxExtend}"
+                                  ItemsSource="{Binding Source={StaticResource DataBitsValues}}"
+                                  SelectedItem="{Binding DataBits, Mode=TwoWay}"
+                                  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayTextConverter}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <!-- 停止位 -->
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="停止位：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <ComboBox Grid.Row="3" Grid.Column="1"
+                                  Style="{StaticResource ComboBoxExtend}"
+                                  ItemsSource="{Binding Source={StaticResource StopBitsValues}}"
+                                  SelectedItem="{Binding StopBits, Mode=TwoWay}"
+                                  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <!-- 校验位 -->
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="校验位：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <ComboBox Grid.Row="4" Grid.Column="1"
+                                  Style="{StaticResource ComboBoxExtend}"
+                                  ItemsSource="{Binding Source={StaticResource ParityValues}}"
+                                  SelectedItem="{Binding Parity, Mode=TwoWay}"
+                                  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <!-- 从站地址 -->
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="从站地址：" VerticalAlignment="Center"/>
+                        <hc:NumericUpDown Grid.Row="5" Grid.Column="1"
+                                          Value="{Binding SlaveAddress}" Minimum="1" Maximum="247"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"/>
+                    </Grid>
+                </StackPanel>
+            </DataTemplate>
+        </converters:PlcConfigTemplateSelector.ModbusRTUTemplate>
+
+    </converters:PlcConfigTemplateSelector>
+
+</ResourceDictionary>

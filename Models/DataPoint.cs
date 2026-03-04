@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.ViewModels;
+using MultiProtocol.Model;
 
 namespace MeasurementSoftware.Models
 {
@@ -20,11 +21,6 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private string pointName = string.Empty;
 
-        /// <summary>
-        /// 点位描述
-        /// </summary>
-        [ObservableProperty]
-        private string pointDescription = string.Empty;
 
         /// <summary>
         /// 数据地址（如：DB1.DBD0、D100、400001等）
@@ -36,19 +32,37 @@ namespace MeasurementSoftware.Models
         /// 数据类型（Int、Float、Bool等）
         /// </summary>
         [ObservableProperty]
-        private string dataType = "Float";
+        private FieldType dataType = FieldType.Float;
 
         /// <summary>
         /// 字节序（ABCD、BADC、CDAB、DCBA）
         /// </summary>
         [ObservableProperty]
-        private string byteOrder = "DCBA";
+        private ByteOrder byteOrder = ByteOrder.DCBA;
 
         /// <summary>
         /// 当前值
         /// </summary>
         [ObservableProperty]
         private object? currentValue;
+
+        /// <summary>
+        /// 是否读取成功
+        /// </summary>
+        [ObservableProperty]
+        private bool isSuccess = true;
+
+        /// <summary>
+        /// 错误消息
+        /// </summary>
+        [ObservableProperty]
+        private string? errorMessage;
+
+        /// <summary>
+        /// 最后更新时间
+        /// </summary>
+        [ObservableProperty]
+        private DateTime lastUpdateTime = DateTime.Now;
 
         /// <summary>
         /// 是否启用
@@ -61,5 +75,24 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private string deviceId = string.Empty;
+
+        /// <summary>
+        /// 验证状态（用于UI显示）
+        /// </summary>
+        [ObservableProperty]
+        private string validationStatus = "未检查";
+
+        /// <summary>
+        /// 验证错误消息
+        /// </summary>
+        [ObservableProperty]
+        private string validationError = string.Empty;
+
+        /// <summary>
+        /// 验证是否通过
+        /// </summary>
+        [ObservableProperty]
+        private bool isValidated = false;
+
     }
 }

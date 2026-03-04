@@ -4,6 +4,32 @@ using MeasurementSoftware.ViewModels;
 namespace MeasurementSoftware.Models
 {
     /// <summary>
+    /// 上传状态枚举
+    /// </summary>
+    public enum UploadStatus
+    {
+        /// <summary>
+        /// 待上传
+        /// </summary>
+        Pending,
+
+        /// <summary>
+        /// 上传中
+        /// </summary>
+        Uploading,
+
+        /// <summary>
+        /// 上传成功
+        /// </summary>
+        Success,
+
+        /// <summary>
+        /// 上传失败
+        /// </summary>
+        Failed
+    }
+
+    /// <summary>
     /// 测量记录模型
     /// </summary>
     public partial class MeasurementRecord : ObservableViewModel
@@ -48,6 +74,54 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private string operatorName = string.Empty;
+
+        /// <summary>
+        /// 绑定的二维码
+        /// </summary>
+        [ObservableProperty]
+        private string barcode = string.Empty;
+
+        /// <summary>
+        /// 二维码扫描时间
+        /// </summary>
+        [ObservableProperty]
+        private DateTime? barcodeScanTime;
+
+        /// <summary>
+        /// 工步编号（如果是分步测量）
+        /// </summary>
+        [ObservableProperty]
+        private int stepNumber = 1;
+
+        /// <summary>
+        /// 总工步数
+        /// </summary>
+        [ObservableProperty]
+        private int totalSteps = 1;
+
+        /// <summary>
+        /// MES上传状态
+        /// </summary>
+        [ObservableProperty]
+        private UploadStatus mesUploadStatus = UploadStatus.Pending;
+
+        /// <summary>
+        /// MES上传时间
+        /// </summary>
+        [ObservableProperty]
+        private DateTime? mesUploadTime;
+
+        /// <summary>
+        /// PLC传输状态
+        /// </summary>
+        [ObservableProperty]
+        private UploadStatus plcTransferStatus = UploadStatus.Pending;
+
+        /// <summary>
+        /// PLC传输时间
+        /// </summary>
+        [ObservableProperty]
+        private DateTime? plcTransferTime;
 
         /// <summary>
         /// 备注

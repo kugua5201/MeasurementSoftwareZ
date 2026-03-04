@@ -1,0 +1,307 @@
+﻿<UserControl x:Class="MeasurementSoftware.UserControls.SpcUserControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             xmlns:scottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+             mc:Ignorable="d"
+             d:DesignHeight="700" d:DesignWidth="1200">
+
+    <Grid Style="{StaticResource PageRootGrid}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 顶部操作栏 -->
+        <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <TextBlock Text="通道：" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ComboBox ItemsSource="{Binding Channels}"
+                          SelectedItem="{Binding SelectedChannel}"
+                          DisplayMemberPath="ChannelName"
+                          Width="150" Margin="0,0,15,0"
+                          Style="{StaticResource ComboBoxExtend}"/>
+
+                <TextBlock Text="起始日期：" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <hc:DatePicker SelectedDate="{Binding StartDate}" Width="130" Margin="0,0,15,0"/>
+
+                <TextBlock Text="结束日期：" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <hc:DatePicker SelectedDate="{Binding EndDate}" Width="130" Margin="0,0,15,0"/>
+
+                <TextBlock Text="子组大小：" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <hc:NumericUpDown Value="{Binding SubgroupSize}" Minimum="2" Maximum="10"
+                                  Width="80" Margin="0,0,15,0"/>
+
+                <Button Content="分析" Command="{Binding AnalyzeCommand}"
+                        Style="{StaticResource ButtonPrimary}"
+                        Width="{StaticResource FormButtonWidth}" Margin="0,0,5,0"/>
+                <Button Content="清除" Command="{Binding ClearResultsCommand}"
+                        Style="{StaticResource ButtonDefault}"
+                        Width="{StaticResource FormButtonWidth}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 主内容区 -->
+        <Grid Grid.Row="1" Margin="15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="15"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 左侧：SPC指标面板 -->
+            <Border Grid.Column="0"
+                    Background="White"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Effect="{StaticResource EffectShadow1}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0"
+                            Background="{DynamicResource SecondaryRegionBrush}"
+                            Padding="12"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            CornerRadius="6,6,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,8,0" 
+                                       Foreground="{DynamicResource PrimaryBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="SPC指标" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="15">
+                            <!-- 状态提示 -->
+                            <!--<TextBlock Text="{Binding AnalysisStatus}" FontSize="12"
+                                       Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,15"
+                                       TextWrapping="Wrap"/>-->
+
+                            <!-- SPC指标卡片 -->
+                            <Border Background="{DynamicResource BackgroundColor}" Padding="12" CornerRadius="6"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="过程能力" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,8">
+                                            <TextBlock Text="Cp" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.Cp, StringFormat='{}{0:F3}', FallbackValue='--'}"
+                                                       FontSize="18" FontWeight="Bold"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,8">
+                                            <TextBlock Text="Cpk" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.Cpk, StringFormat='{}{0:F3}', FallbackValue='--'}"
+                                                       FontSize="18" FontWeight="Bold"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,8">
+                                            <TextBlock Text="合格率" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.YieldRate, StringFormat='{}{0:F1}%', FallbackValue='--'}"
+                                                       FontSize="14" FontWeight="Bold" Foreground="{StaticResource StatusSuccessBrush}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                                            <TextBlock Text="等级" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.CpkLevel, FallbackValue='--'}"
+                                                       FontSize="14" FontWeight="Bold"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="2" Grid.Column="0">
+                                            <TextBlock Text="样本数" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.SampleCount, FallbackValue='--'}"
+                                                       FontSize="14"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="2" Grid.Column="1">
+                                            <TextBlock Text="标准差" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.StdDev, StringFormat='{}{0:F6}', FallbackValue='--'}"
+                                                       FontSize="14"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 统计信息 -->
+                            <Border Background="{DynamicResource BackgroundColor}" Padding="12" CornerRadius="6"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="统计信息" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,8"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,6">
+                                            <TextBlock Text="均值" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.Mean, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="13"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,6">
+                                            <TextBlock Text="极差" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.Range, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="13"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,0,6">
+                                            <TextBlock Text="最大值" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.Max, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="13"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,6">
+                                            <TextBlock Text="最小值" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.Min, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="13"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,0,6">
+                                            <TextBlock Text="USL" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.USL, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="13"
+                                                       Foreground="{StaticResource StatusErrorBrush}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,0,0,6">
+                                            <TextBlock Text="LSL" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.LSL, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="13"
+                                                       Foreground="{StaticResource StatusErrorBrush}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
+                                            <TextBlock Text="标准值" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                            <TextBlock Text="{Binding CurrentSpcResult.Nominal, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="13"
+                                                       Foreground="{StaticResource StatusInfoBrush}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 历史对比表 -->
+                            <Border Background="{DynamicResource BackgroundColor}" Padding="12" CornerRadius="6"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <TextBlock Text="通道对比" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}" Margin="0,0,0,8"/>
+                                    <DataGrid ItemsSource="{Binding SpcResults}"
+                                              AutoGenerateColumns="False" IsReadOnly="True"
+                                              HeadersVisibility="Column" MaxHeight="200"
+                                              BorderThickness="0" Background="Transparent"
+                                              RowHeight="32" FontSize="12"
+                                              GridLinesVisibility="Horizontal"
+                                              HorizontalGridLinesBrush="{DynamicResource BorderBrush}"
+                                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                               CanUserResizeColumns="True"
+                                              >
+                                        <DataGrid.ColumnHeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                                <Setter Property="FontSize" Value="12"/>
+                                                <Setter Property="Padding" Value="8,6"/>
+                                                <Setter Property="Background" Value="{DynamicResource SecondaryRegionBrush}"/>
+                                            </Style>
+                                        </DataGrid.ColumnHeaderStyle>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="通道" Binding="{Binding ChannelName}" Width="80"/>
+                                            <DataGridTextColumn Header="Cpk" Binding="{Binding Cpk, StringFormat=F3}" Width="65">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="合格率" Binding="{Binding YieldRate, StringFormat='{}{0:F1}%'}" Width="65">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                            <DataGridTextColumn Header="等级" Binding="{Binding CpkLevel}" Width="*">
+                                                <DataGridTextColumn.ElementStyle>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                    </Style>
+                                                </DataGridTextColumn.ElementStyle>
+                                            </DataGridTextColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- 右侧：图表区域 -->
+            <Border Grid.Column="2"
+                    Background="{DynamicResource RegionBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Effect="{StaticResource EffectShadow1}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0"
+                            Background="{DynamicResource SecondaryRegionBrush}"
+                            Padding="12"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0,0,0,1"
+                            CornerRadius="6,6,0,0">
+                        <TextBlock Text="SPC控制图" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <hc:TabControl Grid.Row="1" Style="{StaticResource TabControlCapsuleSolid}" Margin="10" >
+                        <!-- Xbar 控制图 -->
+                        <hc:TabItem Header="Xbar 控制图" HorizontalAlignment="Left">
+                            <scottPlot:WpfPlot x:Name="XbarChart" Margin="5"/>
+                        </hc:TabItem>
+
+                        <!-- R 控制图 -->
+                        <hc:TabItem Header="R 控制图">
+                            <scottPlot:WpfPlot x:Name="RChart" Margin="5"/>
+                        </hc:TabItem>
+
+                        <!-- 直方图 -->
+                        <hc:TabItem Header="直方图">
+                            <scottPlot:WpfPlot x:Name="HistogramChart" Margin="5"/>
+                        </hc:TabItem>
+
+                        <!-- 趋势图 -->
+                        <hc:TabItem Header="数据趋势">
+                            <scottPlot:WpfPlot x:Name="TrendChart" Margin="5"/>
+                        </hc:TabItem>
+                    </hc:TabControl>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

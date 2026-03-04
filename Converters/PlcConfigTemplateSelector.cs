@@ -17,7 +17,7 @@ namespace MeasurementSoftware.Converters
             {
                 return device.DeviceType switch
                 {
-                    PlcDeviceType.SiemensS7 => SiemensS7Template,
+                    PlcDeviceType.SiemensS7_S1200 => SiemensS7Template,
                     PlcDeviceType.MitsubishiMC => MitsubishiMCTemplate,
                     PlcDeviceType.ModbusTCP => ModbusTCPTemplate,
                     PlcDeviceType.ModbusRTU => ModbusRTUTemplate,

@@ -83,11 +83,17 @@ namespace MeasurementSoftware.ViewModels
         {
             return pageName switch
             {
-                "Home" => "首页",
-                "About" => "关于",
+                "Home" => "测量",
+                "RecipeManagement" => "配方管理",
+                "Calibration" => "校准",
+                "DataManagement" => "数据管理",
+                "DataRecord" => "数据管理",
                 "ChannelSetting" => "通道设置",
                 "DeviceManagement" => "设备管理",
-                "CommunicationSetting" => "设备管理", // 兼容旧名称
+                "CommunicationSetting" => "设备管理",
+                "QrCodeSetting" => "二维码配置",
+                "MesSetting" => "MES配置",
+                "Spc" => "SPC分析",
                 "LogViewer" => "日志",
                 _ => pageName
             };
@@ -98,10 +104,16 @@ namespace MeasurementSoftware.ViewModels
             return pageName switch
             {
                 "Home" => "\xE80F",
-                "About" => "\xE946",
+                "RecipeManagement" => "\xE7C3",
+                "Calibration" => "\xE9E9",
+                "DataManagement" => "\xE8F1",
+                "DataRecord" => "\xE8F1",
                 "ChannelSetting" => "\xE762",
                 "DeviceManagement" => "\xE968",
                 "CommunicationSetting" => "\xE968",
+                "QrCodeSetting" => "\xEAD8",
+                "MesSetting" => "\xE774",
+                "Spc" => "\xE9D9",
                 "Setting" => "\xE713",
                 "LogViewer" => "\xE7BA",
                 _ => "\xE80F"
@@ -109,6 +121,12 @@ namespace MeasurementSoftware.ViewModels
         }
 
 
+
+        /// <summary>
+        /// 导航到配方管理页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToRecipeManagement() => NavigateToPage("RecipeManagement");
 
         /// <summary>
         /// 导航到通信设置页面
@@ -123,21 +141,57 @@ namespace MeasurementSoftware.ViewModels
         private void NavigateToChannelSetting() => NavigateToPage("ChannelSetting");
 
         /// <summary>
-        /// 导航到关于页面
-        /// </summary>
-        [RelayCommand]
-        private void NavigateToAbout() => NavigateToPage("About");
-
-        /// <summary>
-        /// 导航到首页
+        /// 导航到首页（测量页面）
         /// </summary>
         [RelayCommand]
         private void NavigateToHome() => NavigateToPage("Home");
+
+        /// <summary>
+        /// 导航到校准页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToCalibration() => NavigateToPage("Calibration");
+
+        /// <summary>
+        /// 导航到数据管理页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToDataManagement() => NavigateToPage("DataManagement");
+
+        /// <summary>
+        /// 导航到数据记录页面（兼容旧名称）
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToDataRecord() => NavigateToPage("DataManagement");
+
+        /// <summary>
+        /// 导航到条码配置页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToBarcodeSetting() => NavigateToPage("BarcodeSetting");
+
+        /// <summary>
+        /// 导航到二维码配置页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToQrCodeSetting() => NavigateToPage("QrCodeSetting");
+
+        /// <summary>
+        /// 导航到MES配置页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToMesSetting() => NavigateToPage("MesSetting");
 
         /// <summary>
         /// 导航到日志查看页面
         /// </summary>
         [RelayCommand]
         private void NavigateToLogViewer() => NavigateToPage("LogViewer");
+
+        /// <summary>
+        /// 导航到SPC分析页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToSpc() => NavigateToPage("Spc");
     }
 }

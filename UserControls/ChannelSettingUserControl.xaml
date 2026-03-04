@@ -10,162 +10,50 @@
              d:DesignHeight="700" d:DesignWidth="1200"
              x:Name="ChannelSettingControl">
     <hc:SimplePanel>
-        <Grid >
+        <Grid Style="{StaticResource PageRootGrid}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-        <!-- 操作按钮栏 -->
-        <Border Grid.Row="0" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="15,10">
-            <StackPanel Orientation="Horizontal">
-                <!-- 打开配方 -->
-                <Button Command="{Binding OpenRecipeCommand}" 
-                        Background="#2196F3" Foreground="White" 
-                         Margin="0,0,10,0"
-                        ToolTip="打开配方">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Fill="White" VerticalAlignment="Center" Margin="0,0,6,0"
-                              Data="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z" 
-                              Width="16" Height="16" Stretch="Uniform"/>
-                        <TextBlock Text="打开配方" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+            <!-- 主内容区域 -->
+            <Grid Grid.Row="0" Margin="15">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
-                <!-- 新建配方 -->
-                <Button Command="{Binding CreateNewRecipeCommand}" 
-                        Background="#4CAF50" Foreground="White" 
-                         Margin="0,0,10,0"
-                        ToolTip="新建配方">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Fill="White" VerticalAlignment="Center" Margin="0,0,6,0"
-                              Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" 
-                              Width="16" Height="16" Stretch="Uniform"/>
-                        <TextBlock Text="新建配方" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <!-- 通道列表 -->
+                <Border Grid.Row="0" Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                <!-- 保存配方 -->
-                <Button Command="{Binding SaveRecipeCommand}" 
-                        Background="#FF9800" Foreground="White" 
-                         Margin="0,0,10,0"
-                        ToolTip="保存配方">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Fill="White" VerticalAlignment="Center" Margin="0,0,6,0"
-                              Data="M15,9H5V5H15M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3Z" 
-                              Width="16" Height="16" Stretch="Uniform"/>
-                        <TextBlock Text="保存配方" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                        <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Command="{Binding AddChannelCommand}" 
+                                        Content="添加通道"
+                                        Style="{StaticResource ButtonPrimary}"
+                                        Padding="12,5" Margin="0,0,8,0"
+                                        ToolTip="添加通道"/>
+                                    <Button Command="{Binding DeleteChannelCommand}" 
+                                        Content="删除通道"
+                                        Style="{StaticResource ButtonDanger}"
+                                        Padding="12,5" Margin="0,0,8,0"
+                                        ToolTip="删除选中通道"/>
+                                    <Button Command="{Binding RenumberPointsCommand}" 
+                                        Content="重新编号"
+                                        Style="{StaticResource ButtonPrimary}"
+                                        Padding="12,5"
+                                        ToolTip="重新排序通道编号"/>
+                                </StackPanel>
+                                <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveRecipeCommand}"/>
+                            </Grid>
+                        </Border>
 
-                <!-- 另存为 -->
-                <Button Command="{Binding SaveAsRecipeCommand}" 
-                        Background="#9C27B0" Foreground="White" 
-                         Margin="0,0,10,0"
-                        ToolTip="另存为">
-                    <StackPanel Orientation="Horizontal">
-                        <Path Fill="White" VerticalAlignment="Center" Margin="0,0,6,0"
-                              Data="M17,3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V7L17,3M12,19A3,3 0 0,1 9,16A3,3 0 0,1 12,13A3,3 0 0,1 15,16A3,3 0 0,1 12,19M15,9H5V5H15M19,13H17V19H19V13Z" 
-                              Width="16" Height="16" Stretch="Uniform"/>
-                        <TextBlock Text="另存为" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Border>
-
-        <!-- 主内容区域 -->
-        <Grid Grid.Row="1" Margin="15">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-
-            <!-- 配方信息 -->
-            <Border Grid.Row="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="5" Padding="15" Margin="0,0,0,15">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="150"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="配方名称：" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SelectedRecipe.RecipeName, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="5" Margin="0,0,20,10"/>
-
-                    <TextBlock Grid.Row="0" Grid.Column="2" Text="通道数量：" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                    <TextBlock Grid.Row="0" Grid.Column="3" VerticalAlignment="Center" Margin="0,0,0,10">
-                        <Run Text="{Binding Channels.Count, Mode=OneWay}"/>
-                        <Run Text="个"/>
-                    </TextBlock>
-
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="配方描述：" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" 
-                             Text="{Binding SelectedRecipe.Description, UpdateSourceTrigger=PropertyChanged}" 
-                             Padding="5" Margin="0,0,0,10"/>
-
-                    <!--<TextBlock Grid.Row="2" Grid.Column="0" Text="配方路径：" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" 
-                             Text="{Binding CurrentRecipePath, Mode=OneWay}" 
-                             IsReadOnly="True"
-                             Background="#F5F5F5"
-                             Padding="5"/>-->
-                </Grid>
-            </Border>
-
-            <!-- 通道列表 -->
-            <Border Grid.Row="1" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="5">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0" Background="#F5F5F5" Padding="10" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1">
-                        <Grid>
-                            <StackPanel Orientation="Horizontal">
-                                <Path Fill="#FF9800" VerticalAlignment="Center" Margin="0,0,8,0"
-                                      Data="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H14A7,7 0 0,1 21,14H22A1,1 0 0,1 23,15V18A1,1 0 0,1 22,19H21V20A2,2 0 0,1 19,22H5A2,2 0 0,1 3,20V19H2A1,1 0 0,1 1,18V15A1,1 0 0,1 2,14H3A7,7 0 0,1 10,7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2M7.5,13A0.5,0.5 0 0,0 7,13.5A0.5,0.5 0 0,0 7.5,14A0.5,0.5 0 0,0 8,13.5A0.5,0.5 0 0,0 7.5,13M16.5,13A0.5,0.5 0 0,0 16,13.5A0.5,0.5 0 0,0 16.5,14A0.5,0.5 0 0,0 17,13.5A0.5,0.5 0 0,0 16.5,13Z" 
-                                      Width="16" Height="16" Stretch="Uniform"/>
-                                <TextBlock Text="请先在通讯设置中配置 PLC 设备和数据点" FontSize="12" Foreground="#FF9800" VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                <!-- 添加通道 -->
-                                <Button Command="{Binding AddChannelCommand}" 
-                                        Background="#2196F3" Foreground="White" 
-                                        Padding="10,5" Margin="0,0,5,0"
-                                        ToolTip="添加通道">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Fill="White" VerticalAlignment="Center" Margin="0,0,5,0"
-                                              Data="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" 
-                                              Width="14" Height="14" Stretch="Uniform"/>
-                                        <TextBlock Text="添加通道" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <!-- 删除通道 -->
-                                <Button Command="{Binding DeleteChannelCommand}" 
-                                        Background="#F44336" Foreground="White" 
-                                        Padding="10,5"
-                                        ToolTip="删除选中通道">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Path Fill="White" VerticalAlignment="Center" Margin="0,0,5,0"
-                                              Data="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" 
-                                              Width="14" Height="14" Stretch="Uniform"/>
-                                        <TextBlock Text="删除通道" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding Channels}" 
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding Channels}" 
                               SelectedItem="{Binding SelectedChannel}"
                               AutoGenerateColumns="False"
                               CanUserAddRows="False"
@@ -173,176 +61,220 @@
                               HeadersVisibility="Column"
                               RowHeight="35"
                               FontSize="13"
+                              Background="{StaticResource BackgroundColor}"
                               MouseDoubleClick="DataGrid_MouseDoubleClick">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="通道编号" Binding="{Binding ChannelNumber}" Width="80" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="通道名称" Binding="{Binding ChannelName}" Width="120" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="通道说明" Binding="{Binding ChannelDescription}" Width="150" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="通道类型" Binding="{Binding ChannelType}" Width="100" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="PLC设备" Binding="{Binding PlcDeviceId, Converter={StaticResource DeviceIdToNameConverter}}" Width="120" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="数据点位" Binding="{Binding DataPointName}" Width="150" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="点位地址" Binding="{Binding DataSourceAddress}" Width="120" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue, StringFormat=F3}" Width="80" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="上公差" Binding="{Binding UpperTolerance, StringFormat=F3}" Width="80" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="下公差" Binding="{Binding LowerTolerance, StringFormat=F3}" Width="80" IsReadOnly="True"/>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="通道编号" Binding="{Binding ChannelNumber}" Width="80" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="通道名称" Binding="{Binding ChannelName}" Width="120" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="通道说明" Binding="{Binding ChannelDescription}" Width="150" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="通道类型" Binding="{Binding ChannelType}" Width="100" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="PLC设备" Binding="{Binding PlcDeviceId, Converter={StaticResource DeviceIdToNameConverter}}" Width="120" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="数据点位" Binding="{Binding DataPointName}" Width="150" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="点位地址" Binding="{Binding DataSourceAddress}" Width="120" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue, StringFormat=F3}" Width="80" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="上公差" Binding="{Binding UpperTolerance, StringFormat=F3}" Width="80" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="下公差" Binding="{Binding LowerTolerance, StringFormat=F3}" Width="80" IsReadOnly="True"/>
                                 <DataGridCheckBoxColumn Header="启用" Binding="{Binding IsEnabled}" Width="60" IsReadOnly="True"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
-        </Grid>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Border>
+            </Grid>
 
-        <!-- 通道编辑抽屉 -->
-        <hc:Drawer Dock="Right" 
+            <!-- 通道编辑抽屉 -->
+            <hc:Drawer Dock="Right" 
                    ShowMode="Cover"
                    IsOpen="{Binding IsChannelEditorOpen, Mode=TwoWay}" Tag="drawer" >
-            <Border Background="{DynamicResource RegionBrush}" 
+                <Border Background="{DynamicResource RegionBrush}" 
                     MinWidth="600" MaxWidth="700" 
                     BorderThickness="1,0,0,0" 
-                    BorderBrush="#E0E0E0"
+                    BorderBrush="{DynamicResource BorderBrush}"
                    >
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
 
-                    <!-- 抽屉标题栏 -->
-                    <Border Grid.Row="0" Background="#2196F3" Padding="15,12">
-                        <Grid>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding DrawerTitle}" FontSize="16" FontWeight="Bold" Foreground="White"/>
-                            </StackPanel>
-                            <Button Command="hc:ControlCommands.Close" 
+                        <!-- 抽屉标题栏 -->
+                        <Border Grid.Row="0" Background="{DynamicResource PrimaryBrush}" Padding="15,12">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DrawerTitle}" FontSize="16" FontWeight="Bold" Foreground="White"/>
+                                </StackPanel>
+                                <Button Command="hc:ControlCommands.Close" 
                                     HorizontalAlignment="Right" 
                                     Foreground="White" 
                                     Style="{StaticResource ButtonIcon}" 
                                     hc:IconElement.Geometry="{StaticResource DeleteFillCircleGeometry}"/>
-                        </Grid>
-                    </Border>
+                            </Grid>
+                        </Border>
 
-                    <!-- 通道编辑表单 -->
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="20">
-                        <StackPanel>
-                            <TextBlock Text="基本信息" FontSize="13" FontWeight="Bold" Margin="0,0,0,15" Foreground="#2196F3"/>
+                        <!-- 通道编辑表单 -->
+                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="20">
+                            <StackPanel>
+                                <TextBlock Text="基本信息" FontSize="13" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryBrush}"/>
 
-                            <Grid Margin="0,0,0,20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="通道编号：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EditingChannel.ChannelNumber}" 
-                                         IsReadOnly="True" Background="#F5F5F5"
-                                         Padding="8" Margin="0,0,0,15"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="通道编号：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" 
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding EditingChannel.ChannelNumber}" 
+                                         IsReadOnly="True" 
+                                         Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="通道名称：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EditingChannel.ChannelName, UpdateSourceTrigger=PropertyChanged}" 
-                                         Padding="8" Margin="0,0,0,15"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="通道名称：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" 
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding EditingChannel.ChannelName, UpdateSourceTrigger=PropertyChanged}" 
+                                         Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                         hc:InfoElement.Placeholder="请输入通道名称"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="通道说明：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EditingChannel.ChannelDescription, UpdateSourceTrigger=PropertyChanged}" 
-                                         Padding="8" Margin="0,0,0,15"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="通道说明：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" 
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding EditingChannel.ChannelDescription, UpdateSourceTrigger=PropertyChanged}" 
+                                         Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                         hc:InfoElement.Placeholder="请输入通道说明"/>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="通道类型：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                <ComboBox Grid.Row="3" Grid.Column="1"
-                                          ItemsSource="{Binding  ChannelTypes}"
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="通道类型：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <ComboBox Grid.Row="3" Grid.Column="1"
+                                          Style="{StaticResource ComboBoxExtend}"
+                                          ItemsSource="{Binding ChannelTypes}"
                                           SelectedItem="{Binding EditingChannel.ChannelType}"
-                                          Padding="8" Margin="0,0,0,15" />
+                                          Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
                                     <TextBlock Grid.Row="4" Grid.Column="0" Text="启用：" VerticalAlignment="Center"/>
-                                    <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding EditingChannel.IsEnabled}" VerticalAlignment="Center"/>
-                            </Grid>
+                                    <ToggleButton Grid.Row="4" Grid.Column="1" 
+                                              IsChecked="{Binding EditingChannel.IsEnabled}" 
+                                              Style="{StaticResource ToggleButtonSwitch}" 
+                                              HorizontalAlignment="Left"/>
+                                </Grid>
 
-                            <Separator Margin="0,10,0,20"/>
+                                <Separator Margin="0,5,0,15"/>
 
-                            <TextBlock Text="测量参数" FontSize="13" FontWeight="Bold" Margin="0,0,0,15" Foreground="#2196F3"/>
+                                <TextBlock Text="测量参数" FontSize="13" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryBrush}"/>
 
-                            <Grid Margin="0,0,0,20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="标准值：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EditingChannel.StandardValue, StringFormat=F3}" 
-                                         Padding="8" Margin="0,0,0,15"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="标准值：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" 
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding EditingChannel.StandardValue, StringFormat=F3}" 
+                                         Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="上公差：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding EditingChannel.UpperTolerance, StringFormat=F3}" 
-                                         Padding="8" Margin="0,0,0,15"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="上公差：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" 
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding EditingChannel.UpperTolerance, StringFormat=F3}" 
+                                         Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="下公差：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EditingChannel.LowerTolerance, StringFormat=F3}" 
-                                         Padding="8" Margin="0,0,0,15"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="下公差：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" 
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding EditingChannel.LowerTolerance, StringFormat=F3}" 
+                                         Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="单位：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding EditingChannel.Unit, UpdateSourceTrigger=PropertyChanged}" 
-                                         Padding="8" Margin="0,0,0,15"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="单位：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBox Grid.Row="3" Grid.Column="1" 
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding EditingChannel.Unit, UpdateSourceTrigger=PropertyChanged}" 
+                                         Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                         hc:InfoElement.Placeholder="例如：mm"/>
 
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="小数位数：" VerticalAlignment="Center"/>
-                                    <hc:NumericUpDown Grid.Row="4" Grid.Column="1" Value="{Binding EditingChannel.DecimalPlaces}" 
-                                                  Minimum="0" Maximum="6" Margin="0,0,0,0"/>
-                            </Grid>
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="采样数量：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <hc:NumericUpDown Grid.Row="4" Grid.Column="1" 
+                                                  Value="{Binding EditingChannel.SampleCount}" 
+                                                  Minimum="1" Maximum="10000"
+                                                  Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                            <Separator Margin="0,10,0,20"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="小数位数：" VerticalAlignment="Center"/>
+                                    <hc:NumericUpDown Grid.Row="5" Grid.Column="1" 
+                                                  Value="{Binding EditingChannel.DecimalPlaces}" 
+                                                  Minimum="0" Maximum="6"
+                                                  Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"/>
+                                </Grid>
 
-                            <TextBlock Text="数据源配置" FontSize="13" FontWeight="Bold" Margin="0,0,0,15" Foreground="#2196F3"/>
+                                <Separator Margin="0,5,0,15"/>
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="100"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                                <TextBlock Text="数据源配置" FontSize="13" FontWeight="Bold" Margin="0,0,0,15" Foreground="{DynamicResource PrimaryBrush}"/>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="PLC设备：" VerticalAlignment="Center" Margin="0,0,0,15"/>
-                                    <ComboBox Grid.Row="0" Grid.Column="1"
-                                        ItemsSource="{Binding AvailablePlcDevices}"
-                                        SelectedValue="{Binding EditingChannel.PlcDeviceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        SelectedValuePath="DeviceId"
-                                        DisplayMemberPath="DeviceName"
-                                        Padding="8" Margin="0,0,0,15"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="数据点：" VerticalAlignment="Center"/>
-                                <ComboBox Grid.Row="1" Grid.Column="1" 
-                                          ItemsSource="{Binding EditingChannel.AvailableDataPoints}"
-                                          SelectedValue="{Binding EditingChannel.DataPointId}"
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="PLC设备：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <hc:ComboBox Grid.Row="0" Grid.Column="1"
+                                          Style="{StaticResource ComboBoxExtend}"
+                                          ItemsSource="{Binding AvailablePlcDevices}"
+                                          SelectedValue="{Binding EditingChannel.PlcDeviceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectedValuePath="DeviceId"
+                                          DisplayMemberPath="DeviceName"
+                                          Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                          hc:InfoElement.Placeholder="选择PLC设备"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="数据点位：" VerticalAlignment="Center"/>
+                                    <hc:ComboBox Grid.Row="1" Grid.Column="1" 
+                                          Style="{StaticResource ComboBoxExtend}"
+                                          ItemsSource="{Binding EditingChannel.AvailableDataPoints, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectedValue="{Binding EditingChannel.DataPointId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           SelectedValuePath="PointId"
                                           DisplayMemberPath="PointName"
-                                          Padding="8"/>
-                            </Grid>
-                        </StackPanel>
-                    </ScrollViewer>
+                                          Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
+                                          hc:InfoElement.Placeholder="选择数据点"/>
+                                </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
 
-                    <!-- 底部操作按钮 -->
-                    <Border Grid.Row="2" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="15,10">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <Button Command="{Binding CancelEditChannelCommand}" Margin="0,0,10,0" Background="#9E9E9E" Foreground="White" Content="取消" Width="100"/>
-                            <Button Command="{Binding SaveChannelCommand}" Background="#4CAF50" Foreground="White" Content="保存" Width="100" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </Border>
-        </hc:Drawer>
+                        <!-- 底部操作按钮 -->
+                        <Border Grid.Row="1" Background="{DynamicResource SecondaryRegionBrush}" 
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="15,10">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Button Command="{Binding CancelEditChannelCommand}" 
+                                    Content="取消" 
+                                    Style="{StaticResource ButtonDefault}" 
+                                    Width="{StaticResource FormButtonWidth}" Margin="0,0,10,0"/>
+                                <Button Command="{Binding SaveChannelCommand}" 
+                                    Content="保存" 
+                                    Style="{StaticResource ButtonSuccess}" 
+                                    Width="{StaticResource FormButtonWidth}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+            </hc:Drawer>
 
         </Grid>
     </hc:SimplePanel>

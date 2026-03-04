@@ -2,26 +2,24 @@
 using CommunityToolkit.Mvvm.Input;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Logs;
-using MeasurementSoftware.Services.Recipe;
-using MeasurementSoftware.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
 using HandyControl.Controls;
+using MeasurementSoftware.Services.Config;
+using MessageBox = HandyControl.Controls.MessageBox;
 
 namespace MeasurementSoftware.ViewModels
 {
     public partial class ChannelSettingViewModel : ObservableViewModel
     {
-        private readonly IRecipeService _recipeService;
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
-        private readonly IUserSettingsService _userSettingsService;
 
         // 直接引用全局配置
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
         public MeasurementRecipe? SelectedRecipe => _recipeConfigService.CurrentRecipe;
-        public ObservableCollection<MeasurementChannel> Channels => CurrentRecipe?.Channels ?? new ObservableCollection<MeasurementChannel>();
+        public ObservableCollection<MeasurementChannel> Channels => CurrentRecipe?.Channels ?? [];
 
         /// <summary>
         /// 可用的PLC设备列表（仅包含已启用的设备）
@@ -47,23 +45,128 @@ namespace MeasurementSoftware.ViewModels
 
         public IEnumerable<ChannelType> ChannelTypes => Enum.GetValues<ChannelType>();
 
-        public ChannelSettingViewModel(IRecipeService recipeService, ILog log,
-            IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IUserSettingsService userSettingsService)
+        private ObservableCollection<PlcDevice>? _lastDevices;
+
+        public ChannelSettingViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService)
         {
-            _recipeService = recipeService;
             _log = log;
             _recipeConfigService = recipeConfigService;
             _deviceConfigService = deviceConfigService;
-            _userSettingsService = userSettingsService;
 
-            // 订阅设备集合变化事件
-            _deviceConfigService.Devices.CollectionChanged += Devices_CollectionChanged;
-
-            // 订阅每个设备的属性变化事件
-            foreach (var device in _deviceConfigService.Devices)
+            // 监听配方和设备变化
+            if (_recipeConfigService is System.ComponentModel.INotifyPropertyChanged npc)
             {
-                device.PropertyChanged += Device_PropertyChanged;
+                npc.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
+                    {
+                        OnRecipeChanged();
+                    }
+                    else if (e.PropertyName == nameof(IDeviceConfigService.Devices))
+                    {
+                        OnDevicesChanged();
+                    }
+                };
             }
+
+            OnDevicesChanged();
+            OnRecipeChanged();
+        }
+
+        private void OnDevicesChanged()
+        {
+            if (_lastDevices != null)
+            {
+                _lastDevices.CollectionChanged -= Devices_CollectionChanged;
+                foreach (var device in _lastDevices)
+                {
+                    device.PropertyChanged -= Device_PropertyChanged;
+                }
+            }
+
+            _lastDevices = _deviceConfigService.Devices;
+
+            if (_lastDevices != null)
+            {
+                _lastDevices.CollectionChanged += Devices_CollectionChanged;
+                foreach (var device in _lastDevices)
+                {
+                    device.PropertyChanged += Device_PropertyChanged;
+                }
+            }
+
+            OnPropertyChanged(nameof(AvailablePlcDevices));
+        }
+
+        /// <summary>
+        /// 配方切换时，刷新通道列表并为每个通道加载数据点
+        /// </summary>
+        private void OnRecipeChanged()
+        {
+            if (CurrentRecipe != null)
+            {
+                foreach (var channel in CurrentRecipe.Channels)
+                {
+                    channel.PropertyChanged -= Channel_PropertyChanged;
+                    channel.PropertyChanged += Channel_PropertyChanged;
+                    if (channel.PlcDeviceId != 0)
+                    {
+                        LoadDataPointsForChannel(channel);
+                    }
+                }
+            }
+
+            OnPropertyChanged(nameof(CurrentRecipe));
+            OnPropertyChanged(nameof(SelectedRecipe));
+            OnPropertyChanged(nameof(Channels));
+            OnPropertyChanged(nameof(AvailablePlcDevices));
+        }
+
+        [RelayCommand]
+        private async Task SaveRecipeAsync()
+        {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("没有配方需要保存");
+                return;
+            }
+
+            CurrentRecipe.ModifyTime = DateTime.Now;
+            var success = await _recipeConfigService.SaveCurrentRecipeAsync();
+            if (success)
+                Growl.Success("配方保存成功");
+            else
+                Growl.Error("配方保存失败");
+        }
+
+        private void Channel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MeasurementChannel.PlcDeviceId) && sender is MeasurementChannel channel)
+            {
+                LoadDataPointsForChannel(channel);
+                channel.DataPointId = string.Empty;
+                channel.DataSourceAddress = string.Empty;
+            }
+            else if (e.PropertyName == nameof(MeasurementChannel.DataPointId) && sender is MeasurementChannel channel2)
+            {
+                var dataPoint = channel2.AvailableDataPoints.FirstOrDefault(dp => dp.PointId == channel2.DataPointId);
+                if (dataPoint != null)
+                {
+                    channel2.DataSourceAddress = dataPoint.Address;
+                }
+            }
+        }
+
+        private void LoadDataPointsForChannel(MeasurementChannel channel)
+        {
+            if (channel.PlcDeviceId == 0)
+            {
+                channel.AvailableDataPoints = new ObservableCollection<DataPoint>();
+                return;
+            }
+
+            var dataPoints = _deviceConfigService.GetDataPointsByDeviceId(channel.PlcDeviceId);
+            channel.AvailableDataPoints = new ObservableCollection<DataPoint>(dataPoints.Where(dp => dp.IsEnabled));
         }
 
         /// <summary>
@@ -100,218 +203,20 @@ namespace MeasurementSoftware.ViewModels
         {
             if (e.PropertyName == nameof(PlcDevice.IsEnabled))
             {
-                // 设备启用状态变化，刷新可用设备列表
+
                 OnPropertyChanged(nameof(AvailablePlcDevices));
-                _log.Info($"设备启用状态已更改，已刷新可用设备列表");
-            }
-        }
+                //todo 如果关联设备被关闭了，选中通道是否不应该关闭？
+                //if (!AvailablePlcDevices.Any())
+                //{
+                //    if (EditingChannel != null)
+                //    {
+                //        IsEditMode = true;
+                //        SaveChannel();
+                //    }
+                //}
+                OnPropertyChanged(nameof(EditingChannel.AvailableDataPoints));
+                OnPropertyChanged(nameof(EditingChannel.DataPointId));
 
-        [RelayCommand]
-        private async Task OpenRecipeAsync()
-        {
-            try
-            {
-                var dialog = new Microsoft.Win32.OpenFileDialog
-                {
-                    Filter = "配方文件 (*.json)|*.json|所有文件 (*.*)|*.*",
-                    Title = "打开配方"
-                };
-
-                if (dialog.ShowDialog() == true)
-                {
-                    var recipe = await _recipeService.LoadRecipeFromFileAsync(dialog.FileName);
-                    if (recipe != null)
-                    {
-                        // 保存到全局配置
-                        _recipeConfigService.OpenRecipe(recipe, dialog.FileName);
-
-                        // 保存到用户配置
-                        _userSettingsService.Settings.LastRecipePath = dialog.FileName;
-                        await _userSettingsService.SaveSettingsAsync();
-
-                        // 为每个通道加载数据点列表
-                        foreach (var channel in recipe.Channels)
-                        {
-                            channel.PropertyChanged += Channel_PropertyChanged;
-                            if (!string.IsNullOrEmpty(channel.PlcDeviceId))
-                            {
-                                LoadDataPointsForChannel(channel);
-                            }
-                        }
-
-                        Growl.Success($"配方 {recipe.RecipeName} 加载成功");
-                        _log.Info($"配方 {recipe.RecipeName} 从 {dialog.FileName} 加载成功");
-
-                        // 触发UI更新
-                        OnPropertyChanged(nameof(CurrentRecipe));
-                        OnPropertyChanged(nameof(SelectedRecipe));
-                        OnPropertyChanged(nameof(Channels));
-                    }
-                    else
-                    {
-                        Growl.Error("配方加载失败");
-                        _log.Error("配方加载失败");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Growl.Error($"打开配方失败: {ex.Message}");
-                _log.Error($"打开配方异常: {ex.Message}");
-            }
-        }
-
-        private void Channel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(MeasurementChannel.PlcDeviceId) && sender is MeasurementChannel channel)
-            {
-                // 当选择的PLC设备变化时，重新加载数据点列表
-                LoadDataPointsForChannel(channel);
-
-                // 清空当前选择的数据点
-                channel.DataPointId = string.Empty;
-                channel.DataSourceAddress = string.Empty;
-            }
-            else if (e.PropertyName == nameof(MeasurementChannel.DataPointId) && sender is MeasurementChannel channel2)
-            {
-                // 当选择数据点时，自动填充地址
-                var dataPoint = channel2.AvailableDataPoints.FirstOrDefault(dp => dp.PointId == channel2.DataPointId);
-                if (dataPoint != null)
-                {
-                    channel2.DataSourceAddress = dataPoint.Address;
-                }
-            }
-        }
-
-        private void LoadDataPointsForChannel(MeasurementChannel channel)
-        {
-            if (string.IsNullOrEmpty(channel.PlcDeviceId))
-            {
-                channel.AvailableDataPoints.Clear();
-                return;
-            }
-
-            var dataPoints = _deviceConfigService.GetDataPointsByDeviceId(channel.PlcDeviceId);
-            channel.AvailableDataPoints = new ObservableCollection<DataPoint>(dataPoints.Where(dp => dp.IsEnabled));
-        }
-
-        [RelayCommand]
-        private void CreateNewRecipe()
-        {
-            var newRecipe = new MeasurementRecipe
-            {
-                RecipeId = Guid.NewGuid().ToString(),
-                RecipeName = $"新配方_{DateTime.Now:yyyyMMddHHmmss}",
-                CreateTime = DateTime.Now,
-                ModifyTime = DateTime.Now
-            };
-            _recipeConfigService.OpenRecipe(newRecipe, string.Empty);
-            Growl.Success("已创建新配方，请设置通道并保存");
-            OnPropertyChanged(nameof(CurrentRecipe));
-            OnPropertyChanged(nameof(SelectedRecipe));
-            OnPropertyChanged(nameof(Channels));
-        }
-
-        [RelayCommand]
-        private async Task SaveRecipeAsync()
-        {
-            if (CurrentRecipe == null)
-            {
-                Growl.Warning("没有配方需要保存");
-                return;
-            }
-
-            try
-            {
-                // 如果已有路径，直接保存；否则显示另存为对话框
-                if (!string.IsNullOrEmpty(_recipeConfigService.CurrentRecipePath))
-                {
-                    CurrentRecipe.ModifyTime = DateTime.Now;
-                    var success = await _recipeService.SaveRecipeToFileAsync(CurrentRecipe, _recipeConfigService.CurrentRecipePath);
-                    if (success)
-                    {
-                        Growl.Success("配方保存成功");
-                        _log.Info($"配方 {CurrentRecipe.RecipeName} 保存成功");
-                    }
-                    else
-                    {
-                        Growl.Error("配方保存失败");
-                        _log.Error($"配方 {CurrentRecipe.RecipeName} 保存失败");
-                    }
-                }
-                else
-                {
-                    await SaveAsRecipeAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                Growl.Error($"配方保存异常: {ex.Message}");
-                _log.Error($"配方保存异常: {ex.Message}");
-            }
-        }
-
-        [RelayCommand]
-        private async Task SaveAsRecipeAsync()
-        {
-            if (CurrentRecipe == null)
-            {
-                Growl.Warning("没有配方需要保存");
-                return;
-            }
-
-            try
-            {
-                var dialog = new Microsoft.Win32.SaveFileDialog
-                {
-                    Filter = "配方文件 (*.json)|*.json|所有文件 (*.*)|*.*",
-                    Title = "另存为配方",
-                    FileName = CurrentRecipe.RecipeName + ".json"
-                };
-
-                if (dialog.ShowDialog() == true)
-                {
-                    CurrentRecipe.ModifyTime = DateTime.Now;
-                    var success = await _recipeService.SaveRecipeToFileAsync(CurrentRecipe, dialog.FileName);
-                    if (success)
-                    {
-                        _recipeConfigService.UpdateRecipePath(dialog.FileName);
-                        Growl.Success($"配方另存为 {dialog.FileName} 成功");
-                        _log.Info($"配方 {CurrentRecipe.RecipeName} 另存为 {dialog.FileName} 成功");
-                    }
-                    else
-                    {
-                        Growl.Error("配方保存失败");
-                        _log.Error($"配方 {CurrentRecipe.RecipeName} 保存失败");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Growl.Error($"配方另存为异常: {ex.Message}");
-                _log.Error($"配方另存为异常: {ex.Message}");
-            }
-        }
-
-        [RelayCommand]
-        private void DeleteRecipe()
-        {
-            if (CurrentRecipe == null)
-            {
-                HandyControl.Controls.Growl.Warning("没有配方可以关闭");
-                return;
-            }
-
-            var result = System.Windows.MessageBox.Show($"确定要关闭配方 {CurrentRecipe.RecipeName} 吗？未保存的更改将丢失。", "确认关闭", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if (result == MessageBoxResult.Yes)
-            {
-                var recipeName = CurrentRecipe.RecipeName;
-                _recipeConfigService.CloseRecipe();
-                HandyControl.Controls.Growl.Info($"已关闭配方 {recipeName}");
-                _log.Info($"配方 {recipeName} 已关闭");
-                OnPropertyChanged(nameof(CurrentRecipe));
-                OnPropertyChanged(nameof(SelectedRecipe));
-                OnPropertyChanged(nameof(Channels));
             }
         }
 
@@ -336,11 +241,11 @@ namespace MeasurementSoftware.ViewModels
                 // 默认选中第一个通道类型
                 ChannelType = ChannelTypes.FirstOrDefault(),
                 // 默认选中第一个PLC设备（如果有）
-                PlcDeviceId = AvailablePlcDevices.FirstOrDefault()?.DeviceId ?? string.Empty,
+                PlcDeviceId = AvailablePlcDevices.FirstOrDefault()?.DeviceId ?? 0,
             };
 
             // 加载数据点并设置默认值（如果有设备）
-            if (!string.IsNullOrEmpty(EditingChannel.PlcDeviceId))
+            if (EditingChannel.PlcDeviceId != 0)
             {
                 LoadDataPointsForChannel(EditingChannel);
                 // 默认选中第一个数据点
@@ -389,7 +294,7 @@ namespace MeasurementSoftware.ViewModels
             };
 
             // 如果有设备ID，确保数据点列表已加载
-            if (!string.IsNullOrEmpty(EditingChannel.PlcDeviceId))
+            if (EditingChannel.PlcDeviceId != 0)
             {
                 LoadDataPointsForChannel(EditingChannel);
             }
@@ -412,7 +317,7 @@ namespace MeasurementSoftware.ViewModels
             if (e.PropertyName == nameof(MeasurementChannel.PlcDeviceId))
             {
                 // PLC 设备变化时，自动加载数据点
-                if (!string.IsNullOrEmpty(EditingChannel.PlcDeviceId))
+                if (EditingChannel.PlcDeviceId != 0)
                 {
                     LoadDataPointsForChannel(EditingChannel);
                     // 清空原有数据点选择
@@ -429,7 +334,7 @@ namespace MeasurementSoftware.ViewModels
                 }
                 else
                 {
-                    EditingChannel.AvailableDataPoints.Clear();
+                    EditingChannel.AvailableDataPoints = new ObservableCollection<DataPoint>();
                     EditingChannel.DataPointId = string.Empty;
                     EditingChannel.DataSourceAddress = string.Empty;
                 }
@@ -473,12 +378,20 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.ChannelType = EditingChannel.ChannelType;
                     originalChannel.Unit = EditingChannel.Unit;
                     originalChannel.DecimalPlaces = EditingChannel.DecimalPlaces;
-
-                    // 更新数据源相关属性
-                    originalChannel.PlcDeviceId = EditingChannel.PlcDeviceId;
-                    originalChannel.DataPointId = EditingChannel.DataPointId;
-                    originalChannel.DataSourceAddress = EditingChannel.DataSourceAddress;
-                    originalChannel.AvailableDataPoints = EditingChannel.AvailableDataPoints;
+                    if (!AvailablePlcDevices.Any())
+                    {
+                        originalChannel.PlcDeviceId = 0;
+                        originalChannel.DataPointId = string.Empty;
+                        originalChannel.DataSourceAddress = string.Empty;
+                        originalChannel.AvailableDataPoints = new ObservableCollection<DataPoint>();
+                    }
+                    else
+                    {
+                        originalChannel.PlcDeviceId = EditingChannel.PlcDeviceId;
+                        originalChannel.DataPointId = EditingChannel.DataPointId;
+                        originalChannel.DataSourceAddress = EditingChannel.DataSourceAddress;
+                        originalChannel.AvailableDataPoints = EditingChannel.AvailableDataPoints;
+                    }
 
                     // 重新订阅属性变化事件（如果之前没订阅）
                     originalChannel.PropertyChanged -= Channel_PropertyChanged;
@@ -533,14 +446,42 @@ namespace MeasurementSoftware.ViewModels
                 Growl.Warning("请选择要删除的通道");
                 return;
             }
+            var res = MessageBox.Show("你确定要删除该通道？", "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (res == MessageBoxResult.Yes)
+            {
+                // 取消订阅属性变化事件
+                SelectedChannel.PropertyChanged -= Channel_PropertyChanged;
+                var channelName = SelectedChannel.ChannelName;
 
-            // 取消订阅属性变化事件
-            SelectedChannel.PropertyChanged -= Channel_PropertyChanged;
-            var channelName = SelectedChannel.ChannelName;
+                CurrentRecipe.Channels.Remove(SelectedChannel);
+                OnPropertyChanged(nameof(Channels));
+                Growl.Info("已删除通道");
+            }
+        }
 
-            CurrentRecipe.Channels.Remove(SelectedChannel);
-            OnPropertyChanged(nameof(Channels));
-            Growl.Info("已删除通道");
+
+
+        /// <summary>
+        /// 重新编号
+        /// </summary>
+        [RelayCommand]
+        public void RenumberPoints()
+        {
+
+            if (CurrentRecipe?.Channels != null && CurrentRecipe?.Channels.Count != 0)
+            {
+                for (int i = 0; i < CurrentRecipe?.Channels.Count; i++)
+                {
+                    CurrentRecipe.Channels[i].ChannelNumber = i + 1;
+                }
+
+            }
+            else
+            {
+                Growl.Warning("请先添加通道");
+            }
+
+
         }
     }
 }

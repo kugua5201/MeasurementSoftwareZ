@@ -1,11 +1,13 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HandyControl.Controls;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
+using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.UserSetting;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Threading.Channels;
 
 namespace MeasurementSoftware.ViewModels
 {
@@ -13,7 +15,9 @@ namespace MeasurementSoftware.ViewModels
     {
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
+        private readonly IDeviceConfigService _deviceConfigService;
         private readonly IUserSettingsService _userSettingsService;
+        private readonly IDataRecordService _dataRecordService;
 
         [ObservableProperty]
         private string? productImagePath;
@@ -26,11 +30,14 @@ namespace MeasurementSoftware.ViewModels
 
         public IEnumerable<MeasurementChannel> Channels => CurrentRecipe?.Channels?.Where(c => c.IsEnabled) ?? Enumerable.Empty<MeasurementChannel>();
 
-
         [ObservableProperty]
         private bool isAcquiring;
 
+        [ObservableProperty]
+        private string measurementStatus = "就绪";
 
+        [ObservableProperty]
+        private MeasurementResult overallResult = MeasurementResult.NotMeasured;
 
         [ObservableProperty]
         private int passCount;
@@ -40,12 +47,44 @@ namespace MeasurementSoftware.ViewModels
 
         [ObservableProperty]
         private int totalCount;
+
+        /// <summary>
+        /// 实时采集数据（用于趋势图绘制）
+        /// </summary>
+        //[ObservableProperty]
+        //private ObservableCollection<RealTimeDataEventArgs> realTimeData = [];
+
+        /// <summary>
+        /// 趋势图最大显示点数
+        /// </summary>
+        private const int MaxTrendPoints = 10;
+
+        [ObservableProperty]
+        private double[] trendXs = [];
+
+        [ObservableProperty]
+        private double[] trendYs = [];
+
+        /// <summary>
+        /// 轮询间隔(ms)
+        /// </summary>
+        private const int PollIntervalMs = 500;
+
+        private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
-        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IUserSettingsService userSettingsService)
+
+        public HomeViewModel(
+            ILog log,
+            IRecipeConfigService recipeConfigService,
+            IDeviceConfigService deviceConfigService,
+            IUserSettingsService userSettingsService,
+            IDataRecordService dataRecordService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
+            _deviceConfigService = deviceConfigService;
             _userSettingsService = userSettingsService;
+            _dataRecordService = dataRecordService;
 
             // 不再从用户设置加载图片，图片跟随配方
 
@@ -88,7 +127,6 @@ namespace MeasurementSoftware.ViewModels
                 foreach (var ch in _channels)
                     ch.PropertyChanged += Channel_PropertyChanged;
             }
-
         }
         private void Channels_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
@@ -103,65 +141,125 @@ namespace MeasurementSoftware.ViewModels
 
         private void Channel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-
             OnPropertyChanged(nameof(Channels));
         }
+
+
         [RelayCommand]
         private async Task StartAcquisitionAsync()
         {
             if (CurrentRecipe == null)
             {
-                _log.Warn("未选择配方");
+                Growl.Warning("未选择配方");
                 return;
             }
 
+            if (IsAcquiring) return;
+
             IsAcquiring = true;
-            _log.Info("开始数据采集");
-
-            // 模拟数据采集
-            await Task.Delay(1000);
-
-            // 模拟测量结果
-            var random = new Random();
-            foreach (var channel in Channels)
+            MeasurementStatus = "正在采集...";
+            OverallResult = MeasurementResult.NotMeasured;
+            _cts = new CancellationTokenSource();
+            try
             {
-                var offset = (random.NextDouble() - 0.5) * 0.2;
-                channel.MeasuredValue = channel.StandardValue + offset;
-
-                var upperLimit = channel.StandardValue + channel.UpperTolerance;
-                var lowerLimit = channel.StandardValue - channel.LowerTolerance;
-
-                if (channel.MeasuredValue >= lowerLimit && channel.MeasuredValue <= upperLimit)
+                while (!_cts.Token.IsCancellationRequested)
                 {
-                    channel.Result = MeasurementResult.Pass;
+                    foreach (var channel in Channels)
+                    {
+                        if (_cts.Token.IsCancellationRequested) break;
+                        if (!channel.IsEnabled) continue;
+                        if (string.IsNullOrEmpty(channel.PlcDeviceName))
+                        {
+
+                            channel.ChannelDescription = "请先绑定设备";
+                            continue;
+                        }
+
+                        if (string.IsNullOrEmpty(channel.DataPointName))
+                        {
+                            channel.ChannelDescription = "先请绑定设备点位";
+                            continue;
+                        }
+                        var value = GetChannelCurrentValue(channel);
+                        if (value != null)
+                        {
+                            channel.UpdateMeasuredValue(value.Value);
+                        }
+                    }
+
+                    // 实时刷新总判定
+                    if (Channels.Any(c => c.Result != MeasurementResult.NotMeasured))
+                    {
+                        OverallResult = Channels.All(c => c.Result == MeasurementResult.Pass)
+                            ? MeasurementResult.Pass
+                            : MeasurementResult.Fail;
+                    }
+
+                    await Task.Delay(PollIntervalMs, _cts.Token);
                 }
-                else
-                {
-                    channel.Result = MeasurementResult.Fail;
-                }
             }
-
-            // 更新统计
-            TotalCount++;
-            var allPass = Channels.All(c => c.Result == MeasurementResult.Pass);
-            if (allPass)
+            catch (OperationCanceledException) { }
+            finally
             {
-                PassCount++;
+                IsAcquiring = false;
             }
-            else
-            {
-                FailCount++;
-
-            }
-
-            IsAcquiring = false;
         }
 
         [RelayCommand]
-        private void StopAcquisition()
+        private async Task StopAcquisitionAsync()
         {
-            IsAcquiring = false;
+            _cts?.Cancel();
             _log.Info("停止数据采集");
+            MeasurementStatus = "采集已停止";
+
+            // 停止后统计并保存记录
+            if (CurrentRecipe != null && Channels.Any(c => c.Result != MeasurementResult.NotMeasured))
+            {
+                TotalCount++;
+                if (OverallResult == MeasurementResult.Pass)
+                    PassCount++;
+                else
+                    FailCount++;
+
+                var record = new MeasurementRecord
+                {
+                    RecipeId = CurrentRecipe.RecipeId,
+                    RecipeName = CurrentRecipe.RecipeName,
+                    MeasurementTime = DateTime.Now,
+                    OverallResult = OverallResult,
+                    ChannelData = Channels.Select(c => new ChannelMeasurementData
+                    {
+                        ChannelNumber = c.ChannelNumber,
+                        ChannelName = c.ChannelName,
+                        StandardValue = c.StandardValue,
+                        UpperTolerance = c.UpperTolerance,
+                        LowerTolerance = c.LowerTolerance,
+                        MeasuredValue = c.MeasuredValue,
+                        Result = c.Result
+                    }).ToList(),
+                    StepNumber = 1,
+                    TotalSteps = CurrentRecipe.TotalSteps
+                };
+                await _dataRecordService.SaveRecordAsync(record);
+                _log.Info($"测量记录已保存: {OverallResult}");
+            }
+        }
+
+        [RelayCommand]
+        private async Task SaveRecipeAsync()
+        {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("没有配方需要保存");
+                return;
+            }
+
+            CurrentRecipe.ModifyTime = DateTime.Now;
+            var success = await _recipeConfigService.SaveCurrentRecipeAsync();
+            if (success)
+                Growl.Success("配方保存成功");
+            else
+                Growl.Error("配方保存失败");
         }
 
         [RelayCommand]
@@ -199,6 +297,55 @@ namespace MeasurementSoftware.ViewModels
                     _log.Info($"已设置产品图片: {openFileDialog.FileName}");
                 }
             }
+        }
+
+        /// <summary>
+        /// 直接从通道绑定的PLC数据点获取当前值（设备轮询已在更新 DataPoint.CurrentValue）
+        /// </summary>
+        private double? GetChannelCurrentValue(MeasurementChannel channel)
+        {
+            if (channel.PlcDeviceId == 0 || string.IsNullOrEmpty(channel.DataPointId))
+            {
+                channel.ChannelDescription = "没有找到对应的通道设备";
+                return null;
+
+            }
+
+
+
+            var device = _deviceConfigService.Devices
+                .FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
+            if (device == null)
+            {
+                channel.ChannelDescription = $"没有找到设备ID {channel.PlcDeviceId}";
+                return null;
+            }
+            if (!device.IsEnabled)
+            {
+                channel.ChannelDescription = $"设备 {channel.PlcDeviceName} 未启用";
+                return null;
+            }
+            if (!device.IsConnected)
+            {
+                channel.ChannelDescription = $"设备 {device.DeviceName} 未连接";
+                return null;
+            }
+            var dataPoint = device.DataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId);
+            if (dataPoint?.CurrentValue == null || !dataPoint.IsSuccess)
+            {
+                channel.ChannelDescription = $"{dataPoint?.ErrorMessage}";
+                return null;
+            }
+            else
+            {
+                channel.ChannelDescription = string.Empty;
+            }
+
+            try
+            {
+                return Convert.ToDouble(dataPoint.CurrentValue);
+            }
+            catch { return null; }
         }
     }
 }

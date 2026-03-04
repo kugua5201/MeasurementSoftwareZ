@@ -150,67 +150,43 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
-                <ScrollViewer Grid.Row="1" Margin="8,0,8,16" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="1" Margin="8,0,8,16" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                     <StackPanel>
                         <Button x:Name="HomeButton"  Command="{Binding NavigateToHomeCommand}" Click="MenuButton_Click"
                                 Style="{StaticResource MainMenuButtonStyle}">
                             <StackPanel Orientation="Horizontal"  Margin="10 0 0 0">
                                 <TextBlock Text="&#xE80F;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="首页" FontSize="14"/>
+                                <TextBlock Text="测量" FontSize="14"/>
                             </StackPanel>
                         </Button>
 
-                        <Button x:Name="AboutButton" Click="MenuButton_Click"  Command="{Binding NavigateToAboutCommand}"
+                   
+
+                        <Button x:Name="CalibrationButton" Command="{Binding NavigateToCalibrationCommand}" Click="MenuButton_Click"
                                 Style="{StaticResource MainMenuButtonStyle}">
-                            <StackPanel Orientation="Horizontal" Margin="10 0 0 0">
-                                <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
-                                <TextBlock Text="关于" FontSize="14"/>
+                            <StackPanel Orientation="Horizontal"  Margin="10 0 0 0">
+                                <TextBlock Text="&#xE9E9;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
+                                <TextBlock Text="校准" FontSize="14"/>
                             </StackPanel>
                         </Button>
 
-                      
-
-                        <Expander x:Name="DataExpander"
-                               Header="数据管理" 
-                               Expanded="Expander_Expanded" 
-                               Background="Transparent"
-                               BorderBrush="Transparent"
-                               Style="{StaticResource AnimatedExpanderStyle}">
-                            <Expander.RenderTransform>
-                                <TransformGroup>
-                                    <ScaleTransform ScaleY="1"/>
-                                    <TranslateTransform Y="0"/>
-                                </TransformGroup>
-                            </Expander.RenderTransform>
-                            <Expander.HeaderTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" Margin="16,12">
-                                        <TextBlock Text="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
-                                        <TextBlock Text="{Binding}" FontSize="14"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </Expander.HeaderTemplate>
-                            <StackPanel>
-                                <Button x:Name="DataViewButton" 
-                                 Click="MenuButton_Click" 
-                                 Style="{StaticResource SubMenuButtonStyle}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0"/>
-                                        <TextBlock Text="数据查看" FontSize="13"/>
-                                    </StackPanel>
-                                </Button>
-                                <Button x:Name="DataExportButton" 
-                                Click="MenuButton_Click" 
-                                Style="{StaticResource SubMenuButtonStyle}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE8C5;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0"/>
-                                        <TextBlock Text="数据导出" FontSize="13"/>
-                                    </StackPanel>
-                                </Button>
+                        <Button x:Name="DataManagementButton" Command="{Binding NavigateToDataManagementCommand}" Click="MenuButton_Click"
+                                Style="{StaticResource MainMenuButtonStyle}">
+                            <StackPanel Orientation="Horizontal"  Margin="10 0 0 0">
+                                <TextBlock Text="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
+                                <TextBlock Text="数据管理" FontSize="14"/>
                             </StackPanel>
-                        </Expander>
+                        </Button>
 
-                        <Expander x:Name="SettingsExpander"  
+                        <Button x:Name="SpcButton" Command="{Binding NavigateToSpcCommand}" Click="MenuButton_Click"
+                                Style="{StaticResource MainMenuButtonStyle}">
+                            <StackPanel Orientation="Horizontal"  Margin="10 0 0 0">
+                                <TextBlock Text="&#xE9D9;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
+                                <TextBlock Text="SPC分析" FontSize="14"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Expander x:Name="SettingsExpander"
                             Header="设置" 
                             Expanded="Expander_Expanded" 
                             Background="Transparent"
@@ -247,10 +223,34 @@
                                         <TextBlock Text="设备管理" FontSize="13"/>
                                     </StackPanel>
                                 </Button>
+                                <Button x:Name="QrCodeSettingButton" 
+                                 Click="MenuButton_Click"  Command="{Binding NavigateToQrCodeSettingCommand}"
+                                 Style="{StaticResource SubMenuButtonStyle}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xEAD8;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0"/>
+                                        <TextBlock Text="二维码配置" FontSize="13"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="MesSettingButton" 
+                                 Click="MenuButton_Click"  Command="{Binding NavigateToMesSettingCommand}"
+                                 Style="{StaticResource SubMenuButtonStyle}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="14" Margin="0,0,12,0"/>
+                                        <TextBlock Text="MES配置" FontSize="13"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </Expander>
 
 
+
+                        <Button x:Name="RecipeManagementButton" Command="{Binding NavigateToRecipeManagementCommand}" Click="MenuButton_Click"
+                            Style="{StaticResource MainMenuButtonStyle}">
+                            <StackPanel Orientation="Horizontal"  Margin="10 0 0 0">
+                                <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="16" Margin="0,0,12,0"/>
+                                <TextBlock Text="配方管理" FontSize="14"/>
+                            </StackPanel>
+                        </Button>
                         <Button x:Name="LogViewerButton" Click="MenuButton_Click" Command="{Binding NavigateToLogViewerCommand}"
                              Style="{StaticResource MainMenuButtonStyle}">
                             <StackPanel Orientation="Horizontal" Margin="10 0 0 0">

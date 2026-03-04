@@ -6,7 +6,7 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="1200">
-    <Grid>
+    <Grid Style="{StaticResource PageRootGrid}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -14,7 +14,7 @@
         </Grid.RowDefinitions>
 
         <!-- 顶部工具栏 -->
-        <Border Grid.Row="0" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="10,10">
+        <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -24,34 +24,33 @@
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,0">
                     <TextBlock Text="日期：" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="13"/>
                     <DatePicker SelectedDate="{Binding SelectedDate}" 
-                                Width="150" 
-                                VerticalAlignment="Center" 
+                                Width="{StaticResource FormNumericWidth}" 
+                                VerticalAlignment="Center"
                                 Margin="0,0,20,0"/>
 
                     <TextBlock Text="级别：" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="13"/>
                     <ComboBox ItemsSource="{Binding LogLevels}" 
                               SelectedItem="{Binding SelectedLevel}" 
-                              Width="100" 
-                              VerticalAlignment="Center" 
+                              Style="{StaticResource ComboBoxExtend}"
+                              Width="{StaticResource FormButtonWidth}" 
+                              VerticalAlignment="Center"
                               Margin="0,0,20,0"/>
 
                     <TextBlock Text="{Binding StatusMessage}" 
                                VerticalAlignment="Center" 
-                               Foreground="#666" 
+                               Foreground="{DynamicResource SecondaryTextBrush}" 
                                FontSize="12" 
                                Margin="0,0,20,0"/>
 
                     <Button Command="{Binding RefreshCommand}" 
-                            Background="#4CAF50" 
-                            Foreground="White" 
-                            Padding="12,6" 
-                            Margin="0,0,5,0"
-                            Content="🔄 刷新"/>
-                    <Button Command="{Binding ClearLogsCommand}" 
-                            Background="#F44336" 
-                            Foreground="White" 
-                            Padding="12,6"
-                            Content="🗑 清空"/>
+                            Content="刷新"
+                            Style="{StaticResource ButtonSuccess}" 
+                            Padding="15,6" 
+                            Margin="0,0,8,0"/>
+                    <Button Command="{Binding ClearLogsCommand}"
+                            Content="清空"
+                            Style="{StaticResource ButtonDanger}" 
+                            Padding="15,6"/>
                 </StackPanel>
 
                 <!-- 第二行：状态栏 -->
@@ -67,7 +66,7 @@
                   HeadersVisibility="Column"
                   RowHeight="32"
                   FontSize="12"
-                  BorderBrush="#E0E0E0"
+                  BorderBrush="{StaticResource LightBorderBrush}"
                   BorderThickness="0"
                   Background="White"
                
@@ -77,7 +76,7 @@
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="60">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#666"/>
+                            <Setter Property="Foreground" Value="{StaticResource PlaceholderTextBrush}"/>
                             <Setter Property="HorizontalAlignment" Value="Center"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
@@ -96,16 +95,16 @@
                             <Setter Property="HorizontalAlignment" Value="Center"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Level}" Value="ERROR">
-                                    <Setter Property="Foreground" Value="#F44336"/>
+                                    <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="WARN">
-                                    <Setter Property="Foreground" Value="#FF9800"/>
+                                    <Setter Property="Foreground" Value="{StaticResource StatusWarningBrush}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="INFO">
-                                    <Setter Property="Foreground" Value="#2196F3"/>
+                                    <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Level}" Value="DEBUG">
-                                    <Setter Property="Foreground" Value="#9C27B0"/>
+                                    <Setter Property="Foreground" Value="{StaticResource StatusDebugBrush}"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
@@ -114,7 +113,7 @@
                 <!--<DataGridTextColumn Header="来源" Binding="{Binding Source}" Width="200">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#666"/>
+                            <Setter Property="Foreground" Value="{StaticResource PlaceholderTextBrush}"/>
                             <Setter Property="FontSize" Value="11"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
@@ -132,7 +131,7 @@
         </DataGrid>
 
         <!-- 分页控制（使用 HandyControl 分页） -->
-        <Border Grid.Row="2" Background="#F5F5F5" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="15,10">
+        <Border Grid.Row="2" Background="{StaticResource LightBackgroundBrush}" BorderBrush="{StaticResource LightBorderBrush}" BorderThickness="0,1,0,0" Padding="15,10">
             <hc:Pagination 
                 MaxPageCount="{Binding TotalPages}"
                 PageIndex="{Binding CurrentPage, Mode=TwoWay}"

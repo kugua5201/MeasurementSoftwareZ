@@ -1,13 +1,14 @@
 ﻿using Autofac;
 using Autofac.Core;
 using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
+using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Events;
 using MeasurementSoftware.Services.Logs;
-using MeasurementSoftware.Services.Recipe;
+using MeasurementSoftware.Services.UserSetting;
 using MeasurementSoftware.UserControls;
 using MeasurementSoftware.ViewModels;
-using MultiProtocol.Services.IIndustrialProtocol;
 using System.IO;
 using System.Windows;
 
@@ -28,15 +29,21 @@ namespace MeasurementSoftware
 
             // 注册服务
             builder.RegisterSingleton<ILog, Log>();
-            builder.RegisterSingleton<IRecipeService, RecipeService>();
             builder.RegisterSingleton<IEventAggregator, EventAggregator>();
             builder.RegisterSingleton<IUserSettingsService, UserSettingsService>();
-       
-            // 注册 AppConfig（全局唯一实例，实现两个接口）
+
+            builder.RegisterSingleton<IMesService, MesService>();
+            builder.RegisterSingleton<IDataRecordService, DataRecordService>();
+            builder.RegisterSingleton<ICalibrationService, CalibrationService>();
+            builder.RegisterSingleton<IMeasurementService, MeasurementService>();
+            builder.RegisterSingleton<ISpcService, SpcService>();
+
+            // 注册 AppConfig（全局唯一实例，实现所有配置接口）
             builder.RegisterType<AppConfig>()
                 .AsSelf()
-                .As<IDeviceConfigService>()
                 .As<IRecipeConfigService>()
+                .As<IDeviceConfigService>()
+                .As<IQrCodeConfigService>()
                 .SingleInstance();
 
             // 注册主窗口
@@ -44,12 +51,18 @@ namespace MeasurementSoftware
 
             // 注册页面 (View + ViewModel)
             builder.RegisterViewWithViewModel<HomeUserControl, HomeViewModel>("Home");
+            builder.RegisterViewWithViewModel<RecipeManagementUserControl, RecipeManagementViewModel>("RecipeManagement");
             builder.RegisterViewWithViewModel<ChannelSettingUserControl, ChannelSettingViewModel>("ChannelSetting");
-            builder.RegisterViewWithViewModel<AboutUserControl, AboutViewModel>("About");
-            builder.RegisterViewWithViewModel<CommunicationSettingUserControl, CommunicationSettingViewModel>("DeviceManagement");
-            builder.RegisterViewWithViewModel<CommunicationSettingUserControl, CommunicationSettingViewModel>("CommunicationSetting"); // 兼容旧名称
-            builder.RegisterViewWithViewModel<SettingUserControl, SettingViewModel>("Setting");
+            builder.RegisterViewWithViewModel<CalibrationUserControl, CalibrationViewModel>("Calibration");
+            builder.RegisterViewWithViewModel<DataRecordUserControl, DataRecordViewModel>("DataManagement");
+            builder.RegisterViewWithViewModel<DataRecordUserControl, DataRecordViewModel>("DataRecord");
+            builder.RegisterViewWithViewModel<DeviceSettingUserControl, DeviceSettingViewModel>("CommunicationSetting");
             builder.RegisterViewWithViewModel<LogViewerUserControl, LogViewerViewModel>("LogViewer");
+            builder.RegisterViewWithViewModel<QrCodeSettingUserControl, QrCodeSettingViewModel>("QrCodeSetting");
+            builder.RegisterViewWithViewModel<SpcUserControl, SpcViewModel>("Spc");
+            // TODO: 添加条码配置和MES配置页面
+            // builder.RegisterViewWithViewModel<BarcodeSettingUserControl, BarcodeSettingViewModel>("BarcodeSetting");
+            // builder.RegisterViewWithViewModel<MesSettingUserControl, MesSettingViewModel>("MesSetting");
 
             // 构建容器（包含所有服务、窗口和页面）
             _container = builder.Build();
@@ -72,25 +85,29 @@ namespace MeasurementSoftware
                 var log = _container!.Resolve<ILog>();
                 var appConfig = _container!.Resolve<AppConfig>();
                 var userSettings = _container!.Resolve<IUserSettingsService>();
-                var recipeService = _container!.Resolve<IRecipeService>();
+                var dataRecordService = _container!.Resolve<IDataRecordService>();
 
                 log.Info("正在加载应用程序配置...");
 
-                // 1. 加载用户设置
+                // 1. 初始化本地数据库
+                await dataRecordService.InitializeAsync();
+
+                // 2. 加载用户设置
                 await userSettings.LoadSettingsAsync();
 
-                // 2. 加载 PLC 设备配置
-                await appConfig.LoadDevicesAsync();
-
-                // 3. 自动加载上次打开的配方
+                // 3. 自动加载上次打开的配方（包含设备、二维码等所有配置）
                 if (!string.IsNullOrEmpty(userSettings.Settings.LastRecipePath) &&
                     File.Exists(userSettings.Settings.LastRecipePath))
                 {
-                    var recipe = await recipeService.LoadRecipeFromFileAsync(userSettings.Settings.LastRecipePath);
+                    var recipe = await appConfig.LoadRecipeAsync(userSettings.Settings.LastRecipePath);
                     if (recipe != null)
                     {
                         appConfig.OpenRecipe(recipe, userSettings.Settings.LastRecipePath);
-                        log.Info($"已自动加载上次打开的配方: {recipe.RecipeName}");
+
+                        // 初始化配方中的PLC设备连接
+                        await appConfig.LoadDevicesAsync();
+
+                        log.Info($"已自动加载配方: {recipe.RecipeName}（含 {appConfig.Devices.Count} 个设备）");
                     }
                 }
 
@@ -105,9 +122,20 @@ namespace MeasurementSoftware
 
         protected override void OnExit(ExitEventArgs e)
         {
-            // 退出时保存配置
-            var userSettings = _container?.Resolve<IUserSettingsService>();
-            userSettings?.SaveSettingsAsync();
+            try
+            {
+                var appConfig = _container?.Resolve<AppConfig>();
+                var userSettings = _container?.Resolve<IUserSettingsService>();
+                // 同步保存用户设置
+                if (userSettings != null && appConfig != null &&
+                    !string.IsNullOrEmpty(appConfig.CurrentRecipePath))
+                {
+                    userSettings.Settings.LastRecipePath = appConfig.CurrentRecipePath;
+                }
+                //保存配置
+                appConfig?.SaveCurrentRecipeAsync();
+            }
+            catch { }
             base.OnExit(e);
         }
     }

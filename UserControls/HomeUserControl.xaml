@@ -4,232 +4,259 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:local="clr-namespace:MeasurementSoftware.UserControls"
-             xmlns:hc="https://handyorg.github.io/handycontrol"
-             mc:Ignorable="d"
+			 xmlns:hc="https://handyorg.github.io/handycontrol"
+			 xmlns:scottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+			 mc:Ignorable="d"
              d:DesignHeight="700" d:DesignWidth="1200">
-	<Grid>
-		<Grid.RowDefinitions>
-			<RowDefinition Height="Auto"/>
-			<RowDefinition Height="*"/>
-			<RowDefinition Height="Auto"/>
-		</Grid.RowDefinitions>
+    <Grid Style="{StaticResource PageRootGrid}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-		<!-- 顶部工具栏 -->
-		<Border Grid.Row="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,0,0,1" Padding="10">
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto"/>
-					<ColumnDefinition Width="*"/>
-					<ColumnDefinition Width="Auto"/>
-				</Grid.ColumnDefinitions>
+        <!-- 顶部工具栏 -->
+        <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
+            <Grid>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button Content="开始采集" Command="{Binding StartAcquisitionCommand}"
+							Style="{StaticResource ButtonSuccess}"
+							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
+                    <Button Content="停止采集" Command="{Binding StopAcquisitionCommand}"
+							Style="{StaticResource ButtonDanger}"
+							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
+                </StackPanel>
+                <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveRecipeCommand}"/>
+            </Grid>
+        </Border>
 
-				<!-- 左侧：当前配方信息 -->
-				<StackPanel Grid.Column="0" Orientation="Horizontal">
-					<Path Fill="#2196F3" VerticalAlignment="Center" Margin="0,0,8,0"
-								Data="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z" 
-								Width="18" Height="18" Stretch="Uniform"/>
-					<TextBlock Text="当前配方：" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="13" Foreground="#666"/>
-					<TextBlock Text="{Binding CurrentRecipe.RecipeName, FallbackValue='未加载配方'}" 
-										 VerticalAlignment="Center" FontSize="14" FontWeight="Bold" Foreground="#2196F3"/>
-				</StackPanel>
-
-				<!-- 右侧：功能菜单 -->
-				<StackPanel Grid.Column="2" Orientation="Horizontal">
-					<Menu Background="Transparent" VerticalAlignment="Center">
-						<MenuItem Header="功能菜单" Height="30" Padding="10,0">
-							<MenuItem Header="测量"/>
-							<MenuItem Header="设置"/>
-							<MenuItem Header="历史"/>
-							<MenuItem Header="报表"/>
-							<MenuItem Header="导出"/>
-							<MenuItem Header="帮助"/>
-						</MenuItem>
-					</Menu>
-					<Button Content="开始采集" Command="{Binding StartAcquisitionCommand}"
-									Width="90" Height="30" Margin="5,0,2,0"
-									Background="#4CAF50" Foreground="White" BorderBrush="#4CAF50"/>
-					<Button Content="停止采集" Command="{Binding StopAcquisitionCommand}"
-									Width="90" Height="30" Margin="2,0"
-									Background="#FF9800" Foreground="White" BorderBrush="#FF9800"/>
-				</StackPanel>
-			</Grid>
-		</Border>
-
-		<!-- 主显示区域 -->
-		<Grid Grid.Row="1" Background="White">
-			<Grid.ColumnDefinitions>
-				<ColumnDefinition Width="*"/>
-				<ColumnDefinition Width="220"/>
-			</Grid.ColumnDefinitions>
-			<Grid.RowDefinitions>
+        <!-- 主显示区域 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="220"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-				<RowDefinition Height="*" MinHeight="200" MaxHeight="300"/>
-			</Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="200" MaxHeight="300"/>
+            </Grid.RowDefinitions>
 
-			<!-- 左上：产品图片 -->
-			<Border Grid.Column="0" Grid.Row="0" 
+            <!-- 左上：产品图片 -->
+            <Border Grid.Column="0" Grid.Row="0" 
         BorderThickness="1" CornerRadius="5" Margin="5">
-				<Grid>
-					<!-- 图片显示 -->
-					<Viewbox VerticalAlignment="Top" x:Name="viewbox">
-						<Canvas x:Name="Canvas" ClipToBounds="True"
+                <Grid>
+                    <!-- 图片显示 -->
+                    <Viewbox VerticalAlignment="Top" x:Name="viewbox">
+                        <Canvas x:Name="Canvas" ClipToBounds="True"
 										Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Grid}}"
 										Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Grid}}">
-							<Canvas.Background>
-								<ImageBrush x:Name="canvasImage"
+                            <Canvas.Background>
+                                <ImageBrush x:Name="canvasImage"
 														Stretch="UniformToFill"
 														ImageSource="{Binding ProductImagePath, Converter={StaticResource StringToImageSourceConverter}}"/>
-							</Canvas.Background>
-						</Canvas>
-					</Viewbox>
-					<!-- 遮罩层：无图片时显示 -->
-                    <Border IsHitTestVisible="False" Background="#F5F5F5">
-						<Border.Style>
-							<Style TargetType="Border">
-								<Setter Property="Visibility" Value="Collapsed"/>
-								<Style.Triggers>
-									<DataTrigger Binding="{Binding ProductImagePath}" Value="{x:Null}">
-										<Setter Property="Visibility" Value="Visible"/>
-									</DataTrigger>
-									<DataTrigger Binding="{Binding ProductImagePath}" Value="">
-										<Setter Property="Visibility" Value="Visible"/>
-									</DataTrigger>
-								</Style.Triggers>
-							</Style>
-						</Border.Style>
-						<StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-							<TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets"
-												 FontSize="64" Foreground="#BDBDBD"
+                            </Canvas.Background>
+
+                            <Canvas.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="导入图片" Command="{Binding ImportProductImageCommand}" />
+                                </ContextMenu>
+                            </Canvas.ContextMenu>
+                        </Canvas>
+                    </Viewbox>
+                    <!-- 遮罩层：无图片时显示 -->
+                    <Border IsHitTestVisible="False" Background="{StaticResource LightBackgroundBrush}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ProductImagePath}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ProductImagePath}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets"
+												 FontSize="64" Foreground="{StaticResource DisabledIconBrush}"
 												 HorizontalAlignment="Center" Margin="0,0,0,10"/>
-							<TextBlock Text="点击导入图片" FontSize="16" Foreground="#9E9E9E"
+                            <TextBlock Text="导入图片" FontSize="16" Foreground="{StaticResource DisabledTextBrush}"
 												 HorizontalAlignment="Center"/>
-						</StackPanel>
-					</Border>
-					<!-- 透明按钮覆盖全区，响应点击命令 -->
-					<Button Command="{Binding ImportProductImageCommand}"
+                        </StackPanel>
+                    </Border>
+                    <!-- 透明按钮覆盖全区，响应点击命令 -->
+                    <!--<Button Command="{Binding ImportProductImageCommand}"
 									Background="Transparent"
 									BorderThickness="0"
 									Opacity="0"
 									HorizontalAlignment="Stretch"
 									VerticalAlignment="Stretch"
-									Focusable="False"/>
-				</Grid>
-			</Border>
-			<!-- 右上：测量向导区 -->
-			<Border Grid.Column="2" Grid.Row="0"  Background="#F5F5F5"
+									Focusable="False"/>-->
+                </Grid>
+            </Border>
+            <!-- 右上：测量向导区 -->
+            <Border Grid.Column="2" Grid.Row="0" Background="{StaticResource LightBackgroundBrush}"
 							BorderThickness="1" CornerRadius="5" Margin="5">
-				<StackPanel Margin="10">
-					<TextBlock Text="测量向导区" FontSize="14" FontWeight="Bold" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+                <StackPanel Margin="10">
+                    <TextBlock Text="测量向导区" FontSize="14" FontWeight="Bold" Margin="0,0,0,15" HorizontalAlignment="Center"/>
 
-					<!-- OK/NG 状态指示 -->
-					<Border Background="#4CAF50" CornerRadius="5" Padding="10" Margin="0,5">
-						<TextBlock Text="OK" FontSize="24" FontWeight="Bold"
-											 Foreground="White" HorizontalAlignment="Center"/>
-					</Border>
+                    <!-- OK/NG 状态指示 -->
+                    <Border CornerRadius="5" Padding="10" Margin="0,5">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{StaticResource DisabledIconBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding OverallResult}" Value="Pass">
+                                        <Setter Property="Background" Value="{StaticResource StatusSuccessBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding OverallResult}" Value="Fail">
+                                        <Setter Property="Background" Value="{StaticResource StatusErrorBrush}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <TextBlock FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="--"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OverallResult}" Value="Pass">
+                                            <Setter Property="Text" Value="OK"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding OverallResult}" Value="Fail">
+                                            <Setter Property="Text" Value="NG"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
 
-					<!-- 测量步骤提示 -->
-					<TextBlock Text="1. 放置产品" FontSize="12" Margin="0,10,0,5" Foreground="#666"/>
-					<TextBlock Text="2. 点击开始测量" FontSize="12" Margin="0,5" Foreground="#666"/>
-					<TextBlock Text="3. 等待测量完成" FontSize="12" Margin="0,5" Foreground="#666"/>
-					<TextBlock Text="4. 查看测量结果" FontSize="12" Margin="0,5" Foreground="#666"/>
+                    <!-- 当前状态 -->
+                    <TextBlock Text="当前状态：" FontSize="12" Margin="0,10,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                    <TextBlock Text="{Binding MeasurementStatus}" FontSize="13" FontWeight="Bold"
+										 Margin="0,0,0,10" Foreground="{StaticResource StatusInfoBrush}"/>
 
-					<Separator Margin="0,10"/>
+                    <Separator Margin="0,5"/>
 
-					<!-- 当前状态 -->
-					<!--<TextBlock Text="当前状态：" FontSize="12" Margin="0,5" Foreground="#666"/>
-					<TextBlock Text="{Binding AcquisitionStatus}" FontSize="13" FontWeight="Bold"
-										 Margin="5,0,0,10" Foreground="#2196F3"/>-->
-				</StackPanel>
-			</Border>
+                    <!-- 统计 -->
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                            <TextBlock Text="总数" FontSize="11" Foreground="{StaticResource PlaceholderTextBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalCount}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                            <TextBlock Text="合格" FontSize="11" Foreground="{StaticResource StatusSuccessBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding PassCount}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource StatusSuccessBrush}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                            <TextBlock Text="不合格" FontSize="11" Foreground="{StaticResource StatusErrorBrush}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding FailCount}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource StatusErrorBrush}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
 
-			<!-- 底部：通道数据表格（横跨所有列） -->
-			<Border Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="3"
-							
-							BorderThickness="1" CornerRadius="5" Margin="5">
-				<Grid>
-					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="*"/>
-					</Grid.RowDefinitions>
+                    <Separator Margin="0,10,0,5"/>
 
-					<!-- 表格标题 -->
+                    <!-- 测量步骤 -->
+                    <TextBlock Text="1. 放置产品" FontSize="12" Margin="0,5,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                    <TextBlock Text="2. 点击开始测量" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                    <TextBlock Text="3. 等待测量完成" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                    <TextBlock Text="4. 查看测量结果" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 底部：通道数据表格（横跨所有列） -->
+            <Border Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="3"
+										BorderThickness="1" CornerRadius="5" Margin="5">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 表格标题 -->
                     <Border Grid.Row="0" Background="White" Padding="10"
-									BorderBrush="#E0E0E0" BorderThickness="0,1,0,1">
-						<TextBlock Text="通道测量数据" FontSize="13" FontWeight="Bold"/>
-					</Border>
+											BorderBrush="{StaticResource LightBorderBrush}" BorderThickness="0,1,0,1">
+                        <TextBlock Text="通道测量数据" FontSize="13" FontWeight="Bold"/>
+                    </Border>
 
-					<!-- 数据表格 -->
-					<DataGrid Grid.Row="1"
-										ItemsSource="{Binding Channels}"
-										AutoGenerateColumns="False"
-										IsReadOnly="True"
-										SelectionMode="Single"
-										HeadersVisibility="Column"
-										RowHeight="35"
-										FontSize="12"
-										Background="White"
-										BorderThickness="0">
-						<DataGrid.Columns>
-							<DataGridTextColumn Header="通道" Binding="{Binding ChannelNumber}" Width="60"/>
-							<DataGridTextColumn Header="名称" Binding="{Binding ChannelName}" Width="120"/>
-							<DataGridTextColumn Header="说明" Binding="{Binding ChannelDescription}" Width="150"/>
-							<DataGridTextColumn Header="类型" Binding="{Binding ChannelType}" Width="100"/>
-							<DataGridTextColumn Header="标准值" Binding="{Binding StandardValue, StringFormat=F3}" Width="80"/>
-							<DataGridTextColumn Header="上限" Binding="{Binding UpperTolerance, StringFormat=F3}" Width="70"/>
-							<DataGridTextColumn Header="下限" Binding="{Binding LowerTolerance, StringFormat=F3}" Width="70"/>
-							<DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue, StringFormat=F3}" Width="90">
-								<DataGridTextColumn.ElementStyle>
-									<Style TargetType="TextBlock">
-										<Setter Property="FontWeight" Value="Bold"/>
-										<Setter Property="Foreground" Value="#2196F3"/>
-										<Setter Property="HorizontalAlignment" Value="Center"/>
-									</Style>
-								</DataGridTextColumn.ElementStyle>
-							</DataGridTextColumn>
-							<DataGridTemplateColumn Header="结果" Width="70">
-								<DataGridTemplateColumn.CellTemplate>
-									<DataTemplate>
-										<Border CornerRadius="3" Padding="5,2">
-											<Border.Style>
-												<Style TargetType="Border">
-													<Style.Triggers>
-														<DataTrigger Binding="{Binding Result}" Value="Pass">
-															<Setter Property="Background" Value="#4CAF50"/>
-														</DataTrigger>
-														<DataTrigger Binding="{Binding Result}" Value="Fail">
-															<Setter Property="Background" Value="#F44336"/>
-														</DataTrigger>
-														<DataTrigger Binding="{Binding Result}" Value="NotMeasured">
-															<Setter Property="Background" Value="#BDBDBD"/>
-														</DataTrigger>
-													</Style.Triggers>
-												</Style>
-											</Border.Style>
-											<TextBlock HorizontalAlignment="Center" Foreground="White" FontWeight="Bold">
-												<TextBlock.Style>
-													<Style TargetType="TextBlock">
-														<Setter Property="Text" Value="-"/>
-														<Style.Triggers>
-															<DataTrigger Binding="{Binding Result}" Value="Pass">
-																<Setter Property="Text" Value="OK"/>
-															</DataTrigger>
-															<DataTrigger Binding="{Binding Result}" Value="Fail">
-																<Setter Property="Text" Value="NG"/>
-															</DataTrigger>
-														</Style.Triggers>
-													</Style>
-												</TextBlock.Style>
-											</TextBlock>
-										</Border>
-									</DataTemplate>
-								</DataGridTemplateColumn.CellTemplate>
-							</DataGridTemplateColumn>
-						</DataGrid.Columns>
-					</DataGrid>
-				</Grid>
-			</Border>
-		</Grid>
+                    <!-- 数据表格 -->
+                    <DataGrid Grid.Row="1"
+													ItemsSource="{Binding Channels}"
+													AutoGenerateColumns="False"
+													IsReadOnly="True"
+													SelectionMode="Single"
+													HeadersVisibility="Column"
+													RowHeight="35"
+													FontSize="12"
+													Background="White"
+													BorderThickness="0">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="通道" Binding="{Binding ChannelNumber}" Width="60"/>
+                            <DataGridTextColumn Header="名称" Binding="{Binding ChannelName}" Width="120"/>
+                            <DataGridTextColumn Header="说明" Binding="{Binding ChannelDescription}" Width="150"/>
+                            <DataGridTextColumn Header="类型" Binding="{Binding ChannelType}" Width="100"/>
+                            <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue}" Width="80"/>
+                            <DataGridTextColumn Header="上限" Binding="{Binding UpperTolerance, StringFormat=F3}" Width="70"/>
+                            <DataGridTextColumn Header="下限" Binding="{Binding LowerTolerance, StringFormat=F3}" Width="70"/>
+                            <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue}" Width="90">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTemplateColumn Header="结果" Width="70">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="3" Padding="5,2">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Result}" Value="Pass">
+                                                            <Setter Property="Background" Value="{StaticResource StatusSuccessBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Result}" Value="Fail">
+                                                            <Setter Property="Background" Value="{StaticResource StatusErrorBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Result}" Value="NotMeasured">
+                                                            <Setter Property="Background" Value="{StaticResource DisabledIconBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock HorizontalAlignment="Center" Foreground="White" FontWeight="Bold">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="-"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Result}" Value="Pass">
+                                                                <Setter Property="Text" Value="OK"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Result}" Value="Fail">
+                                                                <Setter Property="Text" Value="NG"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
+        </Grid>
 
-
-	</Grid>
+    </Grid>
 </UserControl>

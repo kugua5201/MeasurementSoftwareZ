@@ -4,7 +4,7 @@ using System.Linq;
 using System.Windows.Data;
 using Autofac;
 using MeasurementSoftware.Extensions;
-using MeasurementSoftware.Services;
+using MeasurementSoftware.Services.Config;
 
 namespace MeasurementSoftware.Converters
 {
@@ -15,18 +15,17 @@ namespace MeasurementSoftware.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is string deviceId && !string.IsNullOrEmpty(deviceId))
+            if (value is long deviceId && deviceId != 0)
             {
                 try
                 {
-                    // 通过静态导航服务的内部容器获取设备配置服务
                     var deviceService = ContainerBuilderExtensions.GetService<IDeviceConfigService>();
                     var device = deviceService?.Devices.FirstOrDefault(d => d.DeviceId == deviceId);
-                    return device?.DeviceName ?? deviceId;
+                    return device?.DeviceName ?? deviceId.ToString();
                 }
                 catch
                 {
-                    return deviceId;
+                    return deviceId.ToString();
                 }
             }
             return string.Empty;

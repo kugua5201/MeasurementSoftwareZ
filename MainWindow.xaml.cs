@@ -24,8 +24,9 @@ namespace MeasurementSoftware
             InitializeComponent();
             _savedMenuWidth = LeftColumn.Width.Value;
             this.Loaded += MainWindow_Loaded;
-         
         }
+
+
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
@@ -128,7 +129,7 @@ namespace MeasurementSoftware
             selectedButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E3F2FD"));
             foreach (var tb in FindVisualChildren<TextBlock>(selectedButton))
             {
-                tb.Foreground = (Brush)FindResource("PrimaryBrush"); 
+                tb.Foreground = (Brush)FindResource("PrimaryBrush");
             }
         }
 
