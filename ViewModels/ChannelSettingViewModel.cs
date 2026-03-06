@@ -22,6 +22,34 @@ namespace MeasurementSoftware.ViewModels
         public ObservableCollection<MeasurementChannel> Channels => CurrentRecipe?.Channels ?? [];
 
         /// <summary>
+        /// 产品图片路径
+        /// </summary>
+        public string? ProductImagePath => CurrentRecipe?.ProductImagePath;
+
+        /// <summary>
+        /// 标注点集合（从通道中聚合）
+        /// </summary>
+        public IEnumerable<ChannelAnnotation> Annotations => CurrentRecipe?.Channels?.Where(c => c.Annotation != null).Select(c => c.Annotation!) ?? Enumerable.Empty<ChannelAnnotation>();
+
+        /// <summary>
+        /// 选中的标注点
+        /// </summary>
+        [ObservableProperty]
+        private ChannelAnnotation? selectedAnnotation;
+
+        /// <summary>
+        /// 右键点击的图片坐标（用于添加标注）
+        /// </summary>
+        [ObservableProperty]
+        private double clickX;
+
+        /// <summary>
+        /// 右键点击的图片坐标（用于添加标注）
+        /// </summary>
+        [ObservableProperty]
+        private double clickY;
+
+        /// <summary>
         /// 可用的PLC设备列表（仅包含已启用的设备）
         /// </summary>
         public IEnumerable<PlcDevice> AvailablePlcDevices => _deviceConfigService.Devices.Where(d => d.IsEnabled);
@@ -120,6 +148,8 @@ namespace MeasurementSoftware.ViewModels
             OnPropertyChanged(nameof(SelectedRecipe));
             OnPropertyChanged(nameof(Channels));
             OnPropertyChanged(nameof(AvailablePlcDevices));
+            OnPropertyChanged(nameof(ProductImagePath));
+            OnPropertyChanged(nameof(Annotations));
         }
 
         [RelayCommand]
@@ -287,6 +317,8 @@ namespace MeasurementSoftware.ViewModels
                 ChannelType = channel.ChannelType,
                 Unit = channel.Unit,
                 DecimalPlaces = channel.DecimalPlaces,
+                StepNumber = channel.StepNumber,
+                StepName = channel.StepName,
                 PlcDeviceId = channel.PlcDeviceId,
                 DataPointId = channel.DataPointId,
                 DataSourceAddress = channel.DataSourceAddress,
@@ -378,6 +410,8 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.ChannelType = EditingChannel.ChannelType;
                     originalChannel.Unit = EditingChannel.Unit;
                     originalChannel.DecimalPlaces = EditingChannel.DecimalPlaces;
+                    originalChannel.StepNumber = EditingChannel.StepNumber;
+                    originalChannel.StepName = EditingChannel.StepName;
                     if (!AvailablePlcDevices.Any())
                     {
                         originalChannel.PlcDeviceId = 0;
@@ -467,21 +501,110 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         public void RenumberPoints()
         {
-
             if (CurrentRecipe?.Channels != null && CurrentRecipe?.Channels.Count != 0)
             {
                 for (int i = 0; i < CurrentRecipe?.Channels.Count; i++)
                 {
                     CurrentRecipe.Channels[i].ChannelNumber = i + 1;
                 }
-
             }
             else
             {
                 Growl.Warning("请先添加通道");
             }
+        }
 
+        /// <summary>
+        /// 导入产品图片
+        /// </summary>
+        [RelayCommand]
+        private void ImportProductImage()
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp|All Files (*.*)|*.*",
+                Title = "选择产品图片"
+            };
 
+            if (openFileDialog.ShowDialog() == true)
+            {
+                if (CurrentRecipe != null)
+                {
+                    CurrentRecipe.ProductImagePath = openFileDialog.FileName;
+                    OnPropertyChanged(nameof(ProductImagePath));
+                    _log.Info($"已设置产品图片: {openFileDialog.FileName}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 在图片上右键点击位置添加标注点
+        /// </summary>
+        [RelayCommand]
+        private void AddAnnotationAtPoint()
+        {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("请先选择配方");
+                return;
+            }
+
+            if (SelectedChannel == null)
+            {
+                Growl.Warning("请先在右侧列表中选中一个通道");
+                return;
+            }
+
+            if (SelectedChannel.Annotation != null)
+            {
+                // 更新已有标注的位置
+                SelectedChannel.Annotation.X = ClickX;
+                SelectedChannel.Annotation.Y = ClickY;
+                SelectedChannel.Annotation.Label = $"CH{SelectedChannel.ChannelNumber}";
+                SelectedChannel.Annotation.ChannelName = SelectedChannel.ChannelName;
+                Growl.Info($"已更新通道 {SelectedChannel.ChannelName} 的标注位置");
+            }
+            else
+            {
+                // 新增标注
+                SelectedChannel.Annotation = new ChannelAnnotation
+                {
+                    X = ClickX,
+                    Y = ClickY,
+                    ChannelNumber = SelectedChannel.ChannelNumber,
+                    StepNumber = SelectedChannel.StepNumber,
+                    Label = $"CH{SelectedChannel.ChannelNumber}",
+                    ChannelName = SelectedChannel.ChannelName
+                };
+                Growl.Success($"已为通道 {SelectedChannel.ChannelName} 添加标注 (工步{SelectedChannel.StepNumber})");
+            }
+
+            OnPropertyChanged(nameof(Annotations));
+            _log.Info($"标注点已添加: 通道{SelectedChannel.ChannelNumber} 位置({ClickX:F0},{ClickY:F0})");
+        }
+
+        /// <summary>
+        /// 删除选中通道的标注点
+        /// </summary>
+        [RelayCommand]
+        private void DeleteAnnotation()
+        {
+            if (CurrentRecipe == null || SelectedChannel == null)
+            {
+                Growl.Warning("请先选中一个通道");
+                return;
+            }
+
+            if (SelectedChannel.Annotation != null)
+            {
+                SelectedChannel.Annotation = null;
+                OnPropertyChanged(nameof(Annotations));
+                Growl.Info($"已删除通道 {SelectedChannel.ChannelName} 的标注");
+            }
+            else
+            {
+                Growl.Warning("该通道没有标注点");
+            }
         }
     }
 }

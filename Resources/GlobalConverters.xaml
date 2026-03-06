@@ -16,5 +16,11 @@
     <converters:String2VisibilityConverter     x:Key="String2VisibilityConverter"/>
     <converters:EnumToDisplayTextConverter     x:Key="EnumToDisplayTextConverter"/>
     <converters:EnabledChannelFilterConverter  x:Key="EnabledChannelFilterConverter"/>
-
+    <converters:RelativeToPixelConverter       x:Key="RelativeToPixelConverter"/>
+    <converters:ResultToBrushConverter         x:Key="ResultToBrushConverter"/>
+    <converters:AnnotationBrushConverter       x:Key="AnnotationBrushConverter"/>
+    <converters:AnnotationShapeToGeometryConverter x:Key="AnnotationShapeToGeometryConverter"/>
+    <converters:AnnotationDisplayTextConverter  x:Key="AnnotationDisplayTextConverter"/>
+    <converters:SizeToOffsetMarginConverter    x:Key="SizeToOffsetMarginConverter"/>
 </ResourceDictionary>
+

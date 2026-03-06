@@ -94,6 +94,7 @@ namespace MeasurementSoftware.ViewModels
                 "QrCodeSetting" => "二维码配置",
                 "MesSetting" => "MES配置",
                 "Spc" => "SPC分析",
+                "OtherSettings" => "其他设置",
                 "LogViewer" => "日志",
                 _ => pageName
             };
@@ -114,6 +115,7 @@ namespace MeasurementSoftware.ViewModels
                 "QrCodeSetting" => "\xEAD8",
                 "MesSetting" => "\xE774",
                 "Spc" => "\xE9D9",
+                "OtherSettings" => "\xE713",
                 "Setting" => "\xE713",
                 "LogViewer" => "\xE7BA",
                 _ => "\xE80F"
@@ -193,5 +195,11 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         [RelayCommand]
         private void NavigateToSpc() => NavigateToPage("Spc");
+
+        /// <summary>
+        /// 导航到其他设置页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToOtherSettings() => NavigateToPage("OtherSettings");
     }
 }

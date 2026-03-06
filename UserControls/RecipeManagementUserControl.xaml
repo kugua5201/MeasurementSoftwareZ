@@ -60,38 +60,31 @@
 						<ColumnDefinition Width="*"/>
 					</Grid.ColumnDefinitions>
 					<Grid.RowDefinitions>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-						<RowDefinition Height="Auto"/>
-					</Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="Auto"/>
+						</Grid.RowDefinitions>
 
-					<TextBlock Grid.Row="0" Grid.Column="0" Text="配方名称：" VerticalAlignment="Center" Margin="0,0,10,8"/>
-					<TextBox Grid.Row="0" Grid.Column="1"
-									 Style="{StaticResource TextBoxExtend}"
-									 Text="{Binding CurrentRecipe.RecipeName, UpdateSourceTrigger=PropertyChanged}"
-									 Margin="0,0,0,8"
-									 hc:InfoElement.Placeholder="请输入配方名称"/>
+						<TextBlock Grid.Row="0" Grid.Column="0" Text="配方名称：" VerticalAlignment="Center" Margin="0,0,10,8"/>
+						<TextBox Grid.Row="0" Grid.Column="1"
+										 Style="{StaticResource TextBoxExtend}"
+										 Text="{Binding CurrentRecipe.RecipeName, UpdateSourceTrigger=PropertyChanged}"
+										 Margin="0,0,0,8"
+										 hc:InfoElement.Placeholder="请输入配方名称"/>
 
-					<TextBlock Grid.Row="1" Grid.Column="0" Text="配方描述：" VerticalAlignment="Center" Margin="0,0,10,8"/>
-                    <TextBox Grid.Row="1" Grid.Column="1"
-									 Style="{StaticResource TextBoxExtend}"
-									 Text="{Binding CurrentRecipe.Description, UpdateSourceTrigger=PropertyChanged}"
-									 Margin="0,0,0,8"
-									 hc:InfoElement.Placeholder="请输入配方描述"/>
-                    <Separator Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5,0,12"/>
+						<TextBlock Grid.Row="1" Grid.Column="0" Text="配方描述：" VerticalAlignment="Center" Margin="0,0,10,8"/>
+						<TextBox Grid.Row="1" Grid.Column="1"
+										 Style="{StaticResource TextBoxExtend}"
+										 Text="{Binding CurrentRecipe.Description, UpdateSourceTrigger=PropertyChanged}"
+										 Margin="0,0,0,8"
+										 hc:InfoElement.Placeholder="请输入配方描述"/>
+						<Separator Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5,0,12"/>
 
-					<!--<TextBlock Grid.Row="3" Grid.Column="0" Text="配方ID：" VerticalAlignment="Center" Margin="0,0,10,8"
-										 Foreground="{DynamicResource SecondaryTextBrush}"/>
-					<TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding CurrentRecipe.RecipeId}"
-										 VerticalAlignment="Center" Margin="0,0,0,8"
-										 Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>-->
-
-					<TextBlock Grid.Row="4" Grid.Column="0" Text="文件路径：" VerticalAlignment="Center" Margin="0,0,10,0"
-										 Foreground="{DynamicResource SecondaryTextBrush}"/>
-					<TextBlock Grid.Row="4" Grid.Column="1" VerticalAlignment="Center"
-										 Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap">
+						<TextBlock Grid.Row="3" Grid.Column="0" Text="文件路径：" VerticalAlignment="Center" Margin="0,0,10,0"
+											 Foreground="{DynamicResource SecondaryTextBrush}"/>
+						<TextBlock Grid.Row="3" Grid.Column="1" VerticalAlignment="Center"
+											 Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap">
 						<TextBlock.Style>
 							<Style TargetType="TextBlock">
 								<Setter Property="Text" Value="{Binding CurrentRecipePath}"/>

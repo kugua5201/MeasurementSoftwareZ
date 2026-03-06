@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Autofac.Core;
 using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Interceptors;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
@@ -19,6 +20,7 @@ namespace MeasurementSoftware
     /// </summary>
     public partial class App : Application
     {
+        public IContainer Container => _container!;
         private IContainer? _container;
 
         protected override void OnStartup(StartupEventArgs e)
@@ -27,6 +29,7 @@ namespace MeasurementSoftware
 
             var builder = new ContainerBuilder();
 
+            builder.RegisterType<AcquiringInterceptor>();
             // 注册服务
             builder.RegisterSingleton<ILog, Log>();
             builder.RegisterSingleton<IEventAggregator, EventAggregator>();
@@ -51,7 +54,7 @@ namespace MeasurementSoftware
 
             // 注册页面 (View + ViewModel)
             builder.RegisterViewWithViewModel<HomeUserControl, HomeViewModel>("Home");
-            builder.RegisterViewWithViewModel<RecipeManagementUserControl, RecipeManagementViewModel>("RecipeManagement");
+            builder.RegisterViewWithInterceptedViewModel<RecipeManagementUserControl, RecipeManagementViewModel, AcquiringInterceptor>("RecipeManagement");
             builder.RegisterViewWithViewModel<ChannelSettingUserControl, ChannelSettingViewModel>("ChannelSetting");
             builder.RegisterViewWithViewModel<CalibrationUserControl, CalibrationViewModel>("Calibration");
             builder.RegisterViewWithViewModel<DataRecordUserControl, DataRecordViewModel>("DataManagement");
@@ -60,6 +63,7 @@ namespace MeasurementSoftware
             builder.RegisterViewWithViewModel<LogViewerUserControl, LogViewerViewModel>("LogViewer");
             builder.RegisterViewWithViewModel<QrCodeSettingUserControl, QrCodeSettingViewModel>("QrCodeSetting");
             builder.RegisterViewWithViewModel<SpcUserControl, SpcViewModel>("Spc");
+            builder.RegisterViewWithViewModel<OtherSettingsUserControl, OtherSettingsViewModel>("OtherSettings");
             // TODO: 添加条码配置和MES配置页面
             // builder.RegisterViewWithViewModel<BarcodeSettingUserControl, BarcodeSettingViewModel>("BarcodeSetting");
             // builder.RegisterViewWithViewModel<MesSettingUserControl, MesSettingViewModel>("MesSetting");
@@ -122,6 +126,7 @@ namespace MeasurementSoftware
 
         protected override void OnExit(ExitEventArgs e)
         {
+
             try
             {
                 var appConfig = _container?.Resolve<AppConfig>();

@@ -14,5 +14,12 @@ namespace MeasurementSoftware.Services.Config
         void UpdateRecipePath(string path);
         Task<bool> SaveCurrentRecipeAsync();
         Task<MeasurementRecipe?> LoadRecipeAsync(string path);
+
+        /// <summary>
+        /// 当前是否采集中
+        /// </summary>
+        bool IsCollecting { get; }
+
+        void SetCollect(bool Collect);
     }
 }

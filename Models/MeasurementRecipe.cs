@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.ViewModels;
 using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
+using System.Windows.Media;
 
 namespace MeasurementSoftware.Models
 {
@@ -68,7 +70,7 @@ namespace MeasurementSoftware.Models
         /// 总工步数
         /// </summary>
         [ObservableProperty]
-        private int totalSteps = 1;
+        private int totalSteps = 10;
 
         /// <summary>
         /// 二维码绑定配置
@@ -93,6 +95,126 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private ObservableCollection<PlcDevice> devices = new();
+
+        /// <summary>
+        /// 标注点大小（像素）
+        /// </summary>
+        [ObservableProperty]
+        private double annotationSize = 28;
+
+        /// <summary>
+        /// 标注点形状
+        /// </summary>
+        [ObservableProperty]
+        private AnnotationShape annotationShape = AnnotationShape.圆形;
+
+        /// <summary>
+        /// OK（合格）颜色
+        /// </summary>
+        [ObservableProperty]
+        private string okColor = "#4CAF50";
+
+        /// <summary>
+        /// NG（不合格）颜色
+        /// </summary>
+        [ObservableProperty]
+        private string ngColor = "#F44336";
+
+        /// <summary>
+        /// 默认颜色（未测量状态）
+        /// </summary>
+        [ObservableProperty]
+        private string defaultColor = "#2196F3";
+
+        /// <summary>
+        /// 标注显示内容格式
+        /// </summary>
+        [ObservableProperty]
+        private AnnotationDisplayFormat annotationDisplayFormat = AnnotationDisplayFormat.通道编号;
+
+        /// <summary>
+        /// 标注字体大小
+        /// </summary>
+        [ObservableProperty]
+        private double annotationFontSize = 10;
+
+        /// <summary>
+        /// 标注文字颜色
+        /// </summary>
+        [ObservableProperty]
+        private string annotationTextColor = "#FFFFFF";
+
+        /// <summary>
+        /// OK颜色画刷（用于ColorPicker绑定）
+        /// </summary>
+        [JsonIgnore]
+        public SolidColorBrush? OkBrush
+        {
+            get => TryParseBrush(OkColor);
+            set
+            {
+                OkColor = value?.Color.ToString() ?? "#4CAF50";
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// NG颜色画刷（用于ColorPicker绑定）
+        /// </summary>
+        [JsonIgnore]
+        public SolidColorBrush? NgBrush
+        {
+            get => TryParseBrush(NgColor);
+            set
+            {
+                NgColor = value?.Color.ToString() ?? "#F44336";
+                OnPropertyChanged();
+            }
+        }
+
+        partial void OnOkColorChanged(string value) => OnPropertyChanged(nameof(OkBrush));
+        partial void OnNgColorChanged(string value) => OnPropertyChanged(nameof(NgBrush));
+        partial void OnDefaultColorChanged(string value) => OnPropertyChanged(nameof(DefaultBrush));
+        partial void OnAnnotationTextColorChanged(string value) => OnPropertyChanged(nameof(AnnotationTextBrush));
+
+        /// <summary>
+        /// 标注文字颜色画刷（用于绑定）
+        /// </summary>
+        [JsonIgnore]
+        public SolidColorBrush? AnnotationTextBrush
+        {
+            get => TryParseBrush(AnnotationTextColor);
+            set
+            {
+                AnnotationTextColor = value?.Color.ToString() ?? "#FFFFFF";
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// 默认颜色画刷（用于ColorPicker绑定）
+        /// </summary>
+        [JsonIgnore]
+        public SolidColorBrush? DefaultBrush
+        {
+            get => TryParseBrush(DefaultColor);
+            set
+            {
+                DefaultColor = value?.Color.ToString() ?? "#2196F3";
+                OnPropertyChanged();
+            }
+        }
+
+        private static SolidColorBrush? TryParseBrush(string? colorStr)
+        {
+            if (string.IsNullOrEmpty(colorStr)) return null;
+            try
+            {
+                var color = (Color)ColorConverter.ConvertFromString(colorStr);
+                return new SolidColorBrush(color);
+            }
+            catch { return null; }
+        }
 
         /// <summary>
         /// 二维码扫码配置（跟随配方保存）

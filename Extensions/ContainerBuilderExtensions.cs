@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
+using Autofac.Extras.DynamicProxy;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -128,6 +129,36 @@ namespace MeasurementSoftware.Extensions
             PageTypeMapping[pageName] = typeof(TView);
             return builder;
         }
+        /// <summary>
+        /// 带拦截器的View和ViewModel注册 (瞬时)
+        /// </summary>
+        /// <typeparam name="TView"></typeparam>
+        /// <typeparam name="TViewModel"></typeparam>
+        /// <typeparam name="TInterceptor"></typeparam>
+        /// <param name="builder"></param>
+        /// <param name="pageName"></param>
+        /// <returns></returns>
+        public static ContainerBuilder RegisterViewWithInterceptedViewModel<TView, TViewModel, TInterceptor>(
+            this ContainerBuilder builder, string pageName)
+            where TView : class
+            where TViewModel : class
+            where TInterceptor : class
+        {
+            // 注册ViewModel为瞬时并启用拦截器
+            builder.RegisterType<TViewModel>()
+                   .AsSelf()
+                   .InstancePerDependency()
+                   .EnableClassInterceptors()
+                   .InterceptedBy(typeof(TInterceptor));
+
+            // 注册View为瞬时，并自动注入ViewModel
+            builder.RegisterType<TView>().AsSelf().InstancePerDependency().OnActivating(InjectViewModel<TViewModel>);
+
+            // 添加到页面映射
+            PageTypeMapping[pageName] = typeof(TView);
+            return builder;
+        }
+
 
         /// <summary>
         /// 注册View和ViewModel (都是单例)

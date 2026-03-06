@@ -50,11 +50,7 @@ namespace MeasurementSoftware.ViewModels
             }
         }
 
-        public RecipeManagementViewModel(
-            ILog log,
-            IRecipeConfigService recipeConfigService,
-            IDeviceConfigService deviceConfigService,
-            IUserSettingsService userSettingsService)
+        public RecipeManagementViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IUserSettingsService userSettingsService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
@@ -83,12 +79,14 @@ namespace MeasurementSoftware.ViewModels
             OnPropertyChanged(nameof(RecipeSummary));
         }
 
+
         /// <summary>
         /// 新建配方
         /// </summary>
         [RelayCommand]
-        private void CreateNewRecipe()
+        public virtual void CreateNewRecipe()
         {
+
             if (CurrentRecipe != null)
             {
                 var result = HandyControl.Controls.MessageBox.Show(
@@ -116,8 +114,9 @@ namespace MeasurementSoftware.ViewModels
         /// 打开配方
         /// </summary>
         [RelayCommand]
-        private async Task OpenRecipeAsync()
+        public virtual async Task OpenRecipeAsync()
         {
+
             try
             {
                 var dialog = new Microsoft.Win32.OpenFileDialog
@@ -209,13 +208,9 @@ namespace MeasurementSoftware.ViewModels
         /// 另存为配方
         /// </summary>
         [RelayCommand]
-        private async Task SaveAsRecipeAsync()
+        public virtual async Task SaveAsRecipeAsync()
         {
-            if (CurrentRecipe == null)
-            {
-                Growl.Warning("没有配方需要保存");
-                return;
-            }
+
 
             try
             {
@@ -253,6 +248,17 @@ namespace MeasurementSoftware.ViewModels
                 Growl.Error($"另存为异常: {ex.Message}");
                 _log.Error($"另存为异常: {ex.Message}");
             }
+        }
+
+
+        private bool CheckAcquiring()
+        {
+            if (_recipeConfigService.IsCollecting)
+            {
+                Growl.Warning("当前正在采集中，无法进行操作");
+                return false;
+            }
+            return true;
         }
     }
 }

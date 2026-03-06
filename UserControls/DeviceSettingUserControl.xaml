@@ -6,9 +6,13 @@
 		xmlns:local="clr-namespace:MeasurementSoftware.UserControls"
 		xmlns:hc="https://handyorg.github.io/handycontrol"
 		x:Name="CommunicationSettingControl"
+        xmlns:helpers="clr-namespace:MeasurementSoftware.Helpers"
 		xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
 	 mc:Ignorable="d"
    d:DesignHeight="700" d:DesignWidth="1200">
+    <UserControl.Resources>
+        <helpers:BindingProxy x:Key="VmProxy" Data="{Binding}" />
+    </UserControl.Resources>
     <hc:SimplePanel >
         <Grid Style="{StaticResource PageRootGrid}">
             <Grid.RowDefinitions>
@@ -534,6 +538,7 @@
             <Border Background="{DynamicResource RegionBrush}" 
 					MinWidth="800" MaxWidth="900" 
 					BorderThickness="1,0,0,0" 
+                     DataContext="{Binding Data, Source={StaticResource VmProxy}}"
 					BorderBrush="{DynamicResource BorderBrush}">
                 <Grid>
                     <Grid.RowDefinitions>

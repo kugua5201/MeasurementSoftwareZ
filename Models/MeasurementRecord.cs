@@ -3,31 +3,7 @@ using MeasurementSoftware.ViewModels;
 
 namespace MeasurementSoftware.Models
 {
-    /// <summary>
-    /// 上传状态枚举
-    /// </summary>
-    public enum UploadStatus
-    {
-        /// <summary>
-        /// 待上传
-        /// </summary>
-        Pending,
-
-        /// <summary>
-        /// 上传中
-        /// </summary>
-        Uploading,
-
-        /// <summary>
-        /// 上传成功
-        /// </summary>
-        Success,
-
-        /// <summary>
-        /// 上传失败
-        /// </summary>
-        Failed
-    }
+   
 
     /// <summary>
     /// 测量记录模型

@@ -5,6 +5,7 @@ using MeasurementSoftware.ViewModels;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MeasurementSoftware.Services.Config
 {
@@ -169,6 +170,8 @@ namespace MeasurementSoftware.Services.Config
             }
         }
 
+
+
         /// <summary>
         /// 保存二维码配置（实际保存整个配方）
         /// </summary>
@@ -300,7 +303,19 @@ namespace MeasurementSoftware.Services.Config
             }
         }
 
+
+
+
         #endregion
 
+
+        #region 全局参数
+        public bool IsCollecting { get; private set; } = false;
+        public void SetCollect(bool Collect)
+        {
+            IsCollecting = Collect;
+        }
+
+        #endregion
     }
 }

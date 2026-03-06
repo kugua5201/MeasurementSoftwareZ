@@ -181,6 +181,12 @@ namespace MeasurementSoftware.Models
         private string stepName = "默认工步";
 
         /// <summary>
+        /// 通道标注点（在产品图片上标注测量位置，每个通道最多一个标注）
+        /// </summary>
+        [ObservableProperty]
+        private ChannelAnnotation? annotation;
+
+        /// <summary>
         /// 校准系数A写回PLC点位ID（关联到已配置的DataPoint）
         /// </summary>
         [ObservableProperty]
@@ -232,44 +238,44 @@ namespace MeasurementSoftware.Models
             lock (_dataLock)
             {
                 HistoricalData.Add(rawValue);
-
+                MeasuredValue = rawValue;
                 // 保持缓存大小
-                if (SampleCount > 0 && HistoricalData.Count > SampleCount)
-                {
-                    HistoricalData.RemoveAt(0); // 移除最旧的数据
-                }
+                //if (SampleCount > 0 && HistoricalData.Count > SampleCount)
+                //{
+                //    HistoricalData.RemoveAt(0); // 移除最旧的数据
+                //}
 
-                if (HistoricalData.Count > 0)
-                {
-                    double calculatedValue = rawValue;
-                    switch (ChannelType)
-                    {
-                        case ChannelType.结果值:
-                            calculatedValue = rawValue;
-                            break;
-                        case ChannelType.最大值:
-                            calculatedValue = HistoricalData.Max();
-                            break;
-                        case ChannelType.最小值:
-                            calculatedValue = HistoricalData.Min();
-                            break;
-                        case ChannelType.平均值:
-                            calculatedValue = HistoricalData.Average();
-                            break;
-                        case ChannelType.跳动值:
-                        case ChannelType.齿跳动值: // 齿跳动和跳动先同样处理为 Max - Min
-                            calculatedValue = HistoricalData.Max() - HistoricalData.Min();
-                            break;
-                    }
+                //if (HistoricalData.Count > 0)
+                //{
+                //    double calculatedValue = rawValue;
+                //    switch (ChannelType)
+                //    {
+                //        case ChannelType.结果值:
+                //            calculatedValue = rawValue;
+                //            break;
+                //        case ChannelType.最大值:
+                //            calculatedValue = HistoricalData.Max();
+                //            break;
+                //        case ChannelType.最小值:
+                //            calculatedValue = HistoricalData.Min();
+                //            break;
+                //        case ChannelType.平均值:
+                //            calculatedValue = HistoricalData.Average();
+                //            break;
+                //        case ChannelType.跳动值:
+                //        case ChannelType.齿跳动值:
+                //            calculatedValue = HistoricalData.Max() - HistoricalData.Min();
+                //            break;
+                //    }
 
-                    // 保留指定小数位数
-                    StandardValue = Math.Round(calculatedValue, DecimalPlaces);
-                    //读取的原始测量值
-                    MeasuredValue = rawValue;
-                }
+                //    // 保留指定小数位数
+                //    // StandardValue = Math.Round(calculatedValue, DecimalPlaces);
+                //    //读取的原始测量值
+                //    MeasuredValue = rawValue;
+                //}
 
                 // 进行预判
-                CheckResult();
+                //CheckResult();
             }
         }
 
@@ -296,6 +302,43 @@ namespace MeasurementSoftware.Models
             var expiryDate = LastCalibrationTime.Value.AddDays(CalibrationValidityDays);
             return DateTime.Now > expiryDate;
         }
+
+
+        /// <summary>
+        /// 最终结果
+        /// </summary>
+        [ObservableProperty]
+        private double reusltValue;
+
+
+        //更新最终结果值
+        public void UpdateResultValue()
+        {
+
+            switch (ChannelType)
+            {
+                case ChannelType.结果值:
+                    ReusltValue = MeasuredValue;
+                    break;
+                case ChannelType.最大值:
+                    ReusltValue = HistoricalData.Max();
+                    break;
+                case ChannelType.最小值:
+                    ReusltValue = HistoricalData.Min();
+                    break;
+                case ChannelType.平均值:
+                    ReusltValue = HistoricalData.Average();
+                    break;
+                case ChannelType.跳动值:
+                case ChannelType.齿跳动值:
+                    ReusltValue = HistoricalData.Max() - HistoricalData.Min();
+                    break;
+            }
+
+
+            CheckResult();
+        }
+
     }
 
 

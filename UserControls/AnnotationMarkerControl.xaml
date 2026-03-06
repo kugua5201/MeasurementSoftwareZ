@@ -1,0 +1,39 @@
+﻿<UserControl x:Class="MeasurementSoftware.UserControls.AnnotationMarkerControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="MarkerRoot"
+             Background="Transparent">
+    <Grid Margin="{Binding Recipe.AnnotationSize, ElementName=MarkerRoot, Converter={StaticResource SizeToOffsetMarginConverter}}"
+          ToolTip="{Binding ChannelName}">
+        <Grid Width="{Binding Recipe.AnnotationSize, ElementName=MarkerRoot}"
+              Height="{Binding Recipe.AnnotationSize, ElementName=MarkerRoot}">
+            <Path Stretch="Fill" Opacity="0.85"
+                  Data="{Binding Recipe.AnnotationShape, ElementName=MarkerRoot, Converter={StaticResource AnnotationShapeToGeometryConverter}}"
+                  StrokeThickness="2">
+                <Path.Fill>
+                    <MultiBinding Converter="{StaticResource AnnotationBrushConverter}">
+                        <Binding Path="Recipe.OkColor" ElementName="MarkerRoot"/>
+                        <Binding Path="Recipe.NgColor" ElementName="MarkerRoot"/>
+                        <Binding Path="Recipe.DefaultColor" ElementName="MarkerRoot"/>
+                        <Binding Path="Result"/>
+                        <Binding Path="ForceDefaultColor" ElementName="MarkerRoot"/>
+                    </MultiBinding>
+                </Path.Fill>
+            </Path>
+            <TextBlock FontWeight="Bold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Foreground="{Binding Recipe.AnnotationTextBrush, ElementName=MarkerRoot}"
+                       FontSize="{Binding Recipe.AnnotationFontSize, ElementName=MarkerRoot}">
+                <TextBlock.Text>
+                    <MultiBinding Converter="{StaticResource AnnotationDisplayTextConverter}">
+                        <Binding Path="ChannelNumber"/>
+                        <Binding Path="ChannelName"/>
+                        <Binding Path="StepNumber"/>
+                        <Binding Path="DisplayText"/>
+                        <Binding Path="Recipe.AnnotationDisplayFormat" ElementName="MarkerRoot"/>
+                    </MultiBinding>
+                </TextBlock.Text>
+            </TextBlock>
+        </Grid>
+    </Grid>
+</UserControl>

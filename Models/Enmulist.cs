@@ -91,4 +91,62 @@ namespace MeasurementSoftware.Models
         /// </summary>
         Fail
     }
+
+    /// <summary>
+    /// 标注形状枚举
+    /// </summary>
+    public enum AnnotationShape
+    {
+        /// <summary>
+        /// 圆形
+        /// </summary>
+        圆形,
+
+        /// <summary>
+        /// 方形
+        /// </summary>
+        方形,
+
+        /// <summary>
+        /// 菱形
+        /// </summary>
+        菱形
+    }
+
+    /// <summary>
+    /// 标注显示内容格式
+    /// </summary>
+    public enum AnnotationDisplayFormat
+    {
+        通道编号,
+        通道名称,
+        工步编号
+    }
+
+
+    /// <summary>
+    /// 上传状态枚举
+    /// </summary>
+    public enum UploadStatus
+    {
+        /// <summary>
+        /// 待上传
+        /// </summary>
+        Pending,
+
+        /// <summary>
+        /// 上传中
+        /// </summary>
+        Uploading,
+
+        /// <summary>
+        /// 上传成功
+        /// </summary>
+        Success,
+
+        /// <summary>
+        /// 上传失败
+        /// </summary>
+        Failed
+    }
 }

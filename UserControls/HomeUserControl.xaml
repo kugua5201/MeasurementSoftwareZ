@@ -7,7 +7,8 @@
 			 xmlns:hc="https://handyorg.github.io/handycontrol"
 			 xmlns:scottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
 			 mc:Ignorable="d"
-             d:DesignHeight="700" d:DesignWidth="1200">
+			 d:DesignHeight="700" d:DesignWidth="1200"
+			 x:Name="HomeControl">
     <Grid Style="{StaticResource PageRootGrid}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -24,44 +25,99 @@
                     <Button Content="停止采集" Command="{Binding StopAcquisitionCommand}"
 							Style="{StaticResource ButtonDanger}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
+					<Button Content="上一工步" Command="{Binding PreviousStepCommand}"
+							Style="{StaticResource ButtonPrimary}"
+							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"
+							Visibility="{Binding CurrentRecipe.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}"/>
+					<Button Content="下一工步" Command="{Binding NextStepCommand}"
+							Style="{StaticResource ButtonSuccess}"
+							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"
+							Visibility="{Binding CurrentRecipe.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}"/>
+                    <Button Content="清空数据" Command="{Binding ClearDataCommand}"
+							Style="{StaticResource ButtonWarning}"
+							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
+                    <hc:ContextMenuButton Content="更多 ▾"
+							Style="{StaticResource ButtonInfo}"
+							Padding="12,5" Margin="0,0,5,0" ToolTip="布局与显示选项">
+                        <hc:ContextMenuButton.Menu>
+                            <ContextMenu>
+                                <MenuItem Header="切换为水平布局" Click="ToggleLayout_Click" x:Name="LayoutMenuItem"/>
+                                <MenuItem Header="恢复默认布局" Click="RestoreDefaultLayout_Click"/>
+                                <Separator/>
+                                <MenuItem Header="隐藏导向区" Click="ToggleGuidePanel_Click" x:Name="showNg"/>
+                            </ContextMenu>
+                        </hc:ContextMenuButton.Menu>
+                    </hc:ContextMenuButton>
+                    <TextBlock VerticalAlignment="Center" FontSize="13" Margin="10,0,0,0"
+							   Visibility="{Binding CurrentRecipe.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+						<Run Text="当前工步："/>
+						<Run Text="{Binding CurrentStep}" FontWeight="Bold" Foreground="{StaticResource StatusInfoBrush}"/>
+                    </TextBlock>
                 </StackPanel>
                 <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveRecipeCommand}"/>
             </Grid>
         </Border>
 
         <!-- 主显示区域 -->
-        <Grid Grid.Row="1">
+        <Grid x:Name="MainContentGrid" Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*" MinWidth="200"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="220" MinWidth="180"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="*" MinHeight="200" MaxHeight="300"/>
+                <RowDefinition Height="*" MinHeight="120"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto" MinHeight="120"/>
             </Grid.RowDefinitions>
 
-            <!-- 左上：产品图片 -->
-            <Border Grid.Column="0" Grid.Row="0" 
-        BorderThickness="1" CornerRadius="5" Margin="5">
-                <Grid>
-                    <!-- 图片显示 -->
-                    <Viewbox VerticalAlignment="Top" x:Name="viewbox">
-                        <Canvas x:Name="Canvas" ClipToBounds="True"
-										Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=Grid}}"
-										Height="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=Grid}}">
-                            <Canvas.Background>
-                                <ImageBrush x:Name="canvasImage"
-														Stretch="UniformToFill"
-														ImageSource="{Binding ProductImagePath, Converter={StaticResource StringToImageSourceConverter}}"/>
-                            </Canvas.Background>
+            <!-- 左上：产品图片（仅展示） -->
+            <Border x:Name="ImagePanel" Grid.Column="0" Grid.Row="0"
+		BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Margin="5">
+                <Grid ClipToBounds="True">
+                    <!-- 图片 + 标注同尺寸叠加 -->
+                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Image x:Name="HomeProductImage"
+							   Source="{Binding ProductImagePath, Converter={StaticResource StringToImageSourceConverter}}"
+							   Stretch="Uniform"/>
 
-                            <Canvas.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="导入图片" Command="{Binding ImportProductImageCommand}" />
-                                </ContextMenu>
-                            </Canvas.ContextMenu>
-                        </Canvas>
-                    </Viewbox>
+                        <!-- 标注点叠加层（相对坐标，按工步显示） -->
+                        <ItemsControl ItemsSource="{Binding Annotations}" IsHitTestVisible="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Visibility" Value="{Binding IsActiveInCurrentStep, Converter={StaticResource Boolean2VisibilityConverter}}"/>
+                                    <Setter Property="Canvas.Left">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource RelativeToPixelConverter}">
+                                                <Binding Path="X"/>
+                                                <Binding Path="ActualWidth" ElementName="HomeProductImage"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Setter Property="Canvas.Top">
+                                        <Setter.Value>
+                                            <MultiBinding Converter="{StaticResource RelativeToPixelConverter}">
+                                                <Binding Path="Y"/>
+                                                <Binding Path="ActualHeight" ElementName="HomeProductImage"/>
+                                            </MultiBinding>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <local:AnnotationMarkerControl 
+											Recipe="{Binding DataContext.CurrentRecipe, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+
                     <!-- 遮罩层：无图片时显示 -->
                     <Border IsHitTestVisible="False" Background="{StaticResource LightBackgroundBrush}">
                         <Border.Style>
@@ -81,99 +137,103 @@
                             <TextBlock Text="&#xE8B9;" FontFamily="Segoe MDL2 Assets"
 												 FontSize="64" Foreground="{StaticResource DisabledIconBrush}"
 												 HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                            <TextBlock Text="导入图片" FontSize="16" Foreground="{StaticResource DisabledTextBrush}"
+                            <TextBlock Text="请在通道配置中导入产品图片" FontSize="16" Foreground="{StaticResource DisabledTextBrush}"
 												 HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <!-- 透明按钮覆盖全区，响应点击命令 -->
-                    <!--<Button Command="{Binding ImportProductImageCommand}"
-									Background="Transparent"
-									BorderThickness="0"
-									Opacity="0"
-									HorizontalAlignment="Stretch"
-									VerticalAlignment="Stretch"
-									Focusable="False"/>-->
                 </Grid>
             </Border>
-            <!-- 右上：测量向导区 -->
-            <Border Grid.Column="2" Grid.Row="0" Background="{StaticResource LightBackgroundBrush}"
-							BorderThickness="1" CornerRadius="5" Margin="5">
-                <StackPanel Margin="10">
-                    <TextBlock Text="测量向导区" FontSize="14" FontWeight="Bold" Margin="0,0,0,15" HorizontalAlignment="Center"/>
 
-                    <!-- OK/NG 状态指示 -->
-                    <Border CornerRadius="5" Padding="10" Margin="0,5">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="{StaticResource DisabledIconBrush}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding OverallResult}" Value="Pass">
-                                        <Setter Property="Background" Value="{StaticResource StatusSuccessBrush}"/>
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding OverallResult}" Value="Fail">
-                                        <Setter Property="Background" Value="{StaticResource StatusErrorBrush}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="--"/>
+            <!-- 左右拖动分割条 -->
+            <GridSplitter x:Name="HorizontalSplitter" Grid.Column="1" Grid.Row="0" Width="6"
+						  HorizontalAlignment="Center" VerticalAlignment="Stretch"
+						  Background="Transparent" Cursor="SizeWE" ShowsPreview="True"/>
+            <!-- 右上：测量向导区 -->
+            <Border x:Name="GuidePanel" Grid.Column="2" Grid.Row="0" Background="{StaticResource LightBackgroundBrush}"
+							BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Margin="5">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="测量向导区" FontSize="14" FontWeight="Bold" Margin="0,0,0,15" HorizontalAlignment="Center"/>
+
+                        <!-- OK/NG 状态指示 -->
+                        <Border CornerRadius="5" Padding="10" Margin="0,5">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{StaticResource DisabledIconBrush}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding OverallResult}" Value="Pass">
-                                            <Setter Property="Text" Value="OK"/>
+                                            <Setter Property="Background" Value="{StaticResource StatusSuccessBrush}"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding OverallResult}" Value="Fail">
-                                            <Setter Property="Text" Value="NG"/>
+                                            <Setter Property="Background" Value="{StaticResource StatusErrorBrush}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </Border>
+                            </Border.Style>
+                            <TextBlock FontSize="24" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="--"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OverallResult}" Value="Pass">
+                                                <Setter Property="Text" Value="OK"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding OverallResult}" Value="Fail">
+                                                <Setter Property="Text" Value="NG"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
 
-                    <!-- 当前状态 -->
-                    <TextBlock Text="当前状态：" FontSize="12" Margin="0,10,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
-                    <TextBlock Text="{Binding MeasurementStatus}" FontSize="13" FontWeight="Bold"
+                        <!-- 当前状态 -->
+                        <TextBlock Text="当前状态：" FontSize="12" Margin="0,10,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                        <TextBlock Text="{Binding MeasurementStatus}" FontSize="13" FontWeight="Bold"
 										 Margin="0,0,0,10" Foreground="{StaticResource StatusInfoBrush}"/>
 
-                    <Separator Margin="0,5"/>
+                        <Separator Margin="0,5"/>
 
-                    <!-- 统计 -->
-                    <Grid Margin="0,10,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                            <TextBlock Text="总数" FontSize="11" Foreground="{StaticResource PlaceholderTextBrush}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding TotalCount}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                            <TextBlock Text="合格" FontSize="11" Foreground="{StaticResource StatusSuccessBrush}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding PassCount}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource StatusSuccessBrush}" HorizontalAlignment="Center"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                            <TextBlock Text="不合格" FontSize="11" Foreground="{StaticResource StatusErrorBrush}" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding FailCount}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource StatusErrorBrush}" HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </Grid>
+                        <!-- 统计 -->
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                <TextBlock Text="总数" FontSize="11" Foreground="{StaticResource PlaceholderTextBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding TotalCount}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                <TextBlock Text="合格" FontSize="11" Foreground="{StaticResource StatusSuccessBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding PassCount}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource StatusSuccessBrush}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                <TextBlock Text="不合格" FontSize="11" Foreground="{StaticResource StatusErrorBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding FailCount}" FontSize="18" FontWeight="Bold" Foreground="{StaticResource StatusErrorBrush}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
 
-                    <Separator Margin="0,10,0,5"/>
+                        <Separator Margin="0,10,0,5"/>
 
-                    <!-- 测量步骤 -->
-                    <TextBlock Text="1. 放置产品" FontSize="12" Margin="0,5,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
-                    <TextBlock Text="2. 点击开始测量" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
-                    <TextBlock Text="3. 等待测量完成" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
-                    <TextBlock Text="4. 查看测量结果" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
-                </StackPanel>
+                        <!-- 测量步骤 -->
+                        <TextBlock Text="1. 放置产品" FontSize="12" Margin="0,5,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                        <TextBlock Text="2. 点击开始测量" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                        <TextBlock Text="3. 等待测量完成" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                        <TextBlock Text="4. 查看测量结果" FontSize="12" Margin="0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
 
+            <!-- 上下拖动分割条 -->
+            <GridSplitter x:Name="VerticalSplitter" Grid.Row="1" Grid.ColumnSpan="3" Height="6"
+                          HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                          Background="Transparent" Cursor="SizeNS" ShowsPreview="True"/>
+
             <!-- 底部：通道数据表格（横跨所有列） -->
-            <Border Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="3"
-										BorderThickness="1" CornerRadius="5" Margin="5">
+            <Border x:Name="TablePanel" Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="3"
+										BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Margin="5">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -200,20 +260,14 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="通道" Binding="{Binding ChannelNumber}" Width="60"/>
                             <DataGridTextColumn Header="名称" Binding="{Binding ChannelName}" Width="120"/>
+                            <DataGridTextColumn Header="工步" Binding="{Binding StepNumber}" Width="50"/>
                             <DataGridTextColumn Header="说明" Binding="{Binding ChannelDescription}" Width="150"/>
                             <DataGridTextColumn Header="类型" Binding="{Binding ChannelType}" Width="100"/>
                             <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue}" Width="80"/>
-                            <DataGridTextColumn Header="上限" Binding="{Binding UpperTolerance, StringFormat=F3}" Width="70"/>
-                            <DataGridTextColumn Header="下限" Binding="{Binding LowerTolerance, StringFormat=F3}" Width="70"/>
-                            <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue}" Width="90">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="FontWeight" Value="Bold"/>
-                                        <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="上公差" Binding="{Binding UpperTolerance}" Width="70"/>
+                            <DataGridTextColumn Header="下公差" Binding="{Binding LowerTolerance}" Width="70"/>
+                            <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue}" Width="90" />
+                            <DataGridTextColumn Header="结果值" Binding="{Binding ReusltValue}" Width="90" />
                             <DataGridTemplateColumn Header="结果" Width="70">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

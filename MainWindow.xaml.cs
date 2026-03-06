@@ -1,4 +1,6 @@
-﻿using HandyControl.Tools;
+﻿using Autofac;
+using HandyControl.Tools;
+using MeasurementSoftware.Services.Config;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -24,9 +26,23 @@ namespace MeasurementSoftware
             InitializeComponent();
             _savedMenuWidth = LeftColumn.Width.Value;
             this.Loaded += MainWindow_Loaded;
+            this.Closing += MainWindow_Closing;
         }
 
+        private void MainWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            var isCollecting = ((App)Application.Current).Container.Resolve<IRecipeConfigService>()?.IsCollecting ?? false;
+            if (isCollecting)
+            {
+                var res = HandyControl.Controls.MessageBox.Show("当前正在测量，是否要退出？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
+                if (res == MessageBoxResult.No)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
+        }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
