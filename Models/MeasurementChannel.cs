@@ -314,7 +314,13 @@ namespace MeasurementSoftware.Models
         //更新最终结果值
         public void UpdateResultValue()
         {
-
+            if (HistoricalData == null || HistoricalData.Count == 0)
+            {
+                ReusltValue = 0;
+                ChannelDescription = "没有采集到数据";
+                Result = MeasurementResult.Fail;
+                return;
+            }
             switch (ChannelType)
             {
                 case ChannelType.结果值:

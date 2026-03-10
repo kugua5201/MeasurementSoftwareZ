@@ -231,22 +231,24 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private void Device_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(PlcDevice.IsEnabled))
+            if (e.PropertyName == nameof(PlcDevice.IsEnabled) && sender is PlcDevice)
             {
-
                 OnPropertyChanged(nameof(AvailablePlcDevices));
-                //todo 如果关联设备被关闭了，选中通道是否不应该关闭？
-                //if (!AvailablePlcDevices.Any())
-                //{
-                //    if (EditingChannel != null)
-                //    {
-                //        IsEditMode = true;
-                //        SaveChannel();
-                //    }
-                //}
                 OnPropertyChanged(nameof(EditingChannel.AvailableDataPoints));
                 OnPropertyChanged(nameof(EditingChannel.DataPointId));
 
+                // 遍历所有通道，移除禁用设备绑定
+                //foreach (var channel in Channels)
+                //{
+                //    if (channel.PlcDeviceId == device.DeviceId && !device.IsEnabled)
+                //    {
+                //        channel.PlcDeviceId = 0;
+                //        channel.DataPointId = string.Empty;
+                //        channel.DataSourceAddress = string.Empty;
+                //        channel.AvailableDataPoints = new ObservableCollection<DataPoint>();
+                //    }
+                //}
+                OnPropertyChanged(nameof(Channels));
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HandyControl.Controls;
 using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Logs;
@@ -14,7 +15,7 @@ namespace MeasurementSoftware.ViewModels
     public partial class MainWindowViewModel : ObservableViewModel
     {
         [ObservableProperty]
-        private string title = "demo";
+        private string title = "测量软件";
 
         [ObservableProperty]
         private TabItemModel? _selectedTab;
@@ -182,7 +183,12 @@ namespace MeasurementSoftware.ViewModels
         /// 导航到MES配置页面
         /// </summary>
         [RelayCommand]
-        private void NavigateToMesSetting() => NavigateToPage("MesSetting");
+        private void NavigateToMesSetting()
+        {
+            Growl.Warning("MES系统对接功能正在开发中，敬请期待！");
+
+            //NavigateToPage("MesSetting");
+        }
 
         /// <summary>
         /// 导航到日志查看页面

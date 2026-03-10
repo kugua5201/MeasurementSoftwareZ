@@ -423,7 +423,9 @@
                                           SelectedValuePath="PointId"
                                           DisplayMemberPath="PointName"
                                           Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
-                                          hc:InfoElement.Placeholder="选择数据点"/>
+                                          hc:InfoElement.Placeholder="选择数据点">
+                                      
+                                    </hc:ComboBox>
                                 </Grid>
 
                             </StackPanel>

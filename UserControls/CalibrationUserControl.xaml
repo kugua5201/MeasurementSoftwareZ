@@ -95,10 +95,10 @@
                                                        FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,2,0,0"/>
                                         </StackPanel>
 
-                                        <TextBlock Grid.Column="2" 
+                                        <!--<TextBlock Grid.Column="2" 
                                                    Text="{Binding RequiresCalibration, Converter={StaticResource Boolean2TextConverter}, ConverterParameter='需要校准|无需校准'}"
                                                    FontSize="11" VerticalAlignment="Center"
-                                                   Foreground="{Binding RequiresCalibration, Converter={StaticResource Boolean2ColorConverter}}"/>
+                                                   Foreground="{Binding RequiresCalibration, Converter={StaticResource Boolean2ColorConverter}}"/>-->
                                     </Grid>
                                 </Border>
                             </DataTemplate>

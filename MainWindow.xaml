@@ -1,4 +1,4 @@
-﻿<Window x:Class="MeasurementSoftware.MainWindow"
+﻿<hc:Window x:Class="MeasurementSoftware.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -10,7 +10,7 @@
         xmlns:ctls="clr-namespace:MeasurementSoftware.Extensions"
         xmlns:core="clr-namespace:MeasurementSoftware.Models"
         WindowStartupLocation="CenterScreen">
-    <Window.Resources>
+    <hc:Window.Resources>
 
         <!-- 主菜单按钮样式 -->
         <Style x:Key="MainMenuButtonStyle" TargetType="Button">
@@ -113,7 +113,61 @@
             </Setter>
         </Style>
 
-    </Window.Resources>
+        <Style x:Key="CaptionIconButtonStyle" TargetType="hc:ContextMenuButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="43"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="hc:ContextMenuButton">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#E2E2E2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </hc:Window.Resources>
+
+    <hc:Window.NonClientAreaContent>
+        <Grid Height="29">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <hc:ContextMenuButton Grid.Column="1"
+                                  
+                                  Style="{StaticResource CaptionIconButtonStyle}"
+                                  ToolTip="设置">
+                <hc:ContextMenuButton.Content>
+                    <TextBlock Text="&#xE713;" 
+             FontFamily="Segoe MDL2 Assets" 
+             FontSize="16"
+             Foreground="Black"
+                              
+             HorizontalAlignment="Center"
+             VerticalAlignment="Center"/>
+                </hc:ContextMenuButton.Content>
+                <hc:ContextMenuButton.Menu>
+                    <ContextMenu>
+                        <MenuItem Header="通道配置" Command="{Binding NavigateToChannelSettingCommand}"/>
+                        <MenuItem Header="设备管理" Command="{Binding NavigateToCommunicationSettingCommand}"/>
+                        <MenuItem Header="二维码配置" Command="{Binding NavigateToQrCodeSettingCommand}"/>
+                        <MenuItem Header="MES配置" Command="{Binding NavigateToMesSettingCommand}"/>
+                        <Separator/>
+                        <MenuItem Header="其他设置" Command="{Binding NavigateToOtherSettingsCommand}"/>
+                    </ContextMenu>
+                </hc:ContextMenuButton.Menu>
+            </hc:ContextMenuButton>
+        </Grid>
+    </hc:Window.NonClientAreaContent>
 
     <Grid Background="{DynamicResource SecondaryRegionBrush}">
         <Grid.ColumnDefinitions>
@@ -360,7 +414,7 @@ BorderBrush="{DynamicResource BorderBrush}"
               HorizontalAlignment="Stretch"
               VerticalAlignment="Stretch"
               Background="{DynamicResource RegionBrush}"
-              
+              SelectionChanged="TabControl_SelectionChanged"
               PreviewMouseRightButtonDown="TabControl_PreviewMouseRightButtonDown">
 
                     <!-- 定义资源 -->
@@ -613,4 +667,4 @@ BorderBrush="{DynamicResource BorderBrush}"
             </Grid>
         </Border>
     </Grid>
-</Window>
+</hc:Window>

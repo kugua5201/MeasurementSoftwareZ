@@ -73,13 +73,7 @@ namespace MeasurementSoftware.ViewModels
             }
         }
 
-        public ObservableCollection<PlcDeviceType> DeviceTypes { get; } = new()
-        {
-            PlcDeviceType.SiemensS7_S1200,
-            PlcDeviceType.MitsubishiMC,
-            PlcDeviceType.ModbusTCP,
-            PlcDeviceType.ModbusRTU
-        };
+        public ObservableCollection<PlcDeviceType> DeviceTypes { get; } = new ObservableCollection<PlcDeviceType>(Enum.GetValues<PlcDeviceType>().Cast<PlcDeviceType>());
 
         public DeviceSettingViewModel(ILog log, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService)
         {
@@ -183,7 +177,7 @@ namespace MeasurementSoftware.ViewModels
             {
                 DeviceId = newDeviceId,
                 DeviceName = $"PLC设备{newDeviceId}",
-                DeviceType = PlcDeviceType.SiemensS7_S1200,
+                DeviceType = PlcDeviceType.SiemensS7_1200,
                 IpAddress = "192.168.0.1",
                 Port = 102,
                 IsEnabled = false
@@ -551,7 +545,8 @@ namespace MeasurementSoftware.ViewModels
         {
             return deviceType switch
             {
-                PlcDeviceType.SiemensS7_S1200 => DriveType.SiemensS7_1200,
+                PlcDeviceType.SiemensS7_1200 => DriveType.SiemensS7_1200,
+                PlcDeviceType.SiemensS7_1500 => DriveType.SiemensS7_1500,
                 PlcDeviceType.MitsubishiMC => DriveType.MitsubishiMcBinary,
                 PlcDeviceType.ModbusTCP => DriveType.ModbusTcpNet,
                 PlcDeviceType.ModbusRTU => DriveType.ModbusRtu,
@@ -566,7 +561,8 @@ namespace MeasurementSoftware.ViewModels
         {
             return deviceType switch
             {
-                PlcDeviceType.SiemensS7_S1200 => "DB1.DBD0",
+                PlcDeviceType.SiemensS7_1200 => "DB1.DBD0",
+                PlcDeviceType.SiemensS7_1500 => "DB1.DBD0",
                 PlcDeviceType.MitsubishiMC => "D100",
                 PlcDeviceType.ModbusTCP => "40001",
                 PlcDeviceType.ModbusRTU => "40001",

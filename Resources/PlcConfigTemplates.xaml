@@ -58,6 +58,202 @@
             </DataTemplate>
         </converters:PlcConfigTemplateSelector.SiemensS7Template>
 
+        <!-- ===== 西门子 S7-1200 ===== -->
+        <converters:PlcConfigTemplateSelector.SiemensS71200Template>
+            <DataTemplate>
+                <StackPanel>
+                    <TextBlock Text="西门子 S7-1200 通讯参数" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryBrush}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="IP 地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding IpAddress, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 hc:InfoElement.Placeholder="例如：192.168.0.1"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="端口：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
+                                          Value="{Binding Port}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="机架号：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="2" Grid.Column="1"
+                                          Value="{Binding Rack}" Minimum="0" Maximum="15"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="槽号：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="3" Grid.Column="1"
+                                          Value="{Binding Slot}" Minimum="0" Maximum="31"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="启用读取缓存：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <ToggleButton Grid.Row="4" Grid.Column="1"
+                                      IsChecked="{Binding SiemensReadCache.IsEnabled}"
+                                      Style="{StaticResource ToggleButtonSwitch}"
+                                      HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="缓存 1 DB块标识：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="5" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding SiemensReadCache.Cache1.DbBlock, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 IsEnabled="{Binding SiemensReadCache.IsEnabled}"
+                                 hc:InfoElement.Placeholder="例如：DBX、DBD"/>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="缓存 1 长度：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="6" Grid.Column="1"
+                                          Value="{Binding SiemensReadCache.Cache1.Length}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                          IsEnabled="{Binding SiemensReadCache.IsEnabled}"/>
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="缓存 1 可读：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <ToggleButton Grid.Row="7" Grid.Column="1"
+                                      IsChecked="{Binding SiemensReadCache.Cache1.IsReadable}"
+                                      Style="{StaticResource ToggleButtonSwitch}"
+                                      HorizontalAlignment="Left" Margin="0,0,0,8"
+                                      IsEnabled="{Binding SiemensReadCache.IsEnabled}"/>
+
+                        <TextBlock Grid.Row="8" Grid.Column="0" Text="缓存 2 DB块标识：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="8" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding SiemensReadCache.Cache2.DbBlock, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 IsEnabled="{Binding SiemensReadCache.IsEnabled}"
+                                 hc:InfoElement.Placeholder="例如：DBX、DBD"/>
+
+                        <TextBlock Grid.Row="9" Grid.Column="0" Text="缓存 2 长度：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="9" Grid.Column="1"
+                                          Value="{Binding SiemensReadCache.Cache2.Length}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                          IsEnabled="{Binding SiemensReadCache.IsEnabled}"/>
+
+                        <TextBlock Grid.Row="10" Grid.Column="0" Text="缓存 2 可读：" VerticalAlignment="Center"/>
+                        <ToggleButton Grid.Row="10" Grid.Column="1"
+                                      IsChecked="{Binding SiemensReadCache.Cache2.IsReadable}"
+                                      Style="{StaticResource ToggleButtonSwitch}"
+                                      HorizontalAlignment="Left"
+                                      IsEnabled="{Binding SiemensReadCache.IsEnabled}"/>
+                    </Grid>
+                </StackPanel>
+            </DataTemplate>
+        </converters:PlcConfigTemplateSelector.SiemensS71200Template>
+
+        <!-- ===== 西门子 S7-1500 ===== -->
+        <converters:PlcConfigTemplateSelector.SiemensS71500Template>
+            <DataTemplate>
+                <StackPanel>
+                    <TextBlock Text="西门子 S7-1500 通讯参数" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryBrush}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="IP 地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="0" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding IpAddress, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 hc:InfoElement.Placeholder="例如：192.168.0.1"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="端口：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
+                                          Value="{Binding Port}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="机架号：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="2" Grid.Column="1"
+                                          Value="{Binding Rack}" Minimum="0" Maximum="15"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="槽号：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="3" Grid.Column="1"
+                                          Value="{Binding Slot}" Minimum="0" Maximum="31"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="启用读取缓存：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <ToggleButton Grid.Row="4" Grid.Column="1"
+                                      IsChecked="{Binding SiemensReadCache.IsEnabled}"
+                                      Style="{StaticResource ToggleButtonSwitch}"
+                                      HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="缓存 1 DB块标识：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="5" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding SiemensReadCache.Cache1.DbBlock, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 IsEnabled="{Binding SiemensReadCache.IsEnabled}"
+                                 hc:InfoElement.Placeholder="例如：DBX、DBD"/>
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="缓存 1 长度：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="6" Grid.Column="1"
+                                          Value="{Binding SiemensReadCache.Cache1.Length}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                          IsEnabled="{Binding SiemensReadCache.IsEnabled}"/>
+
+                        <TextBlock Grid.Row="7" Grid.Column="0" Text="缓存 1 可读：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <ToggleButton Grid.Row="7" Grid.Column="1"
+                                      IsChecked="{Binding SiemensReadCache.Cache1.IsReadable}"
+                                      Style="{StaticResource ToggleButtonSwitch}"
+                                      HorizontalAlignment="Left" Margin="0,0,0,8"
+                                      IsEnabled="{Binding SiemensReadCache.IsEnabled}"/>
+
+                        <TextBlock Grid.Row="8" Grid.Column="0" Text="缓存 2 DB块标识：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBox Grid.Row="8" Grid.Column="1"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding SiemensReadCache.Cache2.DbBlock, UpdateSourceTrigger=PropertyChanged}"
+                                 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                 IsEnabled="{Binding SiemensReadCache.IsEnabled}"
+                                 hc:InfoElement.Placeholder="例如：DBX、DBD"/>
+
+                        <TextBlock Grid.Row="9" Grid.Column="0" Text="缓存 2 长度：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="9" Grid.Column="1"
+                                          Value="{Binding SiemensReadCache.Cache2.Length}" Minimum="1" Maximum="65535"
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                          IsEnabled="{Binding SiemensReadCache.IsEnabled}"/>
+
+                        <TextBlock Grid.Row="10" Grid.Column="0" Text="缓存 2 可读：" VerticalAlignment="Center"/>
+                        <ToggleButton Grid.Row="10" Grid.Column="1"
+                                      IsChecked="{Binding SiemensReadCache.Cache2.IsReadable}"
+                                      Style="{StaticResource ToggleButtonSwitch}"
+                                      HorizontalAlignment="Left"
+                                      IsEnabled="{Binding SiemensReadCache.IsEnabled}"/>
+                    </Grid>
+                </StackPanel>
+            </DataTemplate>
+        </converters:PlcConfigTemplateSelector.SiemensS71500Template>
+
         <!-- ===== 三菱 MC ===== -->
         <converters:PlcConfigTemplateSelector.MitsubishiMCTemplate>
             <DataTemplate>

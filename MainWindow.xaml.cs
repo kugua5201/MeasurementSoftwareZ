@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using HandyControl.Tools;
+using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
 using System;
 using System.ComponentModel;
@@ -14,10 +15,11 @@ using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using HcWindow = HandyControl.Controls.Window;
 
 namespace MeasurementSoftware
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : HcWindow
     {
         private double _savedMenuWidth = 250; // 保存当前菜单宽度
 
@@ -25,6 +27,7 @@ namespace MeasurementSoftware
         {
             InitializeComponent();
             _savedMenuWidth = LeftColumn.Width.Value;
+           
             this.Loaded += MainWindow_Loaded;
             this.Closing += MainWindow_Closing;
         }
@@ -242,6 +245,49 @@ namespace MeasurementSoftware
                 // 阻止 TabControl 切换 SelectedItem
                 e.Handled = true;
             }
+        }
+
+        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (sender is not TabControl tc || tc.SelectedItem is not TabItemModel tab)
+                return;
+
+            // 根据 tab Header 找到对应的菜单按钮
+            var button = GetMenuButtonByHeader(tab.Header);
+            if (button != null)
+            {
+                SetSelectedButton(button);
+
+                // 如果是子菜单按钮，展开 Expander
+                var parentExpander = FindParentExpander(button);
+                if (parentExpander != null)
+                    parentExpander.IsExpanded = true;
+                else
+                {
+                    // 非子菜单，折叠所有 Expander
+                    foreach (var expander in FindVisualChildren<Expander>(GridLeft))
+                        expander.IsExpanded = false;
+                }
+            }
+        }
+
+        private Button? GetMenuButtonByHeader(string? header)
+        {
+            return header switch
+            {
+                "测量" => HomeButton,
+                "配方管理" => RecipeManagementButton,
+                "校准" => CalibrationButton,
+                "数据管理" => DataManagementButton,
+                "SPC分析" => SpcButton,
+                "通道设置" => ChannelSettingButton,
+                "设备管理" => CommunicationButton,
+                "二维码配置" => QrCodeSettingButton,
+                "MES配置" => MesSettingButton,
+                "其他设置" => OtherSettingsButton,
+                "日志" => LogViewerButton,
+                _ => null
+            };
         }
 
 

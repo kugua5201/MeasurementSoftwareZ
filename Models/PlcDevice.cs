@@ -27,9 +27,6 @@ namespace MeasurementSoftware.Models
     /// </summary>
     public partial class PlcDevice : ObservableViewModel
     {
-
-
-
         #region 基本信息
 
         /// <summary>
@@ -81,6 +78,12 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private int slot = 0;
+
+        /// <summary>
+        /// 西门子读取缓存配置
+        /// </summary>
+        [ObservableProperty]
+        private SiemensReadCacheConfig siemensReadCache = new();
 
         #endregion
 
@@ -214,34 +217,34 @@ namespace MeasurementSoftware.Models
             get => isEnabled;
             set
             {
-                SetProperty(ref isEnabled, value, (() =>
+                if (!value)
                 {
-                    protocol?.Open(value);
-                    if (!value)
+                    var recipeService = ContainerBuilderExtensions.GetService<IRecipeConfigService>();
+                    var currentRecipe = recipeService?.CurrentRecipe;
+                    if (currentRecipe != null)
                     {
-                        var recipeService = ContainerBuilderExtensions.GetService<IRecipeConfigService>();
-                        //判断当前打开的配方是否关联了当前设备，如果关联了，则不让关闭
-                        var currentRecipe = recipeService?.CurrentRecipe;
-                        if (currentRecipe != null)
+                        bool hasBind = currentRecipe.Channels.Any(c => c.PlcDeviceId == DeviceId);
+                        if (hasBind)
                         {
-                            bool hasBind = currentRecipe.Channels.Any(c => c.PlcDeviceId == DeviceId);
-                            if (hasBind)
+                            var res = MessageBox.Show("当前设备已被通道绑定，强制关闭可能导致测量异常，是否继续？", "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                            if (res == MessageBoxResult.No)
                             {
-                                //Growl.Warning("当前设备已被通道绑定，不能关闭！");
-                                //提示是否强制关闭，
-                                var res = MessageBox.Show("当前设备已被通道绑定，强制关闭可能导致测量异常，是否继续？", "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                                if (res == MessageBoxResult.No)
-                                {
-                                    SetProperty(ref isEnabled, true);
-                                    return;
-                                }
-
-
+                                return; // 不赋值，不触发 UI
                             }
-
+                            else
+                            {
+                                foreach (var channel in currentRecipe.Channels.Where(c => c.PlcDeviceId == DeviceId))
+                                {
+                                    channel.PlcDeviceId = 0;
+                                    channel.DataPointId = string.Empty;
+                                    channel.DataSourceAddress = string.Empty;
+                                    channel.AvailableDataPoints = new ObservableCollection<DataPoint>();
+                                }
+                            }
                         }
                     }
-                }));
+                }
+                SetProperty(ref isEnabled, value, () => protocol?.Open(value));
 
             }
         }
@@ -360,8 +363,11 @@ namespace MeasurementSoftware.Models
                 case PlcDeviceType.ModbusRTU:
                     protocol = new ModbusRtuPLC(args);
                     break;
-                case PlcDeviceType.SiemensS7_S1200:
+                case PlcDeviceType.SiemensS7_1200:
                     protocol = new SiemensS1200PLC(args);
+                    break;
+                case PlcDeviceType.SiemensS7_1500:
+                    protocol = new SiemensS1500PLC(args);
                     break;
                 case PlcDeviceType.MitsubishiMC:
                     // TODO: 实现 MitsubishiMC
@@ -390,7 +396,8 @@ namespace MeasurementSoftware.Models
             {
                 PlcDeviceType.ModbusTCP => DriveType.ModbusTcpNet,
                 PlcDeviceType.ModbusRTU => DriveType.ModbusRtu,
-                PlcDeviceType.SiemensS7_S1200 => DriveType.SiemensS7_1200,
+                PlcDeviceType.SiemensS7_1200 => DriveType.SiemensS7_1200,
+                PlcDeviceType.SiemensS7_1500 => DriveType.SiemensS7_1500,
                 PlcDeviceType.MitsubishiMC => DriveType.MitsubishiMcBinary,
                 _ => DriveType.ModbusTcpNet
             };

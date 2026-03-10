@@ -57,22 +57,6 @@ namespace MeasurementSoftware.ViewModels
         [ObservableProperty]
         private int totalCount;
 
-        /// <summary>
-        /// 实时采集数据（用于趋势图绘制）
-        /// </summary>
-        //[ObservableProperty]
-        //private ObservableCollection<RealTimeDataEventArgs> realTimeData = [];
-
-        /// <summary>
-        /// 趋势图最大显示点数
-        /// </summary>
-        private const int MaxTrendPoints = 10;
-
-        [ObservableProperty]
-        private double[] trendXs = [];
-
-        [ObservableProperty]
-        private double[] trendYs = [];
 
         /// <summary>
         /// 轮询间隔(ms)

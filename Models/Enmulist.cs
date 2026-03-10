@@ -10,7 +10,8 @@ namespace MeasurementSoftware.Models
     /// </summary>
     public enum PlcDeviceType
     {
-        SiemensS7_S1200,      // 西门子S7
+        SiemensS7_1200,
+        SiemensS7_1500,
         MitsubishiMC,   // 三菱MC
         ModbusTCP,      // Modbus-TCP
         ModbusRTU       // Modbus-RTU
