@@ -8,7 +8,7 @@ namespace MeasurementSoftware.Services.UserSetting
     public interface IUserSettingsService
     {
         UserSettings Settings { get; }
-        Task LoadSettingsAsync();
-        Task SaveSettingsAsync();
+        void LoadSettings();
+        void SaveSettings();
     }
 }

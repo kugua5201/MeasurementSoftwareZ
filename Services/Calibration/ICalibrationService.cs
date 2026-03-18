@@ -8,10 +8,17 @@ namespace MeasurementSoftware.Services
     public interface ICalibrationService
     {
         /// <summary>
-        /// 执行通道校准（多点校准，自动计算线性系数）
+        /// 执行最小二乘法校准
         /// </summary>
-        Task<(bool Success, double CoefficientA, double CoefficientB)> CalibrateChannelAsync(
-            MeasurementChannel channel, 
+        Task<(bool Success, double CoefficientA, double CoefficientB)> CalibrateLeastSquaresAsync(
+            MeasurementChannel channel,
+            List<(double StandardValue, double MeasuredValue)> calibrationPoints);
+
+        /// <summary>
+        /// 执行线性回归校准
+        /// </summary>
+        Task<(bool Success, double CoefficientA, double CoefficientB)> CalibrateLinearRegressionAsync(
+            MeasurementChannel channel,
             List<(double StandardValue, double MeasuredValue)> calibrationPoints);
 
         /// <summary>
@@ -30,7 +37,7 @@ namespace MeasurementSoftware.Services
         /// <summary>
         /// 加载校准历史
         /// </summary>
-        Task<List<CalibrationRecord>> GetCalibrationHistoryAsync(string channelId);
+        Task<List<CalibrationRecord>> GetCalibrationHistoryAsync(MeasurementChannel channel);
 
         /// <summary>
         /// 检查校准有效期
@@ -41,19 +48,5 @@ namespace MeasurementSoftware.Services
         /// 应用校准到测量值
         /// </summary>
         double ApplyCalibration(MeasurementChannel channel, double rawValue);
-    }
-
-    /// <summary>
-    /// 校准记录
-    /// </summary>
-    public class CalibrationRecord
-    {
-        public string RecordId { get; set; } = Guid.NewGuid().ToString();
-        public string ChannelId { get; set; } = string.Empty;
-        public DateTime CalibrationTime { get; set; } = DateTime.Now;
-        public double CoefficientA { get; set; }
-        public double CoefficientB { get; set; }
-        public string OperatorName { get; set; } = string.Empty;
-        public List<(double StandardValue, double MeasuredValue)> CalibrationPoints { get; set; } = new();
     }
 }

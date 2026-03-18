@@ -67,6 +67,12 @@ namespace MeasurementSoftware.ViewModels
         private bool isEditMode;
 
         /// <summary>
+        /// 是否显示"使用缓存值"开关（当前编辑通道的点位是缓存生成的时候才显示）
+        /// </summary>
+        [ObservableProperty]
+        private bool showCacheToggle;
+
+        /// <summary>
         /// 抽屉标题（根据是添加还是编辑动态显示）
         /// </summary>
         public string DrawerTitle => IsEditMode ? "编辑通道" : "添加通道";
@@ -196,7 +202,21 @@ namespace MeasurementSoftware.ViewModels
             }
 
             var dataPoints = _deviceConfigService.GetDataPointsByDeviceId(channel.PlcDeviceId);
-            channel.AvailableDataPoints = new ObservableCollection<DataPoint>(dataPoints.Where(dp => dp.IsEnabled));
+            channel.AvailableDataPoints = new ObservableCollection<DataPoint>(
+                dataPoints.Where(dp => dp.IsEnabled)
+                    .OrderBy(dp => int.TryParse(dp.PointId, out int id) ? id : int.MaxValue));
+        }
+
+        /// <summary>
+        /// 判断设备是否是西门子 S7-1200/1500 且启用了缓存
+        /// </summary>
+        private bool IsCacheEnabledForDevice(long deviceId)
+        {
+            var device = _deviceConfigService.Devices.FirstOrDefault(d => d.DeviceId == deviceId);
+            if (device == null) return false;
+            if (device.DeviceType is not (PlcDeviceType.SiemensS7_1200 or PlcDeviceType.SiemensS7_1500))
+                return false;
+            return device.SiemensReadCache.IsEnabled && device.SiemensReadCache.IsStructureValid;
         }
 
         /// <summary>
@@ -261,12 +281,15 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
+            ShowCacheToggle = false;
+
             // 创建新通道并打开编辑抽屉
             EditingChannel = new MeasurementChannel
             {
                 ChannelNumber = CurrentRecipe.Channels.Count + 1,
                 ChannelName = $"通道{CurrentRecipe.Channels.Count + 1}",
                 IsEnabled = true,
+                RequiresCalibration = false,
                 StandardValue = 0,
                 UpperTolerance = 0.1,
                 LowerTolerance = 0.1,
@@ -306,6 +329,8 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
+            ShowCacheToggle = false;
+
             // 克隆通道数据进行编辑
             EditingChannel = new MeasurementChannel
             {
@@ -319,18 +344,31 @@ namespace MeasurementSoftware.ViewModels
                 ChannelType = channel.ChannelType,
                 Unit = channel.Unit,
                 DecimalPlaces = channel.DecimalPlaces,
+                RequiresCalibration = channel.RequiresCalibration,
                 StepNumber = channel.StepNumber,
                 StepName = channel.StepName,
                 PlcDeviceId = channel.PlcDeviceId,
                 DataPointId = channel.DataPointId,
                 DataSourceAddress = channel.DataSourceAddress,
-                AvailableDataPoints = channel.AvailableDataPoints
+                AvailableDataPoints = channel.AvailableDataPoints,
+                UseCacheValue = channel.UseCacheValue
             };
 
             // 如果有设备ID，确保数据点列表已加载
             if (EditingChannel.PlcDeviceId != 0)
             {
                 LoadDataPointsForChannel(EditingChannel);
+
+                // 判断是否显示缓存开关
+                var dp = EditingChannel.AvailableDataPoints.FirstOrDefault(d => d.PointId == EditingChannel.DataPointId);
+                ShowCacheToggle = dp?.IsCacheGenerated == true
+                    && !string.IsNullOrEmpty(dp.CacheFieldKey)
+                    && IsCacheEnabledForDevice(EditingChannel.PlcDeviceId);
+
+                if (!ShowCacheToggle)
+                {
+                    EditingChannel.UseCacheValue = false;
+                }
             }
 
             // 监听设备 ID 变化，响应式加载数据点
@@ -384,6 +422,22 @@ namespace MeasurementSoftware.ViewModels
                         EditingChannel.DataSourceAddress = dataPoint.Address;
                         _log.Info($"已设置通道数据点地址: {dataPoint.Address}");
                     }
+
+                    // 判断是否显示"使用缓存值"开关：点位是缓存生成的 + 设备启用了缓存
+                    ShowCacheToggle = dataPoint?.IsCacheGenerated == true
+                        && !string.IsNullOrEmpty(dataPoint.CacheFieldKey)
+                        && IsCacheEnabledForDevice(EditingChannel.PlcDeviceId);
+
+                    // 如果缓存未启用，强制关闭 UseCacheValue
+                    if (!ShowCacheToggle)
+                    {
+                        EditingChannel.UseCacheValue = false;
+                    }
+                }
+                else
+                {
+                    ShowCacheToggle = false;
+                    EditingChannel.UseCacheValue = false;
                 }
             }
         }
@@ -412,6 +466,7 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.ChannelType = EditingChannel.ChannelType;
                     originalChannel.Unit = EditingChannel.Unit;
                     originalChannel.DecimalPlaces = EditingChannel.DecimalPlaces;
+                    originalChannel.RequiresCalibration = EditingChannel.RequiresCalibration;
                     originalChannel.StepNumber = EditingChannel.StepNumber;
                     originalChannel.StepName = EditingChannel.StepName;
                     if (!AvailablePlcDevices.Any())
@@ -427,6 +482,7 @@ namespace MeasurementSoftware.ViewModels
                         originalChannel.DataPointId = EditingChannel.DataPointId;
                         originalChannel.DataSourceAddress = EditingChannel.DataSourceAddress;
                         originalChannel.AvailableDataPoints = EditingChannel.AvailableDataPoints;
+                        originalChannel.UseCacheValue = EditingChannel.UseCacheValue;
                     }
 
                     // 重新订阅属性变化事件（如果之前没订阅）

@@ -214,7 +214,7 @@
                             </StackPanel>
                         </Button>
 
-                   
+
 
                         <Button x:Name="CalibrationButton" Command="{Binding NavigateToCalibrationCommand}" Click="MenuButton_Click"
                                 Style="{StaticResource MainMenuButtonStyle}">
@@ -398,7 +398,7 @@ BorderBrush="{DynamicResource BorderBrush}"
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
-               
+
                 </Grid.RowDefinitions>
 
                 <hc:TabControl
@@ -665,6 +665,20 @@ BorderBrush="{DynamicResource BorderBrush}"
                 </hc:TabControl>
 
             </Grid>
+        </Border>
+
+        <Border Grid.ColumnSpan="3"
+                Background="#66000000"
+                Panel.ZIndex="999"
+                Visibility="{Binding IsAppLoading, Converter={StaticResource Boolean2VisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Border Background="{DynamicResource RegionBrush}" CornerRadius="12" Padding="28,24">
+                    <StackPanel HorizontalAlignment="Center">
+                        <hc:LoadingCircle Width="56" Height="56" Foreground="{DynamicResource PrimaryBrush}"/>
+                        <TextBlock Text="{Binding AppLoadingMessage}" Margin="0,16,0,0" FontSize="14" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </Border>
     </Grid>
 </hc:Window>

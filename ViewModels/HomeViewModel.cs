@@ -5,7 +5,6 @@ using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Logs;
-using MeasurementSoftware.Services.UserSetting;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 
@@ -16,7 +15,6 @@ namespace MeasurementSoftware.ViewModels
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
-        private readonly IUserSettingsService _userSettingsService;
         private readonly IDataRecordService _dataRecordService;
 
         [ObservableProperty]
@@ -59,19 +57,18 @@ namespace MeasurementSoftware.ViewModels
 
 
         /// <summary>
-        /// 轮询间隔(ms)
+        /// 默认轮询间隔(ms)
         /// </summary>
-        private const int PollIntervalMs = 500;
+        private const int DefaultPollIntervalMs = 500;
 
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
 
-        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IUserSettingsService userSettingsService, IDataRecordService dataRecordService)
+        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IDataRecordService dataRecordService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
             _deviceConfigService = deviceConfigService;
-            _userSettingsService = userSettingsService;
             _dataRecordService = dataRecordService;
 
             // 不再从用户设置加载图片，图片跟随配方
@@ -201,10 +198,12 @@ namespace MeasurementSoftware.ViewModels
                     foreach (var channel in activeChannels)
                     {
                         if (_cts.Token.IsCancellationRequested) break;
-                        var value = GetChannelCurrentValue(channel);
-                        if (value != null)
+                        var rawValue = GetChannelCurrentValue(channel);
+                        if (rawValue != null)
                         {
-                            channel.UpdateMeasuredValue(value.Value);
+                            // 应用校准（线性 y = Ax + B）
+                            var calibratedValue = channel.ApplyCalibration(rawValue.Value);
+                            channel.UpdateMeasuredValue(calibratedValue);
                             channel.CheckResult();
                         }
                     }
@@ -212,7 +211,7 @@ namespace MeasurementSoftware.ViewModels
                     // 实时同步标注颜色
                     SyncAnnotationResults();
 
-                    await Task.Delay(PollIntervalMs, _cts.Token);
+                    await Task.Delay(GetPollIntervalMs(), _cts.Token);
                 }
             }
             catch (OperationCanceledException) { }
@@ -291,6 +290,38 @@ namespace MeasurementSoftware.ViewModels
 
             // 同时模式：采集所有通道
             return enabled;
+        }
+
+        /// <summary>
+        /// 获取采集数据的延迟时间
+        /// </summary>
+        /// <returns></returns>
+        private int GetPollIntervalMs()
+        {
+            var delay = CurrentRecipe?.AcquisitionDelayMs ?? _recipeConfigService.AcquisitionDelayMs;
+            return delay > 0 ? delay : DefaultPollIntervalMs;
+        }
+        /// <summary>
+        /// 如果正在采集，切换工步前先校验目标工步是否有启用通道，避免切到空工步后被卡住
+        /// </summary>
+        /// <param name="targetStep">目标工步</param>
+        /// <returns></returns>
+        private bool CanSwitchStepDuringAcquisition(int targetStep)
+        {
+            if (!_recipeConfigService.IsCollecting)
+            {
+                return true;
+            }
+
+            var targetStepChannels = Channels.Where(c => c.IsEnabled && c.StepNumber == targetStep).ToList();
+
+            if (targetStepChannels.Count == 0)
+            {
+                Growl.Warning($"工步 {targetStep} 没有启用通道，无法切换");
+                return false;
+            }
+
+            return true;
         }
 
 
@@ -382,12 +413,15 @@ namespace MeasurementSoftware.ViewModels
 
             if (CurrentStep < maxStep)
             {
+                var targetStep = CurrentStep + 1;
+                if (!CanSwitchStepDuringAcquisition(targetStep)) return;
+
                 // 先结算当前工步的OK/NG并同步到标注
                 var currentStepChannels = Channels.Where(c => c.StepNumber == CurrentStep).ToList();
                 FinalizeChannelResults(currentStepChannels);
                 SyncAnnotationResults();
 
-                CurrentStep++;
+                CurrentStep = targetStep;
                 UpdateAnnotationActiveState();
                 MeasurementStatus = $"已切换到工步 {CurrentStep}/{maxStep}";
             }
@@ -407,7 +441,10 @@ namespace MeasurementSoftware.ViewModels
 
             if (CurrentStep > 1)
             {
-                CurrentStep--;
+                var targetStep = CurrentStep - 1;
+                if (!CanSwitchStepDuringAcquisition(targetStep)) return;
+
+                CurrentStep = targetStep;
                 UpdateAnnotationActiveState();
                 MeasurementStatus = $"已切换到工步 {CurrentStep}/{GetMaxStep()}";
             }
@@ -462,25 +499,29 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 直接从通道绑定的PLC数据点获取当前值（设备轮询已在更新 DataPoint.CurrentValue）
+        /// 获取通道当前值
+        /// 逻辑：
+        ///   1. 通道勾选了 UseCacheValue + 设备启用了缓存 + 缓存正在读取 → 从缓存字典取值
+        ///   2. 否则 → 从寄存器（DataPoint.CurrentValue）取值
+        /// 缓存读取的启停由设备连接/断开自动管理，测量页面不需要手动控制。
         /// </summary>
         private double? GetChannelCurrentValue(MeasurementChannel channel)
         {
             if (channel.PlcDeviceId == 0 || string.IsNullOrEmpty(channel.DataPointId))
             {
-                channel.ChannelDescription = "没有找到对应的通道设备";
+                channel.ChannelDescription = "未绑定设备或点位";
                 return null;
             }
 
             var device = _deviceConfigService.Devices.FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
             if (device == null)
             {
-                channel.ChannelDescription = $"没有找到设备ID {channel.PlcDeviceId}";
+                channel.ChannelDescription = $"未找到设备ID {channel.PlcDeviceId}";
                 return null;
             }
             if (!device.IsEnabled)
             {
-                channel.ChannelDescription = $"设备 {channel.PlcDeviceName} 未启用";
+                channel.ChannelDescription = $"设备 {device.DeviceName} 未启用";
                 return null;
             }
             if (!device.IsConnected)
@@ -488,22 +529,46 @@ namespace MeasurementSoftware.ViewModels
                 channel.ChannelDescription = $"设备 {device.DeviceName} 未连接";
                 return null;
             }
+
+            // 判断是否走缓存读取：通道勾选了 UseCacheValue + 设备启用了缓存 + 点位有 CacheFieldKey
             var dataPoint = device.DataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId);
-            if (dataPoint?.CurrentValue == null || !dataPoint.IsSuccess)
+            if (dataPoint == null)
             {
-                channel.ChannelDescription = $"{dataPoint?.ErrorMessage}";
+                channel.ChannelDescription = "未找到对应点位";
                 return null;
+            }
+
+            bool useCachePath = channel.UseCacheValue && device.SiemensReadCache.IsEnabled && !string.IsNullOrEmpty(dataPoint.CacheFieldKey);
+
+            if (useCachePath)
+            {
+                // 缓存路径：从设备缓存字典取值
+                if (!device.IsCacheReading)
+                {
+                    channel.ChannelDescription = "缓存读取未就绪（等待设备连接）";
+                    return null;
+                }
+                var cacheValue = device.GetCacheFieldValue(dataPoint.CacheFieldKey);
+                if (cacheValue == null)
+                {
+                    channel.ChannelDescription = "缓存字段暂无数据";
+                    return null;
+                }
+                channel.ChannelDescription = string.Empty;
+                return cacheValue;
             }
             else
             {
+                // 寄存器路径：从 DataPoint.CurrentValue 取值
+                if (dataPoint.CurrentValue == null || !dataPoint.IsSuccess)
+                {
+                    channel.ChannelDescription = dataPoint.ErrorMessage ?? "读取中...";
+                    return null;
+                }
                 channel.ChannelDescription = string.Empty;
+                try { return Convert.ToDouble(dataPoint.CurrentValue); }
+                catch { return null; }
             }
-
-            try
-            {
-                return Convert.ToDouble(dataPoint.CurrentValue);
-            }
-            catch { return null; }
         }
     }
 }

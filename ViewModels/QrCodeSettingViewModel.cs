@@ -63,7 +63,7 @@ namespace MeasurementSoftware.ViewModels
                 {
                     if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
                     {
-                        _ = LoadConfigAsync();
+                        Config = _qrCodeConfigService.QrCodeConfig;
                     }
                     else if (e.PropertyName == nameof(IDeviceConfigService.Devices))
                     {
@@ -71,9 +71,7 @@ namespace MeasurementSoftware.ViewModels
                     }
                 };
             }
-
-            // 加载配置
-            _ = LoadConfigAsync();
+            Config = _qrCodeConfigService.QrCodeConfig;
             RefreshComPorts();
         }
 
@@ -114,16 +112,10 @@ namespace MeasurementSoftware.ViewModels
             }
         }
 
-        private Task LoadConfigAsync()
-        {
-            Config = _qrCodeConfigService.QrCodeConfig;
-            _log.Info("二维码配置加载完成");
-            return Task.CompletedTask;
-        }
 
         private PlcDevice? _lastDevice;
 
-        partial void OnConfigChanged(QrCodeConfig? oldValue, QrCodeConfig? newValue)
+        partial void OnConfigChanged(QrCodeConfig? oldValue, QrCodeConfig newValue)
         {
             if (oldValue != null)
             {

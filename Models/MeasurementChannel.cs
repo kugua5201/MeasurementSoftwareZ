@@ -31,7 +31,7 @@ namespace MeasurementSoftware.Models
         /// 通道类型
         /// </summary>
         [ObservableProperty]
-        private ChannelType channelType;
+        private ChannelType channelType = ChannelType.结果值;
 
         /// <summary>
         /// 标准值
@@ -145,6 +145,12 @@ namespace MeasurementSoftware.Models
         private bool requiresCalibration;
 
         /// <summary>
+        /// 当前生效的校准方式
+        /// </summary>
+        [ObservableProperty]
+        private CalibrationMode calibrationMode = CalibrationMode.SinglePoint;
+
+        /// <summary>
         /// 校准系数 A（线性公式：y = Ax + B）
         /// </summary>
         [ObservableProperty]
@@ -167,6 +173,30 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private int calibrationValidityDays = 30;
+
+        /// <summary>
+        /// 单点校准配置
+        /// </summary>
+        [ObservableProperty]
+        private SinglePointCalibrationSettings singlePointCalibration = new();
+
+        /// <summary>
+        /// 最小二乘法校准配置
+        /// </summary>
+        [ObservableProperty]
+        private LeastSquaresCalibrationSettings leastSquaresCalibration = new();
+
+        /// <summary>
+        /// 线性回归校准配置
+        /// </summary>
+        [ObservableProperty]
+        private LinearRegressionCalibrationSettings linearRegressionCalibration = new();
+
+        /// <summary>
+        /// 校准历史（随配方保存）
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<CalibrationRecord> calibrationHistory = [];
 
         /// <summary>
         /// 工步编号（用于分步测量）
@@ -199,6 +229,13 @@ namespace MeasurementSoftware.Models
         private string writeBackDataPointIdB = string.Empty;
 
         /// <summary>
+        /// 是否使用缓存值（仅适用于 S7-1200/1500 启用缓存的点位）
+        /// true = 读取缓存解析值，false = 读取寄存器实时值
+        /// </summary>
+        [ObservableProperty]
+        private bool useCacheValue;
+
+        /// <summary>
         /// 采样数量（缓存数据大小，用于计算最大值、最小值、跳动等）
         /// </summary>
         [ObservableProperty]
@@ -207,7 +244,7 @@ namespace MeasurementSoftware.Models
         /// <summary>
         /// 历史数据（用于计算最大值、最小值等）
         /// </summary>
-        public List<double> HistoricalData { get; set; } = new List<double>();
+        public List<double> HistoricalData { get; set; } = [];
 
         /// <summary>
         /// 检查测量结果是否合格
@@ -237,14 +274,14 @@ namespace MeasurementSoftware.Models
         {
             lock (_dataLock)
             {
-                HistoricalData.Add(rawValue);
-                MeasuredValue = rawValue;
+                //保留对应小数
+                MeasuredValue =Math.Round (rawValue, DecimalPlaces);
                 // 保持缓存大小
-                //if (SampleCount > 0 && HistoricalData.Count > SampleCount)
-                //{
-                //    HistoricalData.RemoveAt(0); // 移除最旧的数据
-                //}
-
+                if (HistoricalData.Count > SampleCount)
+                {
+                    HistoricalData.RemoveAt(0); // 移除最旧的数据
+                }
+                HistoricalData.Add(rawValue);
                 //if (HistoricalData.Count > 0)
                 //{
                 //    double calculatedValue = rawValue;
@@ -341,7 +378,7 @@ namespace MeasurementSoftware.Models
                     break;
             }
 
-
+            ReusltValue = Math.Round(ReusltValue, DecimalPlaces);
             CheckResult();
         }
 

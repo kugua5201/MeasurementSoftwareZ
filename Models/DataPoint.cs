@@ -94,5 +94,17 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private bool isValidated = false;
 
+        /// <summary>
+        /// 是否由缓存结构自动生成（用于区分手动添加的点位）
+        /// </summary>
+        [ObservableProperty]
+        private bool isCacheGenerated = false;
+
+        /// <summary>
+        /// 缓存字段键（格式：CACHE:G{group}:{fieldName}），仅缓存生成的点位有值
+        /// </summary>
+        [ObservableProperty]
+        private string cacheFieldKey = string.Empty;
+
     }
 }

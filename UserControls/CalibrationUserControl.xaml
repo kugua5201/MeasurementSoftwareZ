@@ -144,206 +144,190 @@
 
                     <!-- 内容区 -->
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="20">
-                            <!-- 通道信息 -->
-                            <Border Background="{DynamicResource BackgroundColor}" Padding="15" CornerRadius="6" Margin="0,0,0,15" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                        <StackPanel Margin="15">
+                            <!-- 通道信息 + 校准方式（紧凑一行） -->
+                            <Border Background="{DynamicResource BackgroundColor}" Padding="10,8" CornerRadius="4" Margin="0,0,0,8" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="170"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SelectedChannel.ChannelName, FallbackValue='--'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="  " />
+                                        <TextBlock Text="A=" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedChannel.CalibrationCoefficientA, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="B=" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding SelectedChannel.CalibrationCoefficientB, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding CalibrationStatus}" FontSize="12" FontWeight="SemiBold" Foreground="{Binding CalibrationStatusColor}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <ComboBox Grid.Column="1"
+                                              ItemsSource="{Binding CalibrationModes}"
+                                              SelectedItem="{Binding SelectedCalibrationMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              Style="{StaticResource ComboBoxExtend}"
+                                              VerticalAlignment="Center"
+                                              Margin="8,0,0,0">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayTextConverter}}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </Grid>
+                            </Border>
+
+                            <!-- 校准数据输入 -->
+                            <Border Margin="0,0,0,8" Padding="10" CornerRadius="4"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    Background="{DynamicResource RegionBrush}"
+                                    Visibility="{Binding IsSinglePointCalibration, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="标准值:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                    <hc:NumericUpDown Value="{Binding SinglePointStandardValue}" Width="{StaticResource FormNumericWidth}" Margin="0,0,12,0" DecimalPlaces="3"/>
+                                    <TextBlock Text="测量值:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                    <hc:NumericUpDown Value="{Binding SinglePointMeasuredValue}" Width="{StaticResource FormNumericWidth}" Margin="0,0,12,0" DecimalPlaces="3"/>
+                                    <Button Content="执行单点校准" Command="{Binding ExecuteSinglePointCalibrationCommand}"
+                                           Style="{StaticResource ButtonWarning}" Width="120"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Margin="0,0,0,8" Padding="10" CornerRadius="4"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    Background="{DynamicResource RegionBrush}"
+                                    Visibility="{Binding IsLeastSquaresCalibration, Converter={StaticResource Boolean2VisibilityConverter}}">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
 
-                                    <StackPanel Grid.Row="0" Grid.Column="0">
-                                        <TextBlock Text="通道名称" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <TextBlock Text="{Binding SelectedChannel.ChannelName, FallbackValue='--'}" 
-                                                  FontSize="14" FontWeight="Bold" Margin="0,3,0,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="标准值:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        <hc:NumericUpDown Value="{Binding LeastSquaresStandardValue}" Width="{StaticResource FormButtonWidth}" Margin="0,0,10,0" DecimalPlaces="3"/>
+                                        <TextBlock Text="测量值:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        <hc:NumericUpDown Value="{Binding LeastSquaresMeasuredValue}" Width="{StaticResource FormButtonWidth}" Margin="0,0,10,0" DecimalPlaces="3"/>
+                                        <Button Content="添加" Command="{Binding AddLeastSquaresCalibrationPointCommand}" Style="{StaticResource ButtonPrimary}" Width="60" Height="28"/>
                                     </StackPanel>
 
-                                    <StackPanel Grid.Row="0" Grid.Column="1">
-                                        <TextBlock Text="标准值" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <TextBlock Text="{Binding SelectedChannel.StandardValue, StringFormat='{}{0:F3}', FallbackValue='--'}" 
-                                                  FontSize="14" FontWeight="Bold" Margin="0,3,0,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                    </StackPanel>
+                                    <DataGrid Grid.Row="1" ItemsSource="{Binding LeastSquaresCalibrationPoints}"
+                                             AutoGenerateColumns="False" CanUserAddRows="False"
+                                             HeadersVisibility="Column" Margin="0,0,0,8"
+                                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                             MinHeight="120" MaxHeight="250"
+                                             Background="{StaticResource BackgroundColor}"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="40" IsReadOnly="True"/>
+                                            <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue, StringFormat=F3}" Width="*"/>
+                                            <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue, StringFormat=F3}" Width="*"/>
+                                            <DataGridTemplateColumn Header="" Width="60">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="删除" Command="{Binding DataContext.RemoveLeastSquaresCalibrationPointCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                               CommandParameter="{Binding}" Style="{StaticResource ButtonDanger.Small}" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
 
-                                    <StackPanel Grid.Row="0" Grid.Column="2">
-                                        <TextBlock Text="校准状态" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <TextBlock Text="{Binding CalibrationStatus}" 
-                                                  FontSize="14" FontWeight="Bold" Margin="0,3,0,0"
-                                                  Foreground="{Binding CalibrationStatusColor}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,15,0,0">
-                                        <TextBlock Text="校准系数 A" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <TextBlock Text="{Binding SelectedChannel.CalibrationCoefficientA, StringFormat='{}{0:F6}', FallbackValue='--'}" 
-                                                  FontSize="13" Margin="0,3,0,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,15,0,0">
-                                        <TextBlock Text="校准系数 B" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <TextBlock Text="{Binding SelectedChannel.CalibrationCoefficientB, StringFormat='{}{0:F6}', FallbackValue='--'}" 
-                                                  FontSize="13" Margin="0,3,0,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="0,15,0,0">
-                                        <TextBlock Text="上次校准时间" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <TextBlock Text="{Binding SelectedChannel.LastCalibrationTime, StringFormat='{}{0:yyyy-MM-dd HH:mm:ss}', FallbackValue='未校准'}" 
-                                                  FontSize="13" Margin="0,3,0,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                    <StackPanel Grid.Row="2" Orientation="Horizontal">
+                                        <Button Content="执行校准" Command="{Binding ExecuteLeastSquaresCalibrationCommand}" Style="{StaticResource ButtonWarning}" Width="100" Margin="0,0,8,0"/>
+                                        <Button Content="清空" Command="{Binding ClearLeastSquaresCalibrationPointsCommand}" Style="{StaticResource ButtonDefault}" Width="60"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>
 
-                            <!-- 校准方式选择（下拉列表） -->
-                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="15" CornerRadius="6" Margin="0,0,0,15" Background="{DynamicResource RegionBrush}">
-                                <StackPanel>
-                                    <TextBlock Text="校准方式" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryBrush}"/>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="校准模式：" VerticalAlignment="Center" Width="{StaticResource FormLabelWidthNarrow}" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                        <ComboBox ItemsSource="{Binding CalibrationModes}"
-                                                  SelectedItem="{Binding SelectedCalibrationMode}"
-                                                  Width="{StaticResource FormInputWidth}"
-                                                  Style="{StaticResource ComboBoxExtend}">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayTextConverter}}"/>
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
+                            <Border Margin="0,0,0,8" Padding="10" CornerRadius="4"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    Background="{DynamicResource RegionBrush}"
+                                    Visibility="{Binding IsLinearRegressionCalibration, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                        <TextBlock Text="标准值:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        <hc:NumericUpDown Value="{Binding LinearRegressionStandardValue}" Width="{StaticResource FormButtonWidth}" Margin="0,0,10,0" DecimalPlaces="3"/>
+                                        <TextBlock Text="测量值:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                                        <hc:NumericUpDown Value="{Binding LinearRegressionMeasuredValue}" Width="{StaticResource FormButtonWidth}" Margin="0,0,10,0" DecimalPlaces="3"/>
+                                        <Button Content="添加" Command="{Binding AddLinearRegressionCalibrationPointCommand}" Style="{StaticResource ButtonPrimary}" Width="60" Height="28"/>
                                     </StackPanel>
-                                    <TextBlock Margin="0,8,0,0" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="适用于简单的零点偏移校准，只需测量一个标准点"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsSinglePointCalibration}" Value="False">
-                                                        <Setter Property="Text" Value="使用最小二乘法进行线性拟合，精度更高，建议至少3个标准点"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                </StackPanel>
+
+                                    <DataGrid Grid.Row="1" ItemsSource="{Binding LinearRegressionCalibrationPoints}"
+                                             AutoGenerateColumns="False" CanUserAddRows="False"
+                                             HeadersVisibility="Column" Margin="0,0,0,8"
+                                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                             MinHeight="120" MaxHeight="250"
+                                             Background="{StaticResource BackgroundColor}"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="40" IsReadOnly="True"/>
+                                            <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue, StringFormat=F3}" Width="*"/>
+                                            <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue, StringFormat=F3}" Width="*"/>
+                                            <DataGridTemplateColumn Header="" Width="60">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="删除" Command="{Binding DataContext.RemoveLinearRegressionCalibrationPointCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                               CommandParameter="{Binding}" Style="{StaticResource ButtonDanger}" Width="50" Height="22" Padding="0" FontSize="11"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <StackPanel Grid.Row="2" Orientation="Horizontal">
+                                        <Button Content="执行校准" Command="{Binding ExecuteLinearRegressionCalibrationCommand}" Style="{StaticResource ButtonWarning}" Width="100" Margin="0,0,8,0"/>
+                                        <Button Content="清空" Command="{Binding ClearLinearRegressionCalibrationPointsCommand}" Style="{StaticResource ButtonDefault}" Width="60"/>
+                                    </StackPanel>
+                                </Grid>
                             </Border>
 
-                            <!-- 校准数据输入 -->
-                            <hc:TabControl Margin="0,0,0,10" Style="{StaticResource TabControlCapsuleSolid}" TabStripPlacement="Top" >
-                                <!-- 单点校准 -->
-                                <hc:TabItem Header="单点校准" Visibility="{Binding IsSinglePointCalibration, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                    <StackPanel Margin="15" HorizontalAlignment="Left">
-                                        <Grid Margin="0,0,0,10">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
+                            <Border Margin="0,0,0,8" Padding="10" CornerRadius="4"
+                                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                    Background="{DynamicResource RegionBrush}">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
 
-                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="标准值：" VerticalAlignment="Center" Margin="0,0,0,8" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                            <hc:NumericUpDown Grid.Row="0" Grid.Column="1" Value="{Binding SinglePointStandardValue}" 
-                                                            Width="{StaticResource FormNumericWidth}" Margin="0,0,0,8" DecimalPlaces="3"/>
-
-                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="测量值：" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                            <hc:NumericUpDown Grid.Row="1" Grid.Column="1" Value="{Binding SinglePointMeasuredValue}" 
-                                                            Width="{StaticResource FormNumericWidth}" DecimalPlaces="3"/>
-                                        </Grid>
-
-                                        <Button Content="执行单点校准" Command="{Binding ExecuteSinglePointCalibrationCommand}"
-                                               Style="{StaticResource ButtonWarning}"
-                                               Width="{StaticResource FormNumericWidth}" HorizontalAlignment="Left" Margin="0,5,0,0"/>
-
-
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <TextBlock Text="校正历史" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryBrush}" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding CalibrationHistory.Count, StringFormat='({0}条)'}" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        <Button Content="回用" Command="{Binding ApplySelectedCalibrationHistoryCommand}" Style="{StaticResource ButtonWarning}" Width="50" Height="24" FontSize="11" Margin="12,0,0,0"/>
+                                        <Button Content="刷新" Command="{Binding RefreshCalibrationHistoryCommand}" Style="{StaticResource ButtonPrimary}" Width="50" Height="24" FontSize="11" Margin="8,0,0,0"/>
                                     </StackPanel>
-                                </hc:TabItem>
 
-                                <!-- 多点校准 -->
-                                <hc:TabItem Header="多点校准">
-                                    <Grid Margin="15">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-
-                                        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,15">
-                                            <TextBlock Text="标准值:" VerticalAlignment="Center" Width="{StaticResource FormLabelWidthNarrow}" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                            <hc:NumericUpDown Value="{Binding MultiPointStandardValue}" 
-                                                            Width="{StaticResource FormButtonWidth}" Margin="5,0" DecimalPlaces="3"/>
-                                            <TextBlock Text="测量值:" VerticalAlignment="Center" Width="{StaticResource FormLabelWidthNarrow}" Margin="15,0,0,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                            <hc:NumericUpDown Value="{Binding MultiPointMeasuredValue}" 
-                                                            Width="{StaticResource FormButtonWidth}" Margin="5,0" DecimalPlaces="3"/>
-                                            <Button Content="添加点" Command="{Binding AddCalibrationPointCommand}"
-                                                   Style="{StaticResource ButtonPrimary}"
-                                                   Width="80" Margin="15,0,0,0" Height="30"/>
-                                        </StackPanel>
-
-                                        <DataGrid Grid.Row="1" ItemsSource="{Binding CalibrationPoints}"
-                                                 AutoGenerateColumns="False" CanUserAddRows="False"
-                                                 HeadersVisibility="Column" Margin="0,0,0,15"
-                                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                                 MinHeight="150" MaxHeight="300"
-                                                 Background="{StaticResource BackgroundColor}"
-                                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
-                                            <DataGrid.Columns>
-                                                <DataGridTextColumn Header="序号" Binding="{Binding Index}" Width="60" IsReadOnly="True"/>
-                                                <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue, StringFormat=F3}" Width="*"/>
-                                                <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue, StringFormat=F3}" Width="*"/>
-                                                <DataGridTemplateColumn Header="操作" Width="80">
-                                                    <DataGridTemplateColumn.CellTemplate>
-                                                        <DataTemplate>
-                                                            <Button Content="删除" Command="{Binding DataContext.RemoveCalibrationPointCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                   CommandParameter="{Binding}" Style="{StaticResource ButtonDanger}" Width="60" Height="25" Padding="0"/>
-                                                        </DataTemplate>
-                                                    </DataGridTemplateColumn.CellTemplate>
-                                                </DataGridTemplateColumn>
-                                            </DataGrid.Columns>
-                                        </DataGrid>
-
-                                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left">
-                                            <Button Content="执行多点校准" Command="{Binding ExecuteMultiPointCalibrationCommand}"
-                                                   Style="{StaticResource ButtonWarning}"
-                                                   Width="{StaticResource FormNumericWidth}" Margin="0,0,10,0"/>
-                                            <Button Content="清空列表" Command="{Binding ClearCalibrationPointsCommand}"
-                                                   Style="{StaticResource ButtonDefault}"
-                                                   Width="{StaticResource FormButtonWidth}"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </hc:TabItem>
-
-                                <!-- 校准历史 -->
-                                <hc:TabItem Header="校准历史">
-                                    <Grid Margin="15">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-
-                                        <DataGrid Grid.Row="0" ItemsSource="{Binding CalibrationHistory}"
-                                                 AutoGenerateColumns="False" IsReadOnly="True" Margin="0,0,0,15"
-                                                 BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                                 MinHeight="150" MaxHeight="300"
-                                                   Background="{StaticResource BackgroundColor}"
-                                                 ScrollViewer.VerticalScrollBarVisibility="Auto">
-                                            <DataGrid.Columns>
-                                                <DataGridTextColumn Header="校准时间" Binding="{Binding CalibrationTime, StringFormat='yyyy-MM-dd HH:mm:ss'}" Width="150"/>
-                                                <DataGridTextColumn Header="系数 A" Binding="{Binding CoefficientA, StringFormat=F6}" Width="*"/>
-                                                <DataGridTextColumn Header="系数 B" Binding="{Binding CoefficientB, StringFormat=F6}" Width="*"/>
-                                                <DataGridTextColumn Header="操作员" Binding="{Binding OperatorName}" Width="100"/>
-                                                <DataGridTextColumn Header="校准点数" Binding="{Binding CalibrationPoints.Count}" Width="80"/>
-                                            </DataGrid.Columns>
-                                        </DataGrid>
-
-                                        <Button Grid.Row="1" Content="刷新历史" Command="{Binding RefreshCalibrationHistoryCommand}"
-                                               Style="{StaticResource ButtonPrimary}"
-                                               Width="{StaticResource FormButtonWidth}" Height="30" HorizontalAlignment="Right"/>
-                                    </Grid>
-                                </hc:TabItem>
-                            </hc:TabControl>
+                                    <DataGrid Grid.Row="1" ItemsSource="{Binding CalibrationHistory}"
+                                             SelectedItem="{Binding SelectedCalibrationHistory, Mode=TwoWay}"
+                                             AutoGenerateColumns="False" IsReadOnly="True"
+                                             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                             MinHeight="100" MaxHeight="220"
+                                             Background="{StaticResource BackgroundColor}"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <DataGrid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="回用" Command="{Binding ApplySelectedCalibrationHistoryCommand}" />
+                                                <MenuItem Header="刷新" Command="{Binding RefreshCalibrationHistoryCommand}" />
+                                            </ContextMenu>
+                                        </DataGrid.ContextMenu>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="时间" Binding="{Binding CalibrationTime, StringFormat='MM-dd HH:mm'}" Width="100"/>
+                                            <DataGridTextColumn Header="方式" Binding="{Binding MethodName}" Width="90"/>
+                                            <DataGridTextColumn Header="A" Binding="{Binding CoefficientA, StringFormat=F4}" Width="*"/>
+                                            <DataGridTextColumn Header="B" Binding="{Binding CoefficientB, StringFormat=F4}" Width="*"/>
+                                            <DataGridTextColumn Header="点数" Binding="{Binding CalibrationPoints.Count}" Width="50"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
 

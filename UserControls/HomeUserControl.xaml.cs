@@ -1,6 +1,10 @@
-﻿using System.Windows;
+﻿using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Services.UserSetting;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace MeasurementSoftware.UserControls
 {
@@ -12,6 +16,7 @@ namespace MeasurementSoftware.UserControls
         public HomeUserControl()
         {
             InitializeComponent();
+            RestoreLayout();
         }
 
         #region 布局控制
@@ -22,8 +27,9 @@ namespace MeasurementSoftware.UserControls
         private void ToggleLayout_Click(object sender, RoutedEventArgs e)
         {
             _isAlternateLayout = !_isAlternateLayout;
-        
+
             ApplyCurrentLayout();
+            SaveLayout();
         }
 
         /// <summary>
@@ -34,6 +40,7 @@ namespace MeasurementSoftware.UserControls
             _isAlternateLayout = false;
             _isGuidePanelVisible = true;
             ApplyCurrentLayout();
+            SaveLayout();
         }
 
         /// <summary>
@@ -42,8 +49,9 @@ namespace MeasurementSoftware.UserControls
         private void ToggleGuidePanel_Click(object sender, RoutedEventArgs e)
         {
             _isGuidePanelVisible = !_isGuidePanelVisible;
-           
+
             ApplyCurrentLayout();
+            SaveLayout();
         }
 
         /// <summary>
@@ -65,15 +73,18 @@ namespace MeasurementSoftware.UserControls
         /// </summary>
         private void ApplyDefaultLayout()
         {
+            var layout = ContainerBuilderExtensions.GetService<IUserSettingsService>()?.Settings.HomeLayout;
+
             MainContentGrid.ColumnDefinitions.Clear();
             MainContentGrid.RowDefinitions.Clear();
 
             if (_isGuidePanelVisible)
             {
+                double guideWidth = layout?.GuideColumnWidth ?? 220;
                 // 三列：图片 | 分割条 | 导向区
                 MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 200 });
                 MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220), MinWidth = 180 });
+                MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(guideWidth), MinWidth = 180 });
             }
             else
             {
@@ -81,10 +92,11 @@ namespace MeasurementSoftware.UserControls
                 MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 200 });
             }
 
+            double tableStarHeight = layout?.TableRowStarHeight ?? 0.6;
             // 三行：上方内容 | 水平分割条 | 下方表格
             MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = 120 });
             MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(0.6, GridUnitType.Star), MinHeight = 120 });
+            MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(tableStarHeight, GridUnitType.Star), MinHeight = 120 });
 
             // 图片
             Grid.SetColumn(ImagePanel, 0); Grid.SetRow(ImagePanel, 0);
@@ -136,18 +148,22 @@ namespace MeasurementSoftware.UserControls
         /// </summary>
         private void ApplyAlternateLayout()
         {
+            var layout = ContainerBuilderExtensions.GetService<IUserSettingsService>()?.Settings.HomeLayout;
+
             MainContentGrid.ColumnDefinitions.Clear();
             MainContentGrid.RowDefinitions.Clear();
 
+            double rightStarWidth = layout?.AltRightColumnStarWidth ?? 1.2;
             // 三列：图片 | 分割条 | 导向区+表格
             MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 200 });
             MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star), MinWidth = 350 });
+            MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(rightStarWidth, GridUnitType.Star), MinWidth = 350 });
 
             if (_isGuidePanelVisible)
             {
+                double guideRowHeight = layout?.AltGuideRowHeight ?? 220;
                 // 三行：导向区 | 水平分割条 | 表格
-                MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(220) });
+                MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(guideRowHeight) });
                 MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
                 MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = 120 });
             }
@@ -204,6 +220,84 @@ namespace MeasurementSoftware.UserControls
             }
 
             TablePanel.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>
+        /// GridSplitter 拖动完成后保存分割位置
+        /// </summary>
+        private void Splitter_DragCompleted(object sender, DragCompletedEventArgs e)
+        {
+            Dispatcher.BeginInvoke(SaveSplitterPositions, DispatcherPriority.Background);
+        }
+
+        /// <summary>
+        /// 保存布局模式（切换布局/显隐导向区时调用）
+        /// </summary>
+        private void SaveLayout()
+        {
+            var settings = ContainerBuilderExtensions.GetService<IUserSettingsService>();
+            if (settings == null) return;
+
+            var layout = settings.Settings.HomeLayout;
+            layout.IsAlternateLayout = _isAlternateLayout;
+            layout.IsGuidePanelVisible = _isGuidePanelVisible;
+            settings.SaveSettings();
+        }
+
+        /// <summary>
+        /// 保存当前 GridSplitter 拖动后的面板尺寸
+        /// </summary>
+        private void SaveSplitterPositions()
+        {
+            var settings = ContainerBuilderExtensions.GetService<IUserSettingsService>();
+            if (settings == null) return;
+
+            var layout = settings.Settings.HomeLayout;
+            var cols = MainContentGrid.ColumnDefinitions;
+            var rows = MainContentGrid.RowDefinitions;
+
+            if (!_isAlternateLayout)
+            {
+                // 默认布局：导向区列宽（绝对值）、表格行高比例（Star比）
+                if (_isGuidePanelVisible && cols.Count >= 3 && cols[2].ActualWidth > 0)
+                {
+                    layout.GuideColumnWidth = cols[2].ActualWidth;
+                }
+                if (rows.Count >= 3 && rows[0].ActualHeight > 0)
+                {
+                    layout.TableRowStarHeight = rows[2].ActualHeight / rows[0].ActualHeight;
+                }
+            }
+            else
+            {
+                // 备选布局：右列宽度比例（Star比）、导向区行高（绝对值）
+                if (cols.Count >= 3 && cols[0].ActualWidth > 0)
+                {
+                    layout.AltRightColumnStarWidth = cols[2].ActualWidth / cols[0].ActualWidth;
+                }
+                if (_isGuidePanelVisible && rows.Count >= 3 && rows[0].ActualHeight > 0)
+                {
+                    layout.AltGuideRowHeight = rows[0].ActualHeight;
+                }
+            }
+
+            settings.SaveSettings();
+        }
+
+        /// <summary>
+        /// 从 UserSettings 恢复布局
+        /// </summary>
+        private void RestoreLayout()
+        {
+            var settings = ContainerBuilderExtensions.GetService<IUserSettingsService>();
+            if (settings != null)
+            {
+                var layout = settings.Settings.HomeLayout;
+                _isAlternateLayout = layout.IsAlternateLayout;
+                _isGuidePanelVisible = layout.IsGuidePanelVisible;
+            }
+
+            ApplyCurrentLayout();
         }
 
         #endregion

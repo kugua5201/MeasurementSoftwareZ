@@ -161,7 +161,8 @@
                 <GridSplitter x:Name="MainSplitter" Grid.Column="1" Width="6" 
                               HorizontalAlignment="Center" VerticalAlignment="Stretch"
                               Background="Transparent" Cursor="SizeWE"
-                              ShowsPreview="True"/>
+                              ShowsPreview="True"
+                              DragCompleted="Splitter_DragCompleted"/>
 
                 <!-- 右侧：通道列表 -->
                 <Border x:Name="ChannelListPanel" Grid.Column="2" Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5">
@@ -204,6 +205,13 @@
                               FontSize="13"
                               Background="{StaticResource BackgroundColor}"
                               MouseDoubleClick="DataGrid_MouseDoubleClick">
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="添加通道" Command="{Binding AddChannelCommand}" />
+                                    <MenuItem Header="删除通道" Command="{Binding DeleteChannelCommand}" />
+                                    <MenuItem Header="重新编号" Command="{Binding RenumberPointsCommand}" />
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="编号" Binding="{Binding ChannelNumber}" Width="50" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="通道名称" Binding="{Binding ChannelName}" Width="100" IsReadOnly="True"/>
@@ -215,6 +223,7 @@
                                 <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue}" Width="70" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="上公差" Binding="{Binding UpperTolerance}" Width="70" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="下公差" Binding="{Binding LowerTolerance}" Width="70" IsReadOnly="True"/>
+                                <DataGridCheckBoxColumn Header="校准" Binding="{Binding RequiresCalibration}" Width="65" IsReadOnly="True"/>
                                 <DataGridCheckBoxColumn Header="启用" Binding="{Binding IsEnabled}" Width="50" IsReadOnly="True"/>
                             </DataGrid.Columns>
                         </DataGrid>
@@ -384,8 +393,14 @@
                                                   Minimum="1" Maximum="10000"
                                                   Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="小数位数：" VerticalAlignment="Center"/>
-                                    <hc:NumericUpDown Grid.Row="5" Grid.Column="1" 
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="校准：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <ToggleButton Grid.Row="5" Grid.Column="1"
+                                                  IsChecked="{Binding EditingChannel.RequiresCalibration, Mode=TwoWay}"
+                                                  Style="{StaticResource ToggleButtonSwitch}"
+                                                  HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+                                    <TextBlock Grid.Row="6" Grid.Column="0" Text="小数位数：" VerticalAlignment="Center"/>
+                                    <hc:NumericUpDown Grid.Row="6" Grid.Column="1" 
                                                   Value="{Binding EditingChannel.DecimalPlaces}" 
                                                   Minimum="0" Maximum="6"
                                                   Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"/>
@@ -401,6 +416,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
@@ -424,8 +440,21 @@
                                           DisplayMemberPath="PointName"
                                           Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
                                           hc:InfoElement.Placeholder="选择数据点">
-                                      
+
                                     </hc:ComboBox>
+
+                                    <!-- 使用缓存值开关：仅当选中的点位是缓存生成的时候显示 -->
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="使用缓存值：" VerticalAlignment="Center" Margin="0,8,0,0"
+                                               Visibility="{Binding ShowCacheToggle, Converter={StaticResource Boolean2VisibilityConverter}}"/>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,8,0,0"
+                                                Visibility="{Binding ShowCacheToggle, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                        <ToggleButton IsChecked="{Binding EditingChannel.UseCacheValue, Mode=TwoWay}"
+                                                      Style="{StaticResource ToggleButtonSwitch}"
+                                                      HorizontalAlignment="Left"/>
+                                        <TextBlock Text="开启后测量使用缓存解析值，关闭使用寄存器实时值"
+                                                   FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
+                                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                    </StackPanel>
                                 </Grid>
 
                             </StackPanel>

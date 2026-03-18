@@ -71,19 +71,19 @@ namespace MeasurementSoftware.Extensions
         /// <summary>
         /// 注册瞬时接口
         /// </summary>
-        public static ContainerBuilder RegisterTransient<TInterface, TImplementation>(this ContainerBuilder builder) where TImplementation : class, TInterface
+        public static ContainerBuilder RegisterTransient<TInterface, TImplementation>(this ContainerBuilder builder) where TImplementation : class, TInterface where TInterface : notnull
                 => builder.RegisterInterfaceWithLifetime<TInterface, TImplementation>(lifetime => lifetime.InstancePerDependency());
 
         /// <summary>
         /// 注册单例接口
         /// </summary>
-        public static ContainerBuilder RegisterSingleton<TInterface, TImplementation>(this ContainerBuilder builder) where TImplementation : class, TInterface
+        public static ContainerBuilder RegisterSingleton<TInterface, TImplementation>(this ContainerBuilder builder) where TImplementation : class, TInterface where TInterface : notnull
                 => builder.RegisterInterfaceWithLifetime<TInterface, TImplementation>(lifetime => lifetime.SingleInstance());
 
         /// <summary>
         /// 注册作用域接口
         /// </summary>
-        public static ContainerBuilder RegisterScoped<TInterface, TImplementation>(this ContainerBuilder builder) where TImplementation : class, TInterface
+        public static ContainerBuilder RegisterScoped<TInterface, TImplementation>(this ContainerBuilder builder) where TImplementation : class, TInterface where TInterface : notnull
                 => builder.RegisterInterfaceWithLifetime<TInterface, TImplementation>(lifetime => lifetime.InstancePerLifetimeScope());
 
 
@@ -239,16 +239,19 @@ namespace MeasurementSoftware.Extensions
             return builder;
         }
 
+
         /// <summary>
         /// 通用接口注册辅助方法
         /// </summary>
         private static ContainerBuilder RegisterInterfaceWithLifetime<TInterface, TImplementation>(this ContainerBuilder builder, Action<IRegistrationBuilder<TImplementation, IConcreteActivatorData, SingleRegistrationStyle>> lifetimeConfig)
-               where TImplementation : class, TInterface
+                 where TImplementation : class, TInterface
+                 where TInterface : notnull
         {
             var registration = builder.RegisterType<TImplementation>().As<TInterface>();
             lifetimeConfig(registration);
             return builder;
         }
+
 
 
 

@@ -73,6 +73,12 @@ namespace MeasurementSoftware.Models
         private int totalSteps = 10;
 
         /// <summary>
+        /// 采集轮询延迟(ms)
+        /// </summary>
+        [ObservableProperty]
+        private int acquisitionDelayMs = 500;
+
+        /// <summary>
         /// 二维码绑定配置
         /// </summary>
         [ObservableProperty]

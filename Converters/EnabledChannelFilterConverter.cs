@@ -10,7 +10,7 @@ namespace MeasurementSoftware.Converters
     public class EnabledChannelFilterConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-            => (value as IEnumerable<MeasurementChannel>)?.Where(c => c.IsEnabled).ToList();
+            => (value as IEnumerable<MeasurementChannel>)?.Where(c => c.IsEnabled).ToList()!;
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }

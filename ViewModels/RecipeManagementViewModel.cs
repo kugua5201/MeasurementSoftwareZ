@@ -125,6 +125,13 @@ namespace MeasurementSoftware.ViewModels
                     Title = "打开配方"
                 };
 
+                var lastRecipeDirectory = Path.GetDirectoryName(_userSettingsService.Settings.LastRecipePath);
+                if (!string.IsNullOrWhiteSpace(lastRecipeDirectory) &&
+                    Directory.Exists(lastRecipeDirectory))
+                {
+                    dialog.InitialDirectory = lastRecipeDirectory;
+                }
+
                 if (dialog.ShowDialog() == true)
                 {
                     var recipe = await _recipeConfigService.LoadRecipeAsync(dialog.FileName);
@@ -137,7 +144,7 @@ namespace MeasurementSoftware.ViewModels
 
                         // 记住最后打开的配方路径
                         _userSettingsService.Settings.LastRecipePath = dialog.FileName;
-                        await _userSettingsService.SaveSettingsAsync();
+                        _userSettingsService.SaveSettings();
 
                         NotifyRecipeChanged();
                         Growl.Success($"配方 {recipe.RecipeName} 加载成功");
@@ -181,7 +188,7 @@ namespace MeasurementSoftware.ViewModels
                     {
                         // 更新用户设置
                         _userSettingsService.Settings.LastRecipePath = CurrentRecipePath;
-                        await _userSettingsService.SaveSettingsAsync();
+                        _userSettingsService.SaveSettings();
 
                         NotifyRecipeChanged();
                         Growl.Success("配方保存成功");
@@ -218,20 +225,27 @@ namespace MeasurementSoftware.ViewModels
                 {
                     Filter = "配方文件 (*.json)|*.json|所有文件 (*.*)|*.*",
                     Title = "另存为配方",
-                    FileName = CurrentRecipe.RecipeName + ".json"
+                    FileName = CurrentRecipe?.RecipeName + ".json"
                 };
+
+                var lastRecipeDirectory = Path.GetDirectoryName(_userSettingsService.Settings.LastRecipePath);
+                if (!string.IsNullOrWhiteSpace(lastRecipeDirectory) &&
+                    Directory.Exists(lastRecipeDirectory))
+                {
+                    dialog.InitialDirectory = lastRecipeDirectory;
+                }
 
                 if (dialog.ShowDialog() == true)
                 {
                     // 配方名称与文件名保持一致
-                    CurrentRecipe.RecipeName = Path.GetFileNameWithoutExtension(dialog.FileName);
-                    CurrentRecipe.ModifyTime = DateTime.Now;
+                    CurrentRecipe?.RecipeName = Path.GetFileNameWithoutExtension(dialog.FileName);
+                    CurrentRecipe?.ModifyTime = DateTime.Now;
                     _recipeConfigService.UpdateRecipePath(dialog.FileName);
                     var success = await _recipeConfigService.SaveCurrentRecipeAsync();
                     if (success)
                     {
                         _userSettingsService.Settings.LastRecipePath = dialog.FileName;
-                        await _userSettingsService.SaveSettingsAsync();
+                        _userSettingsService.SaveSettings();
 
                         NotifyRecipeChanged();
                         Growl.Success($"配方另存为 {Path.GetFileName(dialog.FileName)} 成功");

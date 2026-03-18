@@ -7,28 +7,9 @@ using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Logs;
 using MultiProtocol.Model;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 
 namespace MeasurementSoftware.ViewModels
 {
-    /// <summary>
-    /// 校准方式
-    /// </summary>
-    public enum CalibrationMode
-    {
-        /// <summary>
-        /// 单点校准（偏移校准）
-        /// </summary>
-        [Description("单点校准（偏移校准）")]
-        SinglePoint,
-
-        /// <summary>
-        /// 多点校准（线性拟合）
-        /// </summary>
-        [Description("多点校准（线性拟合）")]
-        MultiPoint
-    }
-
     public partial class CalibrationViewModel : ObservableViewModel
     {
         private readonly ILog _log;
@@ -48,19 +29,25 @@ namespace MeasurementSoftware.ViewModels
         /// 校准方式列表（供 ComboBox 绑定）
         /// </summary>
         public List<CalibrationMode> CalibrationModes { get; } =
-            [CalibrationMode.SinglePoint, CalibrationMode.MultiPoint];
+            [CalibrationMode.SinglePoint, CalibrationMode.LeastSquares, CalibrationMode.LinearRegression];
 
         /// <summary>
         /// 当前选中的校准方式
         /// </summary>
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsSinglePointCalibration))]
+        [NotifyPropertyChangedFor(nameof(IsLeastSquaresCalibration))]
+        [NotifyPropertyChangedFor(nameof(IsLinearRegressionCalibration))]
         private CalibrationMode selectedCalibrationMode = CalibrationMode.SinglePoint;
 
         /// <summary>
         /// 是否单点校准（兼容旧绑定 + TabControl 可见性）
         /// </summary>
         public bool IsSinglePointCalibration => SelectedCalibrationMode == CalibrationMode.SinglePoint;
+
+        public bool IsLeastSquaresCalibration => SelectedCalibrationMode == CalibrationMode.LeastSquares;
+
+        public bool IsLinearRegressionCalibration => SelectedCalibrationMode == CalibrationMode.LinearRegression;
 
         [ObservableProperty]
         private double singlePointStandardValue;
@@ -69,16 +56,28 @@ namespace MeasurementSoftware.ViewModels
         private double singlePointMeasuredValue;
 
         [ObservableProperty]
-        private double multiPointStandardValue;
+        private double leastSquaresStandardValue;
 
         [ObservableProperty]
-        private double multiPointMeasuredValue;
+        private double leastSquaresMeasuredValue;
 
         [ObservableProperty]
-        private ObservableCollection<CalibrationPointModel> calibrationPoints = new();
+        private double linearRegressionStandardValue;
+
+        [ObservableProperty]
+        private double linearRegressionMeasuredValue;
+
+        [ObservableProperty]
+        private ObservableCollection<LeastSquaresCalibrationPoint> leastSquaresCalibrationPoints = [];
+
+        [ObservableProperty]
+        private ObservableCollection<LinearRegressionCalibrationPoint> linearRegressionCalibrationPoints = [];
 
         [ObservableProperty]
         private ObservableCollection<CalibrationRecord> calibrationHistory = new();
+
+        [ObservableProperty]
+        private CalibrationRecord? selectedCalibrationHistory;
 
 
 
@@ -161,9 +160,79 @@ namespace MeasurementSoftware.ViewModels
         {
             if (value != null)
             {
+                LoadCalibrationData(value);
                 UpdateCalibrationStatus();
                 LoadCalibrationHistory();
             }
+        }
+
+        partial void OnSelectedCalibrationModeChanged(CalibrationMode value)
+        {
+            if (SelectedChannel != null)
+            {
+                SelectedChannel.CalibrationMode = value;
+            }
+        }
+
+        partial void OnSinglePointStandardValueChanged(double value)
+        {
+            if (SelectedChannel != null)
+            {
+                SelectedChannel.SinglePointCalibration.StandardValue = value;
+            }
+        }
+
+        partial void OnSinglePointMeasuredValueChanged(double value)
+        {
+            if (SelectedChannel != null)
+            {
+                SelectedChannel.SinglePointCalibration.MeasuredValue = value;
+            }
+        }
+
+        partial void OnLeastSquaresStandardValueChanged(double value)
+        {
+            if (SelectedChannel != null)
+            {
+                SelectedChannel.LeastSquaresCalibration.InputStandardValue = value;
+            }
+        }
+
+        partial void OnLeastSquaresMeasuredValueChanged(double value)
+        {
+            if (SelectedChannel != null)
+            {
+                SelectedChannel.LeastSquaresCalibration.InputMeasuredValue = value;
+            }
+        }
+
+        partial void OnLinearRegressionStandardValueChanged(double value)
+        {
+            if (SelectedChannel != null)
+            {
+                SelectedChannel.LinearRegressionCalibration.InputStandardValue = value;
+            }
+        }
+
+        partial void OnLinearRegressionMeasuredValueChanged(double value)
+        {
+            if (SelectedChannel != null)
+            {
+                SelectedChannel.LinearRegressionCalibration.InputMeasuredValue = value;
+            }
+        }
+
+        private void LoadCalibrationData(MeasurementChannel channel)
+        {
+            SelectedCalibrationMode = channel.CalibrationMode;
+            SinglePointStandardValue = channel.SinglePointCalibration.StandardValue;
+            SinglePointMeasuredValue = channel.SinglePointCalibration.MeasuredValue;
+            LeastSquaresStandardValue = channel.LeastSquaresCalibration.InputStandardValue;
+            LeastSquaresMeasuredValue = channel.LeastSquaresCalibration.InputMeasuredValue;
+            LinearRegressionStandardValue = channel.LinearRegressionCalibration.InputStandardValue;
+            LinearRegressionMeasuredValue = channel.LinearRegressionCalibration.InputMeasuredValue;
+            LeastSquaresCalibrationPoints = channel.LeastSquaresCalibration.Points;
+            LinearRegressionCalibrationPoints = channel.LinearRegressionCalibration.Points;
         }
 
         private void UpdateCalibrationStatus()
@@ -191,9 +260,81 @@ namespace MeasurementSoftware.ViewModels
         {
             if (SelectedChannel == null) return;
 
-            var history = await _calibrationService.GetCalibrationHistoryAsync(
-                SelectedChannel.ChannelNumber.ToString());
+            var history = await _calibrationService.GetCalibrationHistoryAsync(SelectedChannel);
             CalibrationHistory = new ObservableCollection<CalibrationRecord>(history);
+            SelectedCalibrationHistory = CalibrationHistory.FirstOrDefault();
+        }
+
+        [RelayCommand]
+        private void ApplySelectedCalibrationHistory()
+        {
+            if (SelectedChannel == null)
+            {
+                Growl.Warning("请先选择通道");
+                return;
+            }
+
+            if (SelectedCalibrationHistory == null)
+            {
+                Growl.Warning("请先选择一条校准历史");
+                return;
+            }
+
+            var record = SelectedCalibrationHistory;
+
+            SelectedChannel.RequiresCalibration = true;
+            SelectedChannel.CalibrationMode = record.Mode;
+            SelectedChannel.CalibrationCoefficientA = record.CoefficientA;
+            SelectedChannel.CalibrationCoefficientB = record.CoefficientB;
+            SelectedChannel.LastCalibrationTime = record.CalibrationTime;
+
+            SelectedChannel.SinglePointCalibration.CoefficientA = record.CoefficientA;
+            SelectedChannel.SinglePointCalibration.CoefficientB = record.CoefficientB;
+            SelectedChannel.SinglePointCalibration.LastCalibrationTime = record.CalibrationTime;
+            SelectedChannel.LeastSquaresCalibration.CoefficientA = record.CoefficientA;
+            SelectedChannel.LeastSquaresCalibration.CoefficientB = record.CoefficientB;
+            SelectedChannel.LeastSquaresCalibration.LastCalibrationTime = record.CalibrationTime;
+            SelectedChannel.LinearRegressionCalibration.CoefficientA = record.CoefficientA;
+            SelectedChannel.LinearRegressionCalibration.CoefficientB = record.CoefficientB;
+            SelectedChannel.LinearRegressionCalibration.LastCalibrationTime = record.CalibrationTime;
+
+            SelectedCalibrationMode = record.Mode;
+
+            switch (record.Mode)
+            {
+                case CalibrationMode.SinglePoint:
+                    if (record.CalibrationPoints.Count > 0)
+                    {
+                        var point = record.CalibrationPoints[0];
+                        SinglePointStandardValue = point.StandardValue;
+                        SinglePointMeasuredValue = point.MeasuredValue;
+                    }
+                    break;
+                case CalibrationMode.LeastSquares:
+                    LeastSquaresCalibrationPoints = new ObservableCollection<LeastSquaresCalibrationPoint>(
+                        record.CalibrationPoints.Select((p, index) => new LeastSquaresCalibrationPoint
+                        {
+                            Index = index + 1,
+                            StandardValue = p.StandardValue,
+                            MeasuredValue = p.MeasuredValue
+                        }));
+                    SelectedChannel.LeastSquaresCalibration.Points = LeastSquaresCalibrationPoints;
+                    break;
+                case CalibrationMode.LinearRegression:
+                    LinearRegressionCalibrationPoints = new ObservableCollection<LinearRegressionCalibrationPoint>(
+                        record.CalibrationPoints.Select((p, index) => new LinearRegressionCalibrationPoint
+                        {
+                            Index = index + 1,
+                            StandardValue = p.StandardValue,
+                            MeasuredValue = p.MeasuredValue
+                        }));
+                    SelectedChannel.LinearRegressionCalibration.Points = LinearRegressionCalibrationPoints;
+                    break;
+            }
+
+            UpdateCalibrationStatus();
+            Growl.Success($"已回用 {record.MethodName} 历史系数 A={record.CoefficientA:F6}, B={record.CoefficientB:F6}");
+            _log.Info($"通道 {SelectedChannel.ChannelName} 已回用校准历史记录 {record.RecordId}");
         }
 
         /// <summary>
@@ -219,9 +360,13 @@ namespace MeasurementSoftware.ViewModels
             {
                 SinglePointMeasuredValue = value.Value;
             }
+            else if (IsLeastSquaresCalibration)
+            {
+                LeastSquaresMeasuredValue = value.Value;
+            }
             else
             {
-                MultiPointMeasuredValue = value.Value;
+                LinearRegressionMeasuredValue = value.Value;
             }
 
             _log.Info($"读取通道 {SelectedChannel.ChannelName} 当前值: {value.Value}");
@@ -277,37 +422,36 @@ namespace MeasurementSoftware.ViewModels
         }
 
         [RelayCommand]
-        private void AddCalibrationPoint()
+        private void AddLeastSquaresCalibrationPoint()
         {
-            var point = new CalibrationPointModel
+            var point = new LeastSquaresCalibrationPoint
             {
-                Index = CalibrationPoints.Count + 1,
-                StandardValue = MultiPointStandardValue,
-                MeasuredValue = MultiPointMeasuredValue
+                Index = LeastSquaresCalibrationPoints.Count + 1,
+                StandardValue = LeastSquaresStandardValue,
+                MeasuredValue = LeastSquaresMeasuredValue
             };
-            CalibrationPoints.Add(point);
-            _log.Info($"添加校准点: 标准值={point.StandardValue}, 测量值={point.MeasuredValue}");
+            LeastSquaresCalibrationPoints.Add(point);
+            _log.Info($"添加最小二乘法校准点: 标准值={point.StandardValue}, 测量值={point.MeasuredValue}");
         }
 
         [RelayCommand]
-        private void RemoveCalibrationPoint(CalibrationPointModel point)
+        private void RemoveLeastSquaresCalibrationPoint(LeastSquaresCalibrationPoint point)
         {
-            CalibrationPoints.Remove(point);
-            // 重新编号
-            for (int i = 0; i < CalibrationPoints.Count; i++)
+            LeastSquaresCalibrationPoints.Remove(point);
+            for (int i = 0; i < LeastSquaresCalibrationPoints.Count; i++)
             {
-                CalibrationPoints[i].Index = i + 1;
+                LeastSquaresCalibrationPoints[i].Index = i + 1;
             }
         }
 
         [RelayCommand]
-        private void ClearCalibrationPoints()
+        private void ClearLeastSquaresCalibrationPoints()
         {
-            CalibrationPoints.Clear();
+            LeastSquaresCalibrationPoints.Clear();
         }
 
         [RelayCommand]
-        private async Task ExecuteMultiPointCalibration()
+        private async Task ExecuteLeastSquaresCalibration()
         {
             if (SelectedChannel == null)
             {
@@ -315,26 +459,87 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            if (CalibrationPoints.Count < 2)
+            if (LeastSquaresCalibrationPoints.Count < 2)
             {
-                Growl.Warning("多点校准至少需要2个校准点");
+                Growl.Warning("最小二乘法校准至少需要2个校准点");
                 return;
             }
 
-            var points = CalibrationPoints.Select(p => (p.StandardValue, p.MeasuredValue)).ToList();
-            var result = await _calibrationService.CalibrateChannelAsync(SelectedChannel, points);
+            var points = LeastSquaresCalibrationPoints.Select(p => (p.StandardValue, p.MeasuredValue)).ToList();
+            var result = await _calibrationService.CalibrateLeastSquaresAsync(SelectedChannel, points);
 
             if (result.Success)
             {
-                Growl.Info($"多点校准成功！\n" + $"线性系数 A = {result.CoefficientA:F6}\n" + $"线性系数 B = {result.CoefficientB:F6}\n" + $"校准公式: y = {result.CoefficientA:F6} * x + {result.CoefficientB:F6}");
+                Growl.Info($"最小二乘法校准成功！\n线性系数 A = {result.CoefficientA:F6}\n线性系数 B = {result.CoefficientB:F6}\n校准公式: y = {result.CoefficientA:F6} * x + {result.CoefficientB:F6}");
                 UpdateCalibrationStatus();
                 LoadCalibrationHistory();
-                _log.Info($"通道 {SelectedChannel.ChannelName} 多点校准成功");
+                _log.Info($"通道 {SelectedChannel.ChannelName} 最小二乘法校准成功");
             }
             else
             {
-                Growl.Warning("多点校准失败，请检查输入数据");
-                _log.Error("多点校准失败");
+                Growl.Warning("最小二乘法校准失败，请检查输入数据");
+                _log.Error("最小二乘法校准失败");
+            }
+        }
+
+        [RelayCommand]
+        private void AddLinearRegressionCalibrationPoint()
+        {
+            var point = new LinearRegressionCalibrationPoint
+            {
+                Index = LinearRegressionCalibrationPoints.Count + 1,
+                StandardValue = LinearRegressionStandardValue,
+                MeasuredValue = LinearRegressionMeasuredValue
+            };
+            LinearRegressionCalibrationPoints.Add(point);
+            _log.Info($"添加线性回归校准点: 标准值={point.StandardValue}, 测量值={point.MeasuredValue}");
+        }
+
+        [RelayCommand]
+        private void RemoveLinearRegressionCalibrationPoint(LinearRegressionCalibrationPoint point)
+        {
+            LinearRegressionCalibrationPoints.Remove(point);
+            for (int i = 0; i < LinearRegressionCalibrationPoints.Count; i++)
+            {
+                LinearRegressionCalibrationPoints[i].Index = i + 1;
+            }
+        }
+
+        [RelayCommand]
+        private void ClearLinearRegressionCalibrationPoints()
+        {
+            LinearRegressionCalibrationPoints.Clear();
+        }
+
+        [RelayCommand]
+        private async Task ExecuteLinearRegressionCalibration()
+        {
+            if (SelectedChannel == null)
+            {
+                Growl.Warning("请先选择通道");
+                return;
+            }
+
+            if (LinearRegressionCalibrationPoints.Count < 2)
+            {
+                Growl.Warning("线性回归校准至少需要2个校准点");
+                return;
+            }
+
+            var points = LinearRegressionCalibrationPoints.Select(p => (p.StandardValue, p.MeasuredValue)).ToList();
+            var result = await _calibrationService.CalibrateLinearRegressionAsync(SelectedChannel, points);
+
+            if (result.Success)
+            {
+                Growl.Info($"线性回归校准成功！\n线性系数 A = {result.CoefficientA:F6}\n线性系数 B = {result.CoefficientB:F6}\n校准公式: y = {result.CoefficientA:F6} * x + {result.CoefficientB:F6}");
+                UpdateCalibrationStatus();
+                LoadCalibrationHistory();
+                _log.Info($"通道 {SelectedChannel.ChannelName} 线性回归校准成功");
+            }
+            else
+            {
+                Growl.Warning("线性回归校准失败，请检查输入数据");
+                _log.Error("线性回归校准失败");
             }
         }
 
@@ -491,21 +696,16 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         private void Cancel()
         {
-            CalibrationPoints.Clear();
+            if (IsLeastSquaresCalibration)
+            {
+                LeastSquaresCalibrationPoints.Clear();
+            }
+            else if (IsLinearRegressionCalibration)
+            {
+                LinearRegressionCalibrationPoints.Clear();
+            }
+
             Growl.Error(string.Empty);
         }
-    }
-
-    // 校准点模型
-    public partial class CalibrationPointModel : ObservableViewModel
-    {
-        [ObservableProperty]
-        private int index;
-
-        [ObservableProperty]
-        private double standardValue;
-
-        [ObservableProperty]
-        private double measuredValue;
     }
 }

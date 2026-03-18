@@ -15,57 +15,81 @@
         <!-- 顶部工具栏 -->
         <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
             <Grid>
-                <TextBlock Text="其他设置" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+      
                 <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveRecipeCommand}"/>
             </Grid>
         </Border>
 
         <!-- 设置内容 -->
-        <Grid Grid.Row="1" Margin="15">
-            <!-- 有配方时显示 -->
-            <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityConverter}}">
-                <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="1" CornerRadius="5" Padding="20,15" VerticalAlignment="Top">
-                    <StackPanel>
+        <Grid Grid.Row="1" >
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                   
+                    <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0"  Padding="20,15" VerticalAlignment="Top" 
+                            Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityConverter}}">
+                        <StackPanel>
 
-                        <!-- 工步配置 -->
-                        <TextBlock Text="工步配置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
-                                   Foreground="{DynamicResource PrimaryBrush}"/>
+													
 
-                        <Grid Margin="0,0,0,20">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="90"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+													<StackPanel Margin="0,0,0,20">
+														<TextBlock Text="采集设置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
+																			 Foreground="{DynamicResource SuccessBrush}"/>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="分步模式：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                <ToggleButton IsChecked="{Binding CurrentRecipe.EnableStepMode}"
-                                              Style="{StaticResource ToggleButtonSwitch}" VerticalAlignment="Center"/>
-                                <TextBlock Text="启用后按工步分步采集" FontSize="11" Margin="10,0,0,0"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                            </StackPanel>
+														<Grid>
+															<Grid.ColumnDefinitions>
+																<ColumnDefinition Width="90"/>
+																<ColumnDefinition Width="*"/>
+															</Grid.ColumnDefinitions>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="总工步数：" VerticalAlignment="Center"/>
-                            <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
-                                              Value="{Binding CurrentRecipe.TotalSteps}"
-                                              Minimum="1" Maximum="99"
-                                              Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
-                                              IsEnabled="{Binding CurrentRecipe.EnableStepMode}"/>
-                        </Grid>
+															<TextBlock Grid.Column="0" Text="采集速度：" VerticalAlignment="Center"/>
+															<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+																<hc:NumericUpDown Value="{Binding CurrentRecipe.AcquisitionDelayMs}"
+																									Minimum="1" Maximum="10000"
+																									Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"/>
+																<TextBlock Text="ms" Margin="10,0,0,0" VerticalAlignment="Center"
+																					 Foreground="{DynamicResource SecondaryTextBrush}"/>
+															</StackPanel>
+														</Grid>
+													</StackPanel>
+													<Separator Margin="0,5,0,15"/>
+													<!-- 工步配置 -->
+                            <TextBlock Text="工步配置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
+                                       Foreground="{DynamicResource PrimaryBrush}"/>
 
-                        <Separator Margin="0,5,0,15"/>
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                        <!-- 标注配置 -->
-                        <TextBlock Text="标注配置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
-                                   Foreground="{DynamicResource WarningBrush}"/>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="分步模式：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <ToggleButton IsChecked="{Binding CurrentRecipe.EnableStepMode}"
+                                                  Style="{StaticResource ToggleButtonSwitch}" VerticalAlignment="Center"/>
+                                    <TextBlock Text="启用后按工步分步采集" FontSize="11" Margin="10,0,0,0"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                </StackPanel>
 
-                        <Grid Margin="0,0,0,10">
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="总工步数：" VerticalAlignment="Center"/>
+                                <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
+                                                  Value="{Binding CurrentRecipe.TotalSteps}"
+                                                  Minimum="1" Maximum="99"
+                                                  Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
+                                                  IsEnabled="{Binding CurrentRecipe.EnableStepMode}"/>
+                            </Grid>
+
+                            <Separator Margin="0,5,0,15"/>
+
+                            <!-- 标注配置 -->
+                            <TextBlock Text="标注配置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
+                                       Foreground="{DynamicResource WarningBrush}"/>
+
+                            <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="90"/>
                                 <ColumnDefinition Width="*"/>
@@ -179,10 +203,11 @@
                                     </Border>
                                 </Popup>
                             </StackPanel>
-                        </Grid>
+                            </Grid>
 
-                    </StackPanel>
-                </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
             </ScrollViewer>
 
             <!-- 无配方提示 -->

@@ -1,11 +1,16 @@
 ﻿using Autofac;
+using HandyControl.Controls;
+using HandyControl.Data;
 using HandyControl.Tools;
+using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
+using MeasurementSoftware.Services.UserSetting;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,6 +20,8 @@ using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using DrawingIcon = System.Drawing.Icon;
+using Forms = System.Windows.Forms;
 using HcWindow = HandyControl.Controls.Window;
 
 namespace MeasurementSoftware
@@ -22,19 +29,32 @@ namespace MeasurementSoftware
     public partial class MainWindow : HcWindow
     {
         private double _savedMenuWidth = 250; // 保存当前菜单宽度
+        private readonly Forms.NotifyIcon _notifyIcon = new();
+        private bool _isExitRequested;
+        private bool _isHiddenToBackground;
+        private DrawingIcon? _trayIcon;
 
         public MainWindow()
         {
             InitializeComponent();
             _savedMenuWidth = LeftColumn.Width.Value;
-           
+
             this.Loaded += MainWindow_Loaded;
             this.Closing += MainWindow_Closing;
+            this.StateChanged += MainWindow_StateChanged;
+            this.Closed += MainWindow_Closed;
         }
 
         private void MainWindow_Closing(object? sender, CancelEventArgs e)
         {
-            var isCollecting = ((App)Application.Current).Container.Resolve<IRecipeConfigService>()?.IsCollecting ?? false;
+            if (!_isExitRequested)
+            {
+                e.Cancel = true;
+                HideToBackground();
+                return;
+            }
+
+            var isCollecting = ((App)System.Windows.Application.Current).Container.Resolve<IRecipeConfigService>()?.IsCollecting ?? false;
             if (isCollecting)
             {
                 var res = HandyControl.Controls.MessageBox.Show("当前正在测量，是否要退出？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -42,15 +62,226 @@ namespace MeasurementSoftware
                 if (res == MessageBoxResult.No)
                 {
                     e.Cancel = true;
+                    _isExitRequested = false;
                     return;
                 }
+            }
+
+            SaveWindowLayout();
+            if (DataContext is ViewModels.MainWindowViewModel viewModel)
+            {
+                viewModel.SaveNavigationLayout();
             }
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            SetSelectedButton(HomeButton);
+            InitializeNotifyIcon();
+            RestoreWindowLayout();
+            RestoreSelectedMenuButton();
         }
+
+        private void MainWindow_StateChanged(object? sender, EventArgs e)
+        {
+            if (_isExitRequested)
+            {
+                return;
+            }
+
+            if (WindowState == WindowState.Minimized)
+            {
+                HideToBackground();
+            }
+        }
+
+        private void MainWindow_Closed(object? sender, EventArgs e)
+        {
+            _notifyIcon.Visible = false;
+            _notifyIcon.Dispose();
+            _trayIcon?.Dispose();
+        }
+
+        private void InitializeNotifyIcon()
+        {
+            if (_notifyIcon.ContextMenuStrip != null)
+            {
+                return;
+            }
+
+            _trayIcon = LoadTrayIcon();
+            _notifyIcon.Icon = _trayIcon ?? System.Drawing.SystemIcons.Application;
+            _notifyIcon.Text = "测量软件";
+            _notifyIcon.Visible = true;
+            _notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
+
+            var menu = new Forms.ContextMenuStrip();
+            menu.Items.Add("显示主窗口", null, (_, _) => RestoreFromBackground());
+            menu.Items.Add(new Forms.ToolStripSeparator());
+            menu.Items.Add("退出", null, (_, _) => ExitApplication());
+            _notifyIcon.ContextMenuStrip = menu;
+        }
+
+        private DrawingIcon? LoadTrayIcon()
+        {
+            DrawingIcon? icon = Properties.Resources.ico is byte[] icoBytes ? new DrawingIcon(new MemoryStream(icoBytes)) : null;
+            return icon;
+        }
+
+        private void HideToBackground()
+        {
+            if (_isHiddenToBackground)
+            {
+                return;
+            }
+
+            _isHiddenToBackground = true;
+            _notifyIcon.Visible = true;
+            ShowInTaskbar = false;
+            Hide();
+            ShowTrayNotification();
+        }
+
+        private void ShowTrayNotification()
+        {
+            try
+            {
+                _notifyIcon.ShowBalloonTip(3000, "测量软件", "应用已最小化到系统托盘，点击托盘图标恢复。", Forms.ToolTipIcon.Info);
+            }
+            catch
+            {
+            }
+        }
+
+        private void RestoreFromBackground()
+        {
+            if (!_isHiddenToBackground)
+            {
+                return;
+            }
+
+            _isHiddenToBackground = false;
+            ShowInTaskbar = true;
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+            Topmost = true;
+            Topmost = false;
+            Focus();
+        }
+
+        private void NotifyIcon_DoubleClick(object? sender, EventArgs e)
+        {
+            RestoreFromBackground();
+        }
+
+        private void ExitApplication()
+        {
+            _isExitRequested = true;
+
+            if (_isHiddenToBackground)
+            {
+                _isHiddenToBackground = false;
+                Show();
+                ShowInTaskbar = true;
+                WindowState = WindowState.Normal;
+            }
+
+            Close();
+        }
+
+        #region 窗口布局保存/恢复
+
+        private void SaveWindowLayout()
+        {
+            var settings = ContainerBuilderExtensions.GetService<IUserSettingsService>();
+            if (settings == null) return;
+
+            var layout = settings.Settings.WindowLayout;
+
+            // 保存窗口状态
+            layout.IsMaximized = WindowState == WindowState.Maximized;
+            if (WindowState == WindowState.Maximized)
+            {
+                // 最大化时用 RestoreBounds 保存正常状态的位置和大小
+                var bounds = RestoreBounds;
+                layout.Left = bounds.Left;
+                layout.Top = bounds.Top;
+                layout.Width = bounds.Width;
+                layout.Height = bounds.Height;
+            }
+            else
+            {
+                layout.Left = Left;
+                layout.Top = Top;
+                layout.Width = Width;
+                layout.Height = Height;
+            }
+
+            // 保存菜单列宽（使用当前值或保存的值）
+            layout.MenuColumnWidth = LeftColumn.Width.Value > 0 ? LeftColumn.Width.Value : _savedMenuWidth;
+        }
+
+        private void RestoreWindowLayout()
+        {
+            var settings = ContainerBuilderExtensions.GetService<IUserSettingsService>();
+            if (settings == null) return;
+
+            var layout = settings.Settings.WindowLayout;
+
+            // 恢复窗口大小
+            if (layout.Width > 0) Width = layout.Width;
+            if (layout.Height > 0) Height = layout.Height;
+
+            // 恢复窗口位置（检查是否在屏幕范围内）
+            if (!double.IsNaN(layout.Left) && !double.IsNaN(layout.Top))
+            {
+                var virtualLeft = SystemParameters.VirtualScreenLeft;
+                var virtualTop = SystemParameters.VirtualScreenTop;
+                var virtualWidth = SystemParameters.VirtualScreenWidth;
+                var virtualHeight = SystemParameters.VirtualScreenHeight;
+
+                if (layout.Left >= virtualLeft && layout.Left < virtualLeft + virtualWidth &&
+                    layout.Top >= virtualTop && layout.Top < virtualTop + virtualHeight)
+                {
+                    Left = layout.Left;
+                    Top = layout.Top;
+                    WindowStartupLocation = WindowStartupLocation.Manual;
+                }
+            }
+
+            // 恢复最大化状态
+            if (layout.IsMaximized)
+            {
+                WindowState = WindowState.Maximized;
+            }
+
+            // 恢复菜单列宽
+            if (layout.MenuColumnWidth > 0)
+            {
+                LeftColumn.Width = new GridLength(layout.MenuColumnWidth);
+                _savedMenuWidth = layout.MenuColumnWidth;
+            }
+        }
+
+        private void RestoreSelectedMenuButton()
+        {
+            if (DataContext is not ViewModels.MainWindowViewModel viewModel)
+            {
+                SetSelectedButton(HomeButton);
+                return;
+            }
+
+            var button = GetMenuButtonByHeader(viewModel.SelectedTab?.Header) ?? HomeButton;
+            SetSelectedButton(button);
+
+            var parentExpander = FindParentExpander(button);
+            if (parentExpander != null)
+            {
+                parentExpander.IsExpanded = true;
+            }
+        }
+
+        #endregion
 
         private void GridSplitter_DragCompleted(object sender, DragCompletedEventArgs e)
         {
@@ -119,7 +350,7 @@ namespace MeasurementSoftware
 
         private void MenuButton_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button selectedButton)
+            if (sender is System.Windows.Controls.Button selectedButton)
             {
                 SetSelectedButton(selectedButton);
 
@@ -135,20 +366,20 @@ namespace MeasurementSoftware
             }
 
         }
-        private void SetSelectedButton(Button selectedButton)
+        private void SetSelectedButton(System.Windows.Controls.Button selectedButton)
         {
-            foreach (var btn in FindVisualChildren<Button>(GridLeft))
+            foreach (var btn in FindVisualChildren<System.Windows.Controls.Button>(GridLeft))
             {
-                btn.Background = Brushes.Transparent;
+                btn.Background = System.Windows.Media.Brushes.Transparent;
                 foreach (var tb in FindVisualChildren<TextBlock>(btn))
                 {
-                    tb.Foreground = (Brush)FindResource("PrimaryTextBrush");
+                    tb.Foreground = (System.Windows.Media.Brush)FindResource("PrimaryTextBrush");
                 }
             }
-            selectedButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E3F2FD"));
+            selectedButton.Background = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#E3F2FD"));
             foreach (var tb in FindVisualChildren<TextBlock>(selectedButton))
             {
-                tb.Foreground = (Brush)FindResource("PrimaryBrush");
+                tb.Foreground = (System.Windows.Media.Brush)FindResource("PrimaryBrush");
             }
         }
 
@@ -224,7 +455,7 @@ namespace MeasurementSoftware
                 if (parent == null && child is FrameworkElement fe)
                     parent = fe.Parent;
 
-                child = parent;
+                child = parent!;
             }
             return null;
         }
@@ -234,13 +465,13 @@ namespace MeasurementSoftware
             // 查找点击点是否在 TabItem Header 上
             var dep = e.OriginalSource as DependencyObject;
 
-            while (dep != null && dep is not TabItem)
+            while (dep != null && dep is not HandyControl.Controls.TabItem)
             {
                 dep = VisualTreeHelper.GetParent(dep);
             }
 
             // 如果右键点在 TabItem 上
-            if (dep is TabItem)
+            if (dep is HandyControl.Controls.TabItem)
             {
                 // 阻止 TabControl 切换 SelectedItem
                 e.Handled = true;
@@ -249,7 +480,7 @@ namespace MeasurementSoftware
 
         private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (sender is not TabControl tc || tc.SelectedItem is not TabItemModel tab)
+            if (sender is not HandyControl.Controls.TabControl tc || tc.SelectedItem is not TabItemModel tab)
                 return;
 
             // 根据 tab Header 找到对应的菜单按钮
@@ -271,7 +502,7 @@ namespace MeasurementSoftware
             }
         }
 
-        private Button? GetMenuButtonByHeader(string? header)
+        private System.Windows.Controls.Button? GetMenuButtonByHeader(string? header)
         {
             return header switch
             {

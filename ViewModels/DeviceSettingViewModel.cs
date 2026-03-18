@@ -10,6 +10,8 @@ using MultiProtocol.Services.Siemens;
 using MultiProtocol.Utils;
 using System.Collections.ObjectModel;
 using System.IO.Ports;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace MeasurementSoftware.ViewModels
 {
@@ -33,6 +35,24 @@ namespace MeasurementSoftware.ViewModels
         [ObservableProperty]
         private bool isPointSettingOpen;
 
+        private bool _isBusy;
+
+        public bool IsBusy
+        {
+            get => _isBusy;
+            set => SetProperty(ref _isBusy, value);
+        }
+
+        private string _busyMessage = "处理中，请稍候...";
+
+        public string BusyMessage
+        {
+            get => _busyMessage;
+            set => SetProperty(ref _busyMessage, value);
+        }
+
+        private bool _isViewActive;
+
         /// <summary>
         /// 可用串口列表（供 Modbus RTU 模板绑定）
         /// </summary>
@@ -46,30 +66,90 @@ namespace MeasurementSoftware.ViewModels
                 if (SelectedDevice == null || value == null || SelectedDevice.DeviceType == value)
                     return;
 
-                if (SelectedDevice.DataPoints.Count > 0)
+                bool hasDataPoints = SelectedDevice.DataPoints.Count > 0;
+                bool hasChannelBindings = _recipeConfigService.CurrentRecipe?.Channels.Any(c => c.PlcDeviceId == SelectedDevice.DeviceId) == true;
+                bool shouldResetSiemensCache = IsSiemensDeviceType(SelectedDevice.DeviceType)
+                    && !IsSiemensDeviceType(value.Value)
+                    && (SelectedDevice.SiemensReadCache.IsEnabled || SelectedDevice.SiemensReadCache.FieldDefinitions.Count > 0 || SelectedDevice.SiemensReadCache.ExpandedFieldDefinitions.Count > 0);
+
+                if (hasDataPoints || hasChannelBindings || shouldResetSiemensCache)
                 {
-                    var result = HandyControl.Controls.MessageBox.Show(
-                        "切换设备类型会清空所有点位，是否继续？",
-                        "提示",
-                        System.Windows.MessageBoxButton.YesNo,
-                        System.Windows.MessageBoxImage.Warning);
+                    var resetTargets = new List<string>();
+                    if (hasDataPoints)
+                    {
+                        resetTargets.Add("当前设备的所有点位");
+                    }
+
+                    if (hasChannelBindings)
+                    {
+                        resetTargets.Add("已绑定该设备的通道、点位关联");
+                    }
+
+                    if (shouldResetSiemensCache)
+                    {
+                        resetTargets.Add("西门子缓存配置");
+                    }
+
+                    var result = HandyControl.Controls.MessageBox.Show($"切换设备类型会清空{string.Join("、", resetTargets)}，是否继续？", "提示", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
 
                     if (result == System.Windows.MessageBoxResult.Yes)
                     {
+                        ResetDeviceBindingsForTypeChange(SelectedDevice, value.Value);
                         SelectedDevice.DeviceType = value.Value;
-                        SelectedDevice.DataPoints.Clear();
                     }
                     else
                     {
-                        // 异步通知UI回退到旧值，必须用Dispatcher延迟触发，
-                        // 否则ComboBox在同步调用栈中不会刷新已选项
-                        OnPropertyChanged(nameof(SelectedDeviceType));
+                        Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            OnPropertyChanged(nameof(SelectedDeviceType));
+                        });
                     }
                 }
                 else
                 {
                     SelectedDevice.DeviceType = value.Value;
                 }
+            }
+        }
+
+        private void ResetDeviceBindingsForTypeChange(PlcDevice device, PlcDeviceType newDeviceType)
+        {
+            device.StopCacheReading();
+            device.DataPoints.Clear();
+            SelectedDataPoint = null;
+
+            var channels = _recipeConfigService.CurrentRecipe?.Channels;
+            if (channels != null)
+            {
+                foreach (var channel in channels.Where(c => c.PlcDeviceId == device.DeviceId))
+                {
+                    channel.PlcDeviceId = 0;
+                    channel.DataPointId = string.Empty;
+                    channel.DataSourceAddress = string.Empty;
+                    channel.AvailableDataPoints = [];
+                    channel.UseCacheValue = false;
+                    channel.WriteBackDataPointIdA = string.Empty;
+                    channel.WriteBackDataPointIdB = string.Empty;
+                }
+            }
+
+            if (IsSiemensDeviceType(device.DeviceType) && !IsSiemensDeviceType(newDeviceType))
+            {
+                device.SiemensReadCache = new SiemensReadCacheConfig();
+            }
+        }
+
+        private static bool IsSiemensDeviceType(PlcDeviceType deviceType)
+        {
+            return deviceType is PlcDeviceType.SiemensS7_1200 or PlcDeviceType.SiemensS7_1500;
+        }
+
+        public void SetViewActive(bool isActive)
+        {
+            _isViewActive = isActive;
+            if (!isActive)
+            {
+                IsPointSettingOpen = false;
             }
         }
 
@@ -88,8 +168,12 @@ namespace MeasurementSoftware.ViewModels
                 {
                     if (e.PropertyName == nameof(IDeviceConfigService.Devices))
                     {
+                        var selectedDeviceId = SelectedDevice?.DeviceId;
+
                         OnPropertyChanged(nameof(Devices));
-                        SelectedDevice = Devices.FirstOrDefault();
+                        SelectedDevice = selectedDeviceId.HasValue
+                            ? Devices.FirstOrDefault(d => d.DeviceId == selectedDeviceId.Value) ?? Devices.FirstOrDefault()
+                            : Devices.FirstOrDefault();
                     }
                 };
             }
@@ -101,6 +185,26 @@ namespace MeasurementSoftware.ViewModels
                 SelectedDevice = Devices[0];
             }
             RefreshComPorts();
+        }
+
+        private async Task ExecuteWithLoadingAsync(string message, Func<Task> action)
+        {
+            IsBusy = true;
+            BusyMessage = message;
+
+            if (Application.Current != null)
+            {
+                await Application.Current.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+            }
+
+            try
+            {
+                await action();
+            }
+            finally
+            {
+                IsBusy = false;
+            }
         }
 
         /// <summary>
@@ -150,15 +254,18 @@ namespace MeasurementSoftware.ViewModels
                 OnPropertyChanged(nameof(SelectedDeviceType));
 
                 // 设备类型改变时，重新初始化PLC协议实例
-                try
+                await ExecuteWithLoadingAsync("正在切换设备类型并重建设备连接...", async () =>
                 {
-                    await device.InitPlcAsync();
-                    _log.Info($"设备类型已更改为: {device.DeviceType}，协议已重新初始化");
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"设备类型切换后初始化失败: {ex.Message}");
-                }
+                    try
+                    {
+                        await device.InitPlcAsync();
+                        _log.Info($"设备类型已更改为: {device.DeviceType}，协议已重新初始化");
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Error($"设备类型切换后初始化失败: {ex.Message}");
+                    }
+                });
 
                 // 强制刷新 UI
                 var currentDevice = SelectedDevice;
@@ -170,38 +277,47 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         private async Task AddDevice()
         {
-            // 计算新设备的ID（自增）
-            long newDeviceId = Devices.Count > 0 ? Devices.Max(d => d.DeviceId) + 1 : 1;
-
-            var newDevice = new PlcDevice
+            await ExecuteWithLoadingAsync("正在添加设备并初始化连接...", async () =>
             {
-                DeviceId = newDeviceId,
-                DeviceName = $"PLC设备{newDeviceId}",
-                DeviceType = PlcDeviceType.SiemensS7_1200,
-                IpAddress = "192.168.0.1",
-                Port = 102,
-                IsEnabled = false
-            };
+                long newDeviceId = Devices.Count > 0 ? Devices.Max(d => d.DeviceId) + 1 : 1;
 
-            // 初始化协议实例并连接（默认IsEnabled=false，不会Open轮询）
-            newDevice.InitPlc();
-            var (success, message) = await newDevice.ConnectAsync();
-            if (success)
-            {
-                _log.Info($"新设备 [{newDevice.DeviceName}] 连接成功");
-            }
-            else
-            {
-                _log.Warn($"新设备 [{newDevice.DeviceName}] 连接失败: {message}");
-            }
+                var newDevice = new PlcDevice
+                {
+                    DeviceId = newDeviceId,
+                    DeviceName = $"PLC设备{newDeviceId}",
+                    DeviceType = PlcDeviceType.SiemensS7_1200,
+                    IpAddress = "192.168.0.1",
+                    Port = 102,
+                    IsEnabled = false
+                };
 
-            Devices.Add(newDevice);
-            SelectedDevice = newDevice;
-            OnPropertyChanged(nameof(Devices));
+                await newDevice.InitPlcAsync();
+                var (success, message) = await newDevice.ConnectAsync();
+                if (success)
+                {
+                    _log.Info($"新设备 [{newDevice.DeviceName}] 连接成功");
+                }
+                else
+                {
+                    _log.Warn($"新设备 [{newDevice.DeviceName}] 连接失败: {message}");
+                }
 
-            IsPointSettingOpen = true;
-            Growl.Success("已添加新设备，请配置设备参数");
-            _log.Info($"添加设备: {newDevice.DeviceName}");
+                Devices.Add(newDevice);
+                SelectedDevice = newDevice;
+                OnPropertyChanged(nameof(Devices));
+
+                if (_isViewActive)
+                {
+                    IsPointSettingOpen = true;
+                    Growl.Success("已添加新设备，请配置设备参数");
+                }
+                else
+                {
+                    Growl.Success("已添加新设备");
+                }
+
+                _log.Info($"添加设备: {newDevice.DeviceName}");
+            });
         }
 
         [RelayCommand]
@@ -225,13 +341,15 @@ namespace MeasurementSoftware.ViewModels
             }
             var deviceName = SelectedDevice.DeviceName;
 
-            // 销毁PLC协议实例，释放连接资源
-            await SelectedDevice.DestroyPlcAsync();
+            await ExecuteWithLoadingAsync($"正在删除设备 {deviceName}...", async () =>
+            {
+                await SelectedDevice.DestroyPlcAsync();
 
-            Devices.Remove(SelectedDevice);
-            SelectedDevice = Devices.FirstOrDefault();
-            Growl.Info($"已删除设备: {deviceName}");
-            _log.Info($"删除设备: {deviceName}");
+                Devices.Remove(SelectedDevice);
+                SelectedDevice = Devices.FirstOrDefault();
+                Growl.Info($"已删除设备: {deviceName}");
+                _log.Info($"删除设备: {deviceName}");
+            });
         }
 
         [RelayCommand]
@@ -245,53 +363,57 @@ namespace MeasurementSoftware.ViewModels
 
             Growl.Info($"正在测试 {SelectedDevice.DeviceName} 连接...");
 
-            try
+            await ExecuteWithLoadingAsync($"正在测试 {SelectedDevice.DeviceName} 连接...", async () =>
             {
-                // 每次测试都用当前最新参数重建协议实例（参数已双向绑定）
-                await SelectedDevice.InitPlcAsync();
+                try
+                {
+                    await SelectedDevice.InitPlcAsync();
 
-                // 连接 → 内部会 SetDevice 注册点位 → 如果IsEnabled则Open开始轮询
-                var (success, message) = await SelectedDevice.ConnectAsync();
-                if (success)
-                {
-                    Growl.Success($"{SelectedDevice.DeviceName} 连接成功");
-                    _log.Info($"测试连接成功: {SelectedDevice.DeviceName}");
+                    var (success, message) = await SelectedDevice.ConnectAsync();
+                    if (success)
+                    {
+                        Growl.Success($"{SelectedDevice.DeviceName} 连接成功");
+                        _log.Info($"测试连接成功: {SelectedDevice.DeviceName}");
+                    }
+                    else
+                    {
+                        Growl.Error($"{SelectedDevice.DeviceName} {message}");
+                        _log.Warn($"测试连接失败: {SelectedDevice.DeviceName} - {message}");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Growl.Error($"{SelectedDevice.DeviceName} {message}");
-                    _log.Warn($"测试连接失败: {SelectedDevice.DeviceName} - {message}");
+                    Growl.Error($"连接异常: {ex.Message}");
+                    _log.Error($"测试连接异常: {SelectedDevice.DeviceName} - {ex.Message}");
                 }
-            }
-            catch (Exception ex)
-            {
-                Growl.Error($"连接异常: {ex.Message}");
-                _log.Error($"测试连接异常: {SelectedDevice.DeviceName} - {ex.Message}");
-            }
+            });
         }
 
         [RelayCommand]
         private async Task SaveConfiguration()
         {
-            try
+            await ExecuteWithLoadingAsync("正在保存设备配置...", async () =>
             {
-                var success = await _deviceConfigService.SaveDevicesAsync([.. Devices]);
-                if (success)
+                try
                 {
-                    Growl.Success($"设备配置已保存");
-                    _log.Info($"保存设备配置成功");
+                    var success = await _deviceConfigService.SaveDevicesAsync([.. Devices]);
+                    if (success)
+                    {
+                        Growl.Success($"设备配置已保存");
+                        _log.Info($"保存设备配置成功");
+                    }
+                    else
+                    {
+                        Growl.Error("保存配置失败");
+                        _log.Error("保存设备配置失败");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Growl.Error("保存配置失败");
-                    _log.Error("保存设备配置失败");
+                    Growl.Error($"保存失败: {ex.Message}");
+                    _log.Error($"保存设备配置异常: {ex.Message}");
                 }
-            }
-            catch (Exception ex)
-            {
-                Growl.Error($"保存失败: {ex.Message}");
-                _log.Error($"保存设备配置异常: {ex.Message}");
-            }
+            });
         }
 
         /// <summary>
@@ -306,39 +428,30 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            try
+            await ExecuteWithLoadingAsync($"正在应用 {SelectedDevice.DeviceName} 参数并重连...", async () =>
             {
-                // 1. 保存配置到本地
-                //var saveSuccess = await _deviceConfigService.SaveDevicesAsync(Devices.ToList());
-                //if (!saveSuccess)
-                //{
-                //    Growl.Error("保存配置失败");
-                //    return;
-                //}
-
-                //Growl.Info($"正在重新连接 {SelectedDevice.DeviceName}...");
-
-                // 2. 用最新参数重建协议实例
-                await SelectedDevice.InitPlcAsync();
-
-                // 3. 连接（内部会 SetDevice + 如果IsEnabled则Open）
-                var (success, message) = await SelectedDevice.ConnectAsync();
-                if (success)
+                try
                 {
-                    Growl.Success($"{SelectedDevice.DeviceName} 配置已保存，重连成功");
-                    _log.Info($"设备 [{SelectedDevice.DeviceName}] 参数应用并重连成功");
+                    await SelectedDevice.InitPlcAsync();
+
+                    var (success, message) = await SelectedDevice.ConnectAsync();
+                    if (success)
+                    {
+                        Growl.Success($"{SelectedDevice.DeviceName} 配置已保存，重连成功");
+                        _log.Info($"设备 [{SelectedDevice.DeviceName}] 参数应用并重连成功");
+                    }
+                    else
+                    {
+                        Growl.Warning($"配置已保存，但连接失败: {message}");
+                        _log.Warn($"设备 [{SelectedDevice.DeviceName}] 参数应用后连接失败: {message}");
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    Growl.Warning($"配置已保存，但连接失败: {message}");
-                    _log.Warn($"设备 [{SelectedDevice.DeviceName}] 参数应用后连接失败: {message}");
+                    Growl.Error($"应用参数失败: {ex.Message}");
+                    _log.Error($"设备 [{SelectedDevice?.DeviceName}] 应用参数异常: {ex.Message}");
                 }
-            }
-            catch (Exception ex)
-            {
-                Growl.Error($"应用参数失败: {ex.Message}");
-                _log.Error($"设备 [{SelectedDevice?.DeviceName}] 应用参数异常: {ex.Message}");
-            }
+            });
         }
 
         /// <summary>
@@ -460,18 +573,29 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            try
+            await ExecuteWithLoadingAsync("正在保存点位配置...", async () =>
             {
+                try
+                {
+                    CheckAllAddresses();
+                    SelectedDevice.ResetDevicePoints();
 
-                SelectedDevice.ResetDevicePoints();
-                Growl.Success("点位配置已保存");
-                IsPointSettingOpen = false;
-            }
-            catch (Exception ex)
-            {
-                Growl.Error($"保存失败: {ex.Message}");
-                _log.Error($"保存点位配置异常: {ex.Message}");
-            }
+                    var success = await _recipeConfigService.SaveCurrentRecipeAsync();
+                    if (!success)
+                    {
+                        Growl.Error("点位配置保存到配方失败");
+                        return;
+                    }
+
+                    Growl.Success("点位配置已保存");
+                    IsPointSettingOpen = false;
+                }
+                catch (Exception ex)
+                {
+                    Growl.Error($"保存失败: {ex.Message}");
+                    _log.Error($"保存点位配置异常: {ex.Message}");
+                }
+            });
         }
 
         /// <summary>
@@ -588,5 +712,235 @@ namespace MeasurementSoftware.ViewModels
             }
 
         }
+
+        /// <summary>
+        /// 验证缓存结构定义并生成对应 DataPoint（真实西门子地址，供寄存器读取）
+        /// </summary>
+        [RelayCommand]
+        private void ApplyCachePoints()
+        {
+            if (SelectedDevice == null)
+            {
+                Growl.Warning("请先选择一个设备");
+                return;
+            }
+
+            var cache = SelectedDevice.SiemensReadCache;
+            if (!cache.IsEnabled)
+            {
+                Growl.Warning("请先启用双缓冲读取");
+                return;
+            }
+
+            var (valid, msg) = cache.ValidateAndApplyStructure();
+            if (!valid)
+            {
+                Growl.Error(msg);
+                return;
+            }
+
+            // 检查是否有通道绑定了旧的缓存生成点位
+            var oldCachePoints = SelectedDevice.DataPoints.Where(dp => dp.IsCacheGenerated).ToList();
+            if (oldCachePoints.Count > 0)
+            {
+                var oldPointIds = oldCachePoints.Select(dp => dp.PointId).ToHashSet();
+                var channels = _recipeConfigService.CurrentRecipe?.Channels;
+                var boundChannels = channels?
+                    .Where(c => c.PlcDeviceId == SelectedDevice.DeviceId && oldPointIds.Contains(c.DataPointId))
+                    .ToList();
+
+                if (boundChannels != null && boundChannels.Count > 0)
+                {
+                    var channelNames = string.Join("、", boundChannels.Select(c => c.ChannelName));
+                    var result = HandyControl.Controls.MessageBox.Show(
+                        $"以下通道已绑定了缓存点位，重新生成后原绑定将被清除：\n\n{channelNames}\n\n是否继续？",
+                        "提示",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+
+                    if (result != MessageBoxResult.Yes)
+                        return;
+
+                    // 清除绑定的通道引用（包括设备ID）
+                    foreach (var ch in boundChannels)
+                    {
+                        ch.PlcDeviceId = 0;
+                        ch.DataPointId = string.Empty;
+                        ch.DataSourceAddress = string.Empty;
+                        ch.UseCacheValue = false;
+                        ch.AvailableDataPoints = new ObservableCollection<DataPoint>();
+                    }
+                    _log.Info($"已清除 {boundChannels.Count} 个通道的缓存点位绑定");
+                }
+            }
+
+            // 移除旧的缓存生成点位
+            foreach (var dp in oldCachePoints)
+                SelectedDevice.DataPoints.Remove(dp);
+
+            // 生成真实地址的 DataPoint（缓存1/缓存2分开生成）
+            int nextId = SelectedDevice.DataPoints.Count > 0
+                ? SelectedDevice.DataPoints.Max(p => int.TryParse(p.PointId, out int id) ? id : 0) + 1
+                : 1;
+
+            for (int cacheIndex = 1; cacheIndex <= 2; cacheIndex++)
+            {
+                string dbBlock = cacheIndex == 1 ? cache.Cache1.DbBlock : cache.Cache2.DbBlock;
+                for (int g = 0; g < cache.GroupCount; g++)
+                {
+                    int groupBaseOffset = g * cache.GroupSize;
+                    foreach (var field in cache.FieldDefinitions)
+                    {
+                        int actualOffset = groupBaseOffset + field.Offset;
+                        string cacheSuffix = $"_C{cacheIndex}";
+                        string groupSuffix = cache.GroupCount > 1 ? $"_G{g + 1}" : "";
+                        string address = GetSiemensDbAddress(dbBlock, actualOffset, field.DataType);
+
+                        var dp = new DataPoint
+                        {
+                            PointId = nextId.ToString(),
+                            PointName = $"{field.FieldName}{cacheSuffix}{groupSuffix}",
+                            Address = address,
+                            DataType = field.DataType,
+                            ByteOrder = field.ByteOrder,
+                            IsEnabled = true,
+                            IsCacheGenerated = true,
+                            CacheFieldKey = $"CACHE:C{cacheIndex}:G{g}:{field.FieldName}"
+                        };
+                        SelectedDevice.DataPoints.Add(dp);
+                        nextId++;
+                    }
+                }
+            }
+            CheckAllAddresses();
+            // 打开点位设置，定位到第一个生成的点位
+            var firstGenerated = SelectedDevice.DataPoints.FirstOrDefault(dp => dp.IsCacheGenerated);
+            if (firstGenerated != null)
+            {
+                IsPointSettingOpen = true;
+                SelectedDataPoint = firstGenerated;
+            }
+
+            // 下发点位到下位机
+            SelectedDevice.ResetDevicePoints();
+            SelectedDevice.StopCacheReading();
+            SelectedDevice.StartCacheReading();
+            int totalPoints = cache.FieldDefinitions.Count * cache.GroupCount * 2;
+            Growl.Success($"{msg}，已生成 {totalPoints} 个点位（可在点位设置中编辑地址）");
+            _log.Info($"设备 [{SelectedDevice.DeviceName}] 缓存结构验证通过，生成 {totalPoints} 个点位");
+        }
+
+        /// <summary>
+        /// 双击缓存字段 Grid 行 → 打开点位设置并定位到对应点位
+        /// </summary>
+        [RelayCommand]
+        private void OpenCacheFieldPoint(CacheFieldDefinition? field)
+        {
+            if (field == null || SelectedDevice == null) return;
+
+            // 通过 CacheFieldKey 精确匹配点位
+            var dp = SelectedDevice.DataPoints.FirstOrDefault(d =>
+                d.IsCacheGenerated && d.CacheFieldKey == field.CacheFieldKey);
+
+            // 回退：按 DisplayName 匹配
+            dp ??= SelectedDevice.DataPoints.FirstOrDefault(d =>
+                d.IsCacheGenerated && d.PointName == field.DisplayName);
+
+            if (dp != null)
+            {
+                IsPointSettingOpen = true;
+                SelectedDataPoint = dp;
+            }
+            else
+            {
+                var result = HandyControl.Controls.MessageBox.Show($"未找到缓存字段 [{field.DisplayName}] 对应的点位，是否立即创建？", "提示", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    return;
+                }
+
+                dp = CreateCacheFieldPoint(field);
+                if (dp == null)
+                {
+                    Growl.Warning("创建对应点位失败");
+                    return;
+                }
+
+                IsPointSettingOpen = true;
+                SelectedDataPoint = dp;
+            }
+        }
+
+        private DataPoint? CreateCacheFieldPoint(CacheFieldDefinition field)
+        {
+            if (SelectedDevice == null) return null;
+
+            var cache = SelectedDevice.SiemensReadCache;
+            string dbBlock = field.CacheIndex == 1 ? cache.Cache1.DbBlock : cache.Cache2.DbBlock;
+            int actualOffset = field.GroupIndex * cache.GroupSize + field.Offset;
+            string address = GetSiemensDbAddress(dbBlock, actualOffset, field.DataType);
+
+            int nextId = SelectedDevice.DataPoints.Count > 0
+                ? SelectedDevice.DataPoints.Max(p => int.TryParse(p.PointId, out int id) ? id : 0) + 1
+                : 1;
+
+            var dataPoint = new DataPoint
+            {
+                PointId = nextId.ToString(),
+                PointName = string.IsNullOrWhiteSpace(field.DisplayName) ? field.FieldName : field.DisplayName,
+                Address = address,
+                DataType = field.DataType,
+                ByteOrder = field.ByteOrder,
+                IsEnabled = true,
+                IsCacheGenerated = true,
+                CacheFieldKey = field.CacheFieldKey
+            };
+
+            ValidateDataPoint(dataPoint, SelectedDevice.DeviceType, out _);
+            SelectedDevice.DataPoints.Add(dataPoint);
+            SelectedDevice.ResetDevicePoints();
+
+            _log.Info($"已为缓存字段 [{field.DisplayName}] 自动创建点位 [{dataPoint.PointName}]，地址: {dataPoint.Address}");
+            return dataPoint;
+        }
+
+        /// <summary>
+        /// 根据 DB 块、偏移和数据类型生成西门子地址
+        /// </summary>
+        private static string GetSiemensDbAddress(string dbBlock, int offset, FieldType dataType)
+        {
+            string blockPart = dbBlock;
+            int baseOffset = 0;
+
+            if (!string.IsNullOrWhiteSpace(dbBlock))
+            {
+                var parts = dbBlock.Split('.', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length > 0)
+                {
+                    blockPart = parts[0];
+                }
+
+                if (parts.Length > 1)
+                {
+                    int.TryParse(parts[1], out baseOffset);
+                }
+            }
+
+            int actualOffset = baseOffset + offset;
+
+            string suffix = dataType switch
+            {
+                FieldType.Bool => $"DBX{actualOffset}.0",
+                FieldType.Byte => $"DBB{actualOffset}",
+                FieldType.Int16 or FieldType.UInt16 or FieldType.Char => $"DBW{actualOffset}",
+                FieldType.Int32 or FieldType.UInt32 or FieldType.Float => $"DBD{actualOffset}",
+                FieldType.Int64 or FieldType.UInt64 or FieldType.Long or FieldType.Double => $"DBB{actualOffset}",
+                _ => $"DBB{actualOffset}"
+            };
+            return $"{blockPart}.{suffix}";
+        }
+
+
     }
 }

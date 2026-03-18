@@ -45,7 +45,7 @@ namespace MeasurementSoftware.Services.Config
             {
                 try
                 {
-                    device.InitPlc();
+                    await device.InitPlcAsync();
 
                     var (success, message) = await device.ConnectAsync();
 
@@ -188,7 +188,6 @@ namespace MeasurementSoftware.Services.Config
                 try { _ = device.DestroyPlcAsync(); } catch { }
             }
 
-            CurrentRecipe = recipe;
             CurrentRecipePath = path;
 
             // 从配方中同步设备列表到运行时，保持 Devices 的引用不变
@@ -197,16 +196,57 @@ namespace MeasurementSoftware.Services.Config
             {
                 foreach (var device in recipe.Devices)
                 {
+                    device.SiemensReadCache?.ValidateAndApplyStructure();
                     Devices.Add(device);
                 }
             }
             recipe.Devices = Devices; // 确保双向引用一致
+            HydrateChannelRuntimeData(recipe);
+
+            CurrentRecipe = recipe;
 
             // 通知所有监听者：设备列表和二维码配置已随配方更新
             OnPropertyChanged(nameof(Devices));
             OnPropertyChanged(nameof(QrCodeConfig));
 
             _log.Info($"已打开配方: {recipe.RecipeName}，包含 {Devices.Count} 个设备");
+        }
+
+        private void HydrateChannelRuntimeData(MeasurementRecipe recipe)
+        {
+            if (recipe.Channels == null)
+            {
+                return;
+            }
+
+            foreach (var channel in recipe.Channels)
+            {
+                if (channel.PlcDeviceId == 0)
+                {
+                    channel.AvailableDataPoints = [];
+                    continue;
+                }
+
+                var device = Devices.FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
+                if (device == null)
+                {
+                    channel.AvailableDataPoints = [];
+                    continue;
+                }
+
+                channel.AvailableDataPoints = new ObservableCollection<DataPoint>(
+                    device.DataPoints.Where(dp => dp.IsEnabled)
+                        .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
+
+                if (!string.IsNullOrEmpty(channel.DataPointId))
+                {
+                    var point = channel.AvailableDataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId);
+                    if (point != null)
+                    {
+                        channel.DataSourceAddress = point.Address;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -311,6 +351,19 @@ namespace MeasurementSoftware.Services.Config
 
         #region 全局参数
         public bool IsCollecting { get; private set; } = false;
+
+        public int AcquisitionDelayMs
+        {
+            get => CurrentRecipe?.AcquisitionDelayMs ?? 500;
+            set
+            {
+                if (CurrentRecipe != null)
+                {
+                    CurrentRecipe.AcquisitionDelayMs = Math.Max(1, value);
+                }
+            }
+        }
+
         public void SetCollect(bool Collect)
         {
             IsCollecting = Collect;

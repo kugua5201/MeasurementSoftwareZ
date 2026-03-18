@@ -13,8 +13,9 @@
     <UserControl.Resources>
         <helpers:BindingProxy x:Key="VmProxy" Data="{Binding}" />
     </UserControl.Resources>
-    <hc:SimplePanel >
-        <Grid Style="{StaticResource PageRootGrid}">
+    <hc:SimplePanel>
+        <Grid>
+            <Grid Style="{StaticResource PageRootGrid}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -528,10 +529,10 @@
                     </Grid>
                 </Border>
             </Grid>
-        </Grid>
+            </Grid>
 
-        <!-- 右侧抽屉：点位设置 -->
-        <hc:Drawer 
+            <!-- 右侧抽屉：点位设置 -->
+            <hc:Drawer 
 				   Dock="Right" 
 				   ShowMode="Cover"
 				   IsOpen="{Binding IsPointSettingOpen, Mode=TwoWay}">
@@ -603,25 +604,83 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- 数据点列表 -->
-                    <DataGrid Grid.Row="2" 
+					<!-- 数据点列表 -->
+					<DataGrid Grid.Row="2" 
 							  ItemsSource="{Binding SelectedDevice.DataPoints}" 
 							  SelectedItem="{Binding SelectedDataPoint}"
 							  AutoGenerateColumns="False"
 							  CanUserAddRows="False"
-                              
+
 							  SelectionMode="Single"
-							
+
 							  HeadersVisibility="Column"
 							  RowHeight="35"
 							  FontSize="13"
-                              BorderBrush="{DynamicResource BorderBrush}"
+							  BorderBrush="{DynamicResource BorderBrush}"
 							  Margin="10">
+						<!--<DataGrid.RowStyle>
+							<Style TargetType="DataGridRow" BasedOn="{StaticResource DataGridRowStyle}">
+								<Setter Property="ToolTip" Value="{Binding ErrorMessage}" />
+								<Style.Triggers>
+									<Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
+                                    </Trigger>
+								</Style.Triggers>
+							</Style>
+						</DataGrid.RowStyle>
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell"  BasedOn="{StaticResource DataGridCellStyle}">
+                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}"/>
+                            </Style>
+                        </DataGrid.CellStyle>-->
+
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow" BasedOn="{StaticResource DataGridRowStyle}">
                                 <Setter Property="ToolTip" Value="{Binding ErrorMessage}" />
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+                                        <Setter Property="Foreground" Value="White" />
+                                    </Trigger>
+                                </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
+
+                        <DataGrid.CellStyle>
+                            <Style TargetType="DataGridCell" BasedOn="{StaticResource DataGridCellStyle}">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}" />
+                                <Setter Property="BorderBrush" Value="Transparent" />
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                                    </Trigger>
+
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsSelected" Value="True" />
+                                            <Condition Property="Selector.IsSelectionActive" Value="False" />
+                                        </MultiTrigger.Conditions>
+                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+                                        <Setter Property="Foreground" Value="White" />
+                                        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                                    </MultiTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.CellStyle>
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="添加点位" Command="{Binding AddDataPointCommand}" />
+                                <MenuItem Header="删除点位" Command="{Binding DeleteDataPointCommand}" />
+                                <MenuItem Header="检查地址" Command="{Binding CheckAllAddressesCommand}" />
+                                <MenuItem Header="设置点位" Command="{Binding SavePointConfigurationCommand}" />
+                                <MenuItem Header="重新编号" Command="{Binding RenumberPointsCommand}" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
                         <DataGrid.Columns>
                             
                             <DataGridTextColumn Header="ID" Binding="{Binding PointId}" Width="50" IsReadOnly="True"/>
@@ -657,11 +716,27 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+                            
+                            
                             <!--<DataGridCheckBoxColumn Header="启用" Binding="{Binding IsEnabled}" Width="50"/>-->
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
             </Border>
-        </hc:Drawer>
+            </hc:Drawer>
+
+            <Border Background="#66000000"
+                    Panel.ZIndex="999"
+                    Visibility="{Binding IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border Background="{DynamicResource RegionBrush}" CornerRadius="12" Padding="28,24">
+                        <StackPanel HorizontalAlignment="Center">
+                            <hc:LoadingCircle Width="56" Height="56" Foreground="{DynamicResource PrimaryBrush}"/>
+                            <TextBlock Text="{Binding BusyMessage}" Margin="0,16,0,0" FontSize="14" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Grid>
     </hc:SimplePanel>
 </UserControl>

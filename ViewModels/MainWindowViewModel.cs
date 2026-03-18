@@ -4,6 +4,7 @@ using HandyControl.Controls;
 using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.UserSetting;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
@@ -23,11 +24,30 @@ namespace MeasurementSoftware.ViewModels
         [ObservableProperty]
         private ObservableCollection<TabItemModel> _tabs = new();
 
+        private bool _isAppLoading;
+
+        public bool IsAppLoading
+        {
+            get => _isAppLoading;
+            set => SetProperty(ref _isAppLoading, value);
+        }
+
+        private string _appLoadingMessage = "正在启动并连接设备，请稍候...";
+
+        public string AppLoadingMessage
+        {
+            get => _appLoadingMessage;
+            set => SetProperty(ref _appLoadingMessage, value);
+        }
+
         private readonly ILog _log;
-        public MainWindowViewModel(ILog log)
+        private readonly IUserSettingsService _userSettingsService;
+
+        public MainWindowViewModel(ILog log, IUserSettingsService userSettingsService)
         {
             _log = log;
-            NavigateToPage("Home");
+            _userSettingsService = userSettingsService;
+            RestoreNavigationLayout();
         }
 
         /// <summary>
@@ -78,6 +98,85 @@ namespace MeasurementSoftware.ViewModels
             {
                 _log.Error($"导航失败: 未找到页面 '{pageName}'");
             }
+        }
+
+        private void RestoreNavigationLayout()
+        {
+            var layout = _userSettingsService.Settings.MainNavigationLayout;
+            var openPages = layout.OpenPages
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct()
+                .ToList();
+
+            if (openPages.Count == 0)
+            {
+                openPages.Add("Home");
+            }
+
+            foreach (var page in openPages)
+            {
+                NavigateToPage(page);
+            }
+
+            var selectedPage = string.IsNullOrWhiteSpace(layout.SelectedPage)
+                ? "Home"
+                : layout.SelectedPage;
+
+            NavigateToPage(selectedPage);
+
+            if (Tabs.Count == 0)
+            {
+                NavigateToPage("Home");
+            }
+        }
+
+        public void SaveNavigationLayout()
+        {
+            var layout = _userSettingsService.Settings.MainNavigationLayout;
+            layout.OpenPages = [.. Tabs
+                .Select(t => GetPageNameByHeader(t.Header))
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct()];
+
+            if (layout.OpenPages.Count == 0)
+            {
+                layout.OpenPages = ["Home"];
+            }
+
+            layout.SelectedPage = GetPageNameByHeader(SelectedTab?.Header);
+            if (string.IsNullOrWhiteSpace(layout.SelectedPage))
+            {
+                layout.SelectedPage = layout.OpenPages[0];
+            }
+
+            _userSettingsService.SaveSettings();
+        }
+
+        public void SetAppLoading(bool isLoading, string? message = null)
+        {
+            IsAppLoading = isLoading;
+            if (!string.IsNullOrWhiteSpace(message))
+            {
+                AppLoadingMessage = message;
+            }
+        }
+
+        private string GetPageNameByHeader(string? header)
+        {
+            return header switch
+            {
+                "测量" => "Home",
+                "配方管理" => "RecipeManagement",
+                "校准" => "Calibration",
+                "数据管理" => "DataManagement",
+                "SPC分析" => "Spc",
+                "通道设置" => "ChannelSetting",
+                "设备管理" => "CommunicationSetting",
+                "二维码配置" => "QrCodeSetting",
+                "其他设置" => "OtherSettings",
+                "日志" => "LogViewer",
+                _ => string.Empty
+            };
         }
 
         private string GetFriendlyName(string pageName)

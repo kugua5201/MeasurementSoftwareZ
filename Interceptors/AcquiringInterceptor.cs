@@ -16,7 +16,7 @@ namespace MeasurementSoftware.Interceptors
             var field = type.GetField("_recipeConfigService", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)
                 ?? type.BaseType?.GetField("_recipeConfigService", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
 
-            IRecipeConfigService recipeConfigService = null;
+            IRecipeConfigService? recipeConfigService = null;
             if (field != null)
             {
                 recipeConfigService = field.GetValue(invocation.InvocationTarget) as IRecipeConfigService;
@@ -37,11 +37,11 @@ namespace MeasurementSoftware.Interceptors
                     // 如果是 Task<T>，返回含默认值的完成 Task
                     var resultType = invocation.Method.ReturnType.GetGenericArguments()[0];
                     var defaultResult = resultType.IsValueType ? Activator.CreateInstance(resultType) : null;
-                    var taskFromResultMethod = typeof(Task).GetMethod("FromResult").MakeGenericMethod(resultType);
-                    invocation.ReturnValue = taskFromResultMethod.Invoke(null, new[] { defaultResult });
+                    var taskFromResultMethod = typeof(Task).GetMethod("FromResult")?.MakeGenericMethod(resultType);
+                    invocation.ReturnValue = taskFromResultMethod?.Invoke(null, new[] { defaultResult });
                 }
                 // 拦截执行
-                return; 
+                return;
             }
 
             invocation.Proceed();

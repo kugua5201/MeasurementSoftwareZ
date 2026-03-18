@@ -20,6 +20,11 @@ namespace MeasurementSoftware.Services.Config
         /// </summary>
         bool IsCollecting { get; }
 
+        /// <summary>
+        /// 采集轮询延迟(ms)
+        /// </summary>
+        int AcquisitionDelayMs { get; set; }
+
         void SetCollect(bool Collect);
     }
 }

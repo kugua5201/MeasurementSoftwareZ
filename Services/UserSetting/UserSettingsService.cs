@@ -1,6 +1,7 @@
 ﻿using MeasurementSoftware.Models;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MeasurementSoftware.Services.UserSetting
 {
@@ -8,6 +9,12 @@ namespace MeasurementSoftware.Services.UserSetting
     {
         private readonly string _settingsPath;
         private UserSettings _settings;
+
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            WriteIndented = true,
+            NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+        };
 
         public UserSettings Settings => _settings;
 
@@ -21,14 +28,14 @@ namespace MeasurementSoftware.Services.UserSetting
             _settings = new UserSettings();
         }
 
-        public async Task LoadSettingsAsync()
+        public void LoadSettings()
         {
             try
             {
                 if (File.Exists(_settingsPath))
                 {
-                    var json = await File.ReadAllTextAsync(_settingsPath);
-                    _settings = JsonSerializer.Deserialize<UserSettings>(json) ?? new UserSettings();
+                    var json = File.ReadAllText(_settingsPath);
+                    _settings = JsonSerializer.Deserialize<UserSettings>(json, _jsonOptions) ?? new UserSettings();
                 }
             }
             catch
@@ -37,13 +44,13 @@ namespace MeasurementSoftware.Services.UserSetting
             }
         }
 
-        public async Task SaveSettingsAsync()
+        public void SaveSettings()
         {
             try
             {
                 _settings.LastUpdated = DateTime.Now;
-                var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
-                await File.WriteAllTextAsync(_settingsPath, json);
+                var json = JsonSerializer.Serialize(_settings, _jsonOptions);
+                File.WriteAllText(_settingsPath, json);
             }
             catch
             {

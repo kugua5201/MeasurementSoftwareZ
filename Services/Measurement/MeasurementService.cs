@@ -192,6 +192,22 @@ namespace MeasurementSoftware.Services
                     return null;
                 }
 
+                // 缓存值读取：UseCacheValue 开关开启且点位有 CacheFieldKey
+                if (channel.UseCacheValue)
+                {
+                    var dp = device.DataPoints.FirstOrDefault(d => d.PointId == channel.DataPointId);
+                    if (dp != null && !string.IsNullOrEmpty(dp.CacheFieldKey))
+                    {
+                        return device.GetCacheFieldValue(dp.CacheFieldKey);
+                    }
+                }
+
+                // 兼容旧的 CACHE: 前缀通道
+                if (channel.DataPointId.StartsWith("CACHE:"))
+                {
+                    return device.GetCacheFieldValue(channel.DataPointId);
+                }
+
                 // 从设备的数据点中查找对应点位
                 var dataPoint = device.DataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId);
                 if (dataPoint == null)

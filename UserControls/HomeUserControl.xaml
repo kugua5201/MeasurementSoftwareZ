@@ -144,10 +144,11 @@
                 </Grid>
             </Border>
 
-            <!-- 左右拖动分割条 -->
-            <GridSplitter x:Name="HorizontalSplitter" Grid.Column="1" Grid.Row="0" Width="6"
+			<!-- 左右拖动分割条 -->
+			<GridSplitter x:Name="HorizontalSplitter" Grid.Column="1" Grid.Row="0" Width="6"
 						  HorizontalAlignment="Center" VerticalAlignment="Stretch"
-						  Background="Transparent" Cursor="SizeWE" ShowsPreview="True"/>
+						  Background="Transparent" Cursor="SizeWE" ShowsPreview="True"
+						  DragCompleted="Splitter_DragCompleted"/>
             <!-- 右上：测量向导区 -->
             <Border x:Name="GuidePanel" Grid.Column="2" Grid.Row="0" Background="{StaticResource LightBackgroundBrush}"
 							BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Margin="5">
@@ -229,7 +230,8 @@
             <!-- 上下拖动分割条 -->
             <GridSplitter x:Name="VerticalSplitter" Grid.Row="1" Grid.ColumnSpan="3" Height="6"
                           HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                          Background="Transparent" Cursor="SizeNS" ShowsPreview="True"/>
+                          Background="Transparent" Cursor="SizeNS" ShowsPreview="True"
+                          DragCompleted="Splitter_DragCompleted"/>
 
             <!-- 底部：通道数据表格（横跨所有列） -->
             <Border x:Name="TablePanel" Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="3"
@@ -266,7 +268,7 @@
                             <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue}" Width="80"/>
                             <DataGridTextColumn Header="上公差" Binding="{Binding UpperTolerance}" Width="70"/>
                             <DataGridTextColumn Header="下公差" Binding="{Binding LowerTolerance}" Width="70"/>
-                            <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue}" Width="90" />
+                            <DataGridTextColumn Header="实时值" Binding="{Binding MeasuredValue}" Width="90" />
                             <DataGridTextColumn Header="结果值" Binding="{Binding ReusltValue}" Width="90" />
                             <DataGridTemplateColumn Header="结果" Width="70">
                                 <DataGridTemplateColumn.CellTemplate>

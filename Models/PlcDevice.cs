@@ -14,6 +14,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using DriveType = MultiProtocol.Model.DriveType;
 using MessageBox = HandyControl.Controls.MessageBox;
@@ -217,34 +218,40 @@ namespace MeasurementSoftware.Models
             get => isEnabled;
             set
             {
-                if (!value)
+                SetProperty(ref isEnabled, value, new Action(() =>
                 {
-                    var recipeService = ContainerBuilderExtensions.GetService<IRecipeConfigService>();
-                    var currentRecipe = recipeService?.CurrentRecipe;
-                    if (currentRecipe != null)
+                    if (!value)
                     {
-                        bool hasBind = currentRecipe.Channels.Any(c => c.PlcDeviceId == DeviceId);
-                        if (hasBind)
+                        var recipeService = ContainerBuilderExtensions.GetService<IRecipeConfigService>();
+                        var currentRecipe = recipeService?.CurrentRecipe;
+                        if (currentRecipe != null)
                         {
-                            var res = MessageBox.Show("当前设备已被通道绑定，强制关闭可能导致测量异常，是否继续？", "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                            if (res == MessageBoxResult.No)
+                            bool hasBind = currentRecipe.Channels.Any(c => c.PlcDeviceId == DeviceId);
+                            if (hasBind)
                             {
-                                return; // 不赋值，不触发 UI
-                            }
-                            else
-                            {
-                                foreach (var channel in currentRecipe.Channels.Where(c => c.PlcDeviceId == DeviceId))
+                                var res = MessageBox.Show("当前设备已被通道绑定，强制关闭可能导致测量异常，是否继续？", "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                                if (res == MessageBoxResult.No)
                                 {
-                                    channel.PlcDeviceId = 0;
-                                    channel.DataPointId = string.Empty;
-                                    channel.DataSourceAddress = string.Empty;
-                                    channel.AvailableDataPoints = new ObservableCollection<DataPoint>();
+
+
+                                    return; // 不赋值，不触发 UI
+                                }
+                                else
+                                {
+                                    foreach (var channel in currentRecipe.Channels.Where(c => c.PlcDeviceId == DeviceId))
+                                    {
+                                        channel.PlcDeviceId = 0;
+                                        channel.DataPointId = string.Empty;
+                                        channel.DataSourceAddress = string.Empty;
+                                        channel.AvailableDataPoints = new ObservableCollection<DataPoint>();
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                SetProperty(ref isEnabled, value, () => protocol?.Open(value));
+                    protocol?.Open(value);
+                }));
+
 
             }
         }
@@ -254,16 +261,29 @@ namespace MeasurementSoftware.Models
         /// 是否已连接
         /// </summary>
         [ObservableProperty]
-        [property: System.Text.Json.Serialization.JsonIgnore]
+        [JsonIgnore]
         private bool isConnected;
+
+        /// <summary>
+        /// 缓存是否正在读取
+        /// </summary>
+        [ObservableProperty]
+        [JsonIgnore]
+        private bool isCacheReading;
+
+        /// <summary>
+        /// 缓存字段值字典（key="CACHE:G{group}:{fieldName}"，value=解析后的值）
+        /// </summary>
+        [JsonIgnore]
+        private readonly Dictionary<string, object?> _cacheFieldValues = new();
 
         /// <summary>
         /// 数据点列表
         /// </summary>
         public ObservableCollection<DataPoint> DataPoints { get; set; } = [];
 
-        [System.Text.Json.Serialization.JsonIgnore]
-        public IIndustrialProtocol protocol { get; private set; }
+        [JsonIgnore]
+        public IIndustrialProtocol? protocol { get; private set; }
 
         /// <summary>
         /// 协议数据读取事件处理：将读取的FieldInfo数据映射回DataPoint
@@ -272,7 +292,6 @@ namespace MeasurementSoftware.Models
         {
             foreach (var fieldInfo in e.Data)
             {
-                // 通过地址匹配到对应的DataPoint
                 var dataPoint = DataPoints.FirstOrDefault(dp => dp.Address == fieldInfo.Address);
                 if (dataPoint == null) continue;
 
@@ -283,12 +302,150 @@ namespace MeasurementSoftware.Models
                 {
                     dataPoint.CurrentValue = fieldInfo.Value;
                     dataPoint.ErrorMessage = null;
-
                 }
                 else
                 {
                     dataPoint.ErrorMessage = fieldInfo.Message;
                 }
+            }
+        }
+
+        /// <summary>
+        /// 协议缓存数据读取事件处理：解析 byte[] → 按结构定义写入 FieldDefinitions，同时存入缓存值字典
+        /// </summary>
+        private void Protocol_OnCacheDataRead(object? sender, CacheDataEventArgs data)
+        {
+            if (!ReferenceEquals(sender, protocol)) return;
+            if (!SiemensReadCache.IsEnabled || !SiemensReadCache.IsStructureValid) return;
+            if (data.Data == null || data.Data.Length == 0) return;
+
+            var cache = SiemensReadCache;
+            var now = DateTime.Now;
+
+            // 更新展开后的列表（仅解析当前缓存区对应的字段）
+            foreach (var expandedField in cache.ExpandedFieldDefinitions.Where(f => f.CacheIndex == data.CacheIndex))
+            {
+                int offset = expandedField.GroupIndex * cache.GroupSize + expandedField.Offset;
+                int size = SiemensReadCacheConfig.GetFieldTypeSize(expandedField.DataType);
+                if (offset + size > data.Data.Length) continue;
+
+                try
+                {
+                    byte[] segment = new byte[size];
+                    Array.Copy(data.Data, offset, segment, 0, size);
+                    var value = ParseByteSegment(segment, expandedField.DataType, expandedField.ByteOrder);
+                    expandedField.ParsedValue = value;
+                    expandedField.LastUpdateTime = now;
+
+                    // 存入字典供通道读值
+                    _cacheFieldValues[expandedField.CacheFieldKey] = value;
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>
+        /// 启动双缓冲缓存读取（调用协议层的 StartCacheReading）
+        /// </summary>
+        public void StartCacheReading()
+        {
+            if (protocol == null || !SiemensReadCache.IsEnabled) return;
+
+            var c = SiemensReadCache;
+            protocol.StartCacheReading(
+                $"{c.Cache1.DbBlock}", c.Cache1.Length, c.Cache1.ReadableFlagAddress,
+                $"{c.Cache2.DbBlock}", c.Cache2.Length, c.Cache2.ReadableFlagAddress);
+            IsCacheReading = true;
+        }
+
+        /// <summary>
+        /// 停止双缓冲缓存读取
+        /// </summary>
+        public void StopCacheReading()
+        {
+            protocol?.StopCacheReading();
+            IsCacheReading = false;
+        }
+
+        /// <summary>
+        /// 获取缓存字段值（供通道读取，cacheFieldId格式：CACHE:C{cache}:G{group}:{fieldName}）
+        /// </summary>
+        public double? GetCacheFieldValue(string cacheFieldId)
+        {
+            if (_cacheFieldValues.TryGetValue(cacheFieldId, out var value) && value != null)
+            {
+                try { return Convert.ToDouble(value); }
+                catch { return null; }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 解析字节段为对应类型的值
+        /// </summary>
+        private static object? ParseByteSegment(byte[] data, FieldType type, ByteOrder order)
+        {
+            data = ApplyByteOrder(data, data.Length, order);
+            return type switch
+            {
+                FieldType.Bool => data[0] != 0,
+                FieldType.Byte => data[0],
+                FieldType.Int16 => BitConverter.ToInt16(data, 0),
+                FieldType.UInt16 => BitConverter.ToUInt16(data, 0),
+                FieldType.Int32 => BitConverter.ToInt32(data, 0),
+                FieldType.UInt32 => BitConverter.ToUInt32(data, 0),
+                FieldType.Int64 => BitConverter.ToInt64(data, 0),
+                FieldType.UInt64 => BitConverter.ToUInt64(data, 0),
+                FieldType.Long => BitConverter.ToInt64(data, 0),
+                FieldType.Float => BitConverter.ToSingle(data, 0),
+                FieldType.Double => BitConverter.ToDouble(data, 0),
+                _ => data
+            };
+        }
+
+        /// <summary>
+        /// 根据字节序重排字节数组
+        /// </summary>
+        private static byte[] ApplyByteOrder(byte[] bytes, int size, ByteOrder byteOrder)
+        {
+            if (bytes.Length < size)
+                throw new ArgumentException("字节数组长度不足");
+
+            byte[] result = new byte[size];
+            Array.Copy(bytes, result, size);
+
+            if (result.Length <= 1) return result;
+
+            switch (byteOrder)
+            {
+                case ByteOrder.ABCD:
+                    return result;
+
+                case ByteOrder.BADC:
+                    for (int i = 0; i < size - 1; i += 2)
+                    {
+                        (result[i], result[i + 1]) = (result[i + 1], result[i]);
+                    }
+                    return result;
+
+                case ByteOrder.CDAB:
+                    if (size == 4)
+                    {
+                        (result[0], result[1], result[2], result[3]) = (result[2], result[3], result[0], result[1]);
+                    }
+                    else if (size == 8)
+                    {
+                        (result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7]) =
+                        (result[4], result[5], result[6], result[7], result[0], result[1], result[2], result[3]);
+                    }
+                    return result;
+
+                case ByteOrder.DCBA:
+                    Array.Reverse(result);
+                    return result;
+
+                default:
+                    return result;
             }
         }
 
@@ -301,7 +458,17 @@ namespace MeasurementSoftware.Models
             if (IsConnected)
             {
                 SetDevicePoints();
-                protocol.Open(IsEnabled);
+                protocol?.Open(IsEnabled);
+
+                // 如果启用了双缓冲读取，启动缓存读取线程
+                if (SiemensReadCache.IsEnabled && SiemensReadCache.IsStructureValid)
+                {
+                    StartCacheReading();
+                }
+            }
+            else
+            {
+                StopCacheReading();
             }
         }
 
@@ -310,8 +477,10 @@ namespace MeasurementSoftware.Models
         /// </summary>
         private void SubscribeProtocolEvents()
         {
-            protocol?.OnDataRead += Protocol_OnDataRead;
-            protocol?.OnConnectChanged += Protocol_OnConnectChanged;
+            if (protocol == null) return;
+            protocol.OnDataRead += Protocol_OnDataRead;
+            protocol.OnConnectChanged += Protocol_OnConnectChanged;
+            protocol.OnCacheDataRead += Protocol_OnCacheDataRead;
         }
 
         /// <summary>
@@ -319,8 +488,10 @@ namespace MeasurementSoftware.Models
         /// </summary>
         private void UnsubscribeProtocolEvents()
         {
-            protocol?.OnDataRead -= Protocol_OnDataRead;
-            protocol?.OnConnectChanged -= Protocol_OnConnectChanged;
+            if (protocol == null) return;
+            protocol.OnDataRead -= Protocol_OnDataRead;
+            protocol.OnConnectChanged -= Protocol_OnConnectChanged;
+            protocol.OnCacheDataRead -= Protocol_OnCacheDataRead;
         }
 
         /// <summary>
@@ -382,8 +553,6 @@ namespace MeasurementSoftware.Models
         {
             if (protocol == null || DataPoints.Count == 0) return;
 
-            //protocol.RemoveDevice(DeviceId);
-
             DeviceInfo device = new(DeviceId, DeviceName);
             List<FieldInfo> fieldInfos = [];
             foreach (DataPoint dataPoint in DataPoints)
@@ -403,6 +572,7 @@ namespace MeasurementSoftware.Models
             };
 
             var checkedFields = DataFieldsHelper.CheckFileds(driveType, fieldInfos);
+
             protocol.SetDevice(device, checkedFields);
         }
 
@@ -424,6 +594,7 @@ namespace MeasurementSoftware.Models
             {
                 try
                 {
+                    StopCacheReading();
                     UnsubscribeProtocolEvents();
                     if (protocol.IsOpen)
                     {
@@ -452,7 +623,7 @@ namespace MeasurementSoftware.Models
                 SubscribeProtocolEvents();
             }
 
-            return protocol;
+            return protocol!;
         }
 
         /// <summary>
@@ -482,7 +653,7 @@ namespace MeasurementSoftware.Models
                 SubscribeProtocolEvents();
             }
 
-            return protocol;
+            return protocol!;
         }
 
         /// <summary>
@@ -495,7 +666,7 @@ namespace MeasurementSoftware.Models
 
             try
             {
-                var result = protocol.Connect();
+                var result = await Task.Run(() => protocol.Connect());
                 if (result.IsSuccess)
                 {
                     IsConnected = true;
