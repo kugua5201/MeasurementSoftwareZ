@@ -36,10 +36,10 @@
 									Padding="15,6" Margin="0,0,8,0"
 									ToolTip="删除当前选中的设备"/>
                         <Button Command="{Binding TestConnectionCommand}" 
-									Content="测试连接" 
+									Content="连接设备" 
 									Style="{StaticResource ButtonDefault}"
 									Padding="15,6"
-									ToolTip="测试当前设备的连接状态"/>
+									ToolTip="连接当前设备"/>
                     </StackPanel>
                     <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveConfigurationCommand}"/>
                 </Grid>
@@ -93,6 +93,13 @@
 								 BorderThickness="0"
 								 Background="Transparent"
 								 Margin="5">
+                                <ListBox.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="添加设备" Command="{Binding AddDeviceCommand}" ></MenuItem>
+                                        <MenuItem Header="删除设备" Command="{Binding DeleteDeviceCommand}" ></MenuItem>
+                                        <MenuItem Header="连接设备" Command="{Binding TestConnectionCommand}" ></MenuItem>
+                                    </ContextMenu>
+                                </ListBox.ContextMenu>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Background="Transparent" 
@@ -346,7 +353,7 @@
                         <!-- 设备配置表单 -->
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
 									  Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityConverter}}">
-                            <StackPanel Margin="20" DataContext="{Binding SelectedDevice}">
+                            <StackPanel Margin="20" DataContext="{Binding SelectedDevice}" >
                                 <!-- 基本信息 -->
                                 <TextBlock Text="基本信息" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryBrush}"/>
 
@@ -396,7 +403,7 @@
                                 <!-- 动态加载不同PLC类型的配置界面 -->
                                 <ContentControl Content="{Binding}" 
 												ContentTemplateSelector="{StaticResource PlcConfigTemplateSelector}"
-												Margin="0,15,0,0"/>
+												Margin="0,15,0,0" />
 
                                 <Separator Margin="0,5"/>
 
@@ -539,7 +546,7 @@
             <Border Background="{DynamicResource RegionBrush}" 
 					MinWidth="800" MaxWidth="900" 
 					BorderThickness="1,0,0,0" 
-                     DataContext="{Binding Data, Source={StaticResource VmProxy}}"
+                    DataContext="{Binding Data, Source={StaticResource VmProxy}}"
 					BorderBrush="{DynamicResource BorderBrush}">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -727,7 +734,7 @@
 
             <Border Background="#66000000"
                     Panel.ZIndex="999"
-                    Visibility="{Binding IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}">
+                    Visibility="{Binding IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}" d:Visibility="Collapsed" >
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Border Background="{DynamicResource RegionBrush}" CornerRadius="12" Padding="28,24">
                         <StackPanel HorizontalAlignment="Center">

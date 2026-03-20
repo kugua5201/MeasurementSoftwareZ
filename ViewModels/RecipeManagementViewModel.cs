@@ -33,6 +33,9 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         public bool HasRecipe => CurrentRecipe != null;
 
+        [ObservableProperty]
+        private bool isOpeningRecipe;
+
         /// <summary>
         /// 配方概要信息
         /// </summary>
@@ -134,26 +137,42 @@ namespace MeasurementSoftware.ViewModels
 
                 if (dialog.ShowDialog() == true)
                 {
-                    var recipe = await _recipeConfigService.LoadRecipeAsync(dialog.FileName);
-                    if (recipe != null)
+                    if (IsSameRecipePath(dialog.FileName, CurrentRecipePath))
                     {
-                        _recipeConfigService.OpenRecipe(recipe, dialog.FileName);
-
-                        // 初始化配方中的PLC设备连接
-                        await _deviceConfigService.LoadDevicesAsync();
-
-                        // 记住最后打开的配方路径
-                        _userSettingsService.Settings.LastRecipePath = dialog.FileName;
-                        _userSettingsService.SaveSettings();
-
-                        NotifyRecipeChanged();
-                        Growl.Success($"配方 {recipe.RecipeName} 加载成功");
-                        _log.Info($"打开配方: {recipe.RecipeName}");
+                        Growl.Info("当前配方已打开，无需重复打开");
+                        return;
                     }
-                    else
+
+                    IsOpeningRecipe = true;
+                    try
                     {
-                        Growl.Error("配方加载失败");
-                        _log.Error("配方加载失败");
+                        await Task.Yield();
+                        var recipe = await _recipeConfigService.LoadRecipeAsync(dialog.FileName);
+
+                        if (recipe != null)
+                        {
+                            _recipeConfigService.OpenRecipe(recipe, dialog.FileName);
+
+                            // 初始化配方中的PLC设备连接
+                            await _deviceConfigService.LoadDevicesAsync();
+
+                            // 记住最后打开的配方路径
+                            _userSettingsService.Settings.LastRecipePath = dialog.FileName;
+                            _userSettingsService.SaveSettings();
+
+                            NotifyRecipeChanged();
+                            Growl.Success($"配方 {recipe.RecipeName} 加载成功");
+                            _log.Info($"打开配方: {recipe.RecipeName}");
+                        }
+                        else
+                        {
+                            Growl.Error("配方加载失败");
+                            _log.Error("配方加载失败");
+                        }
+                    }
+                    finally
+                    {
+                        IsOpeningRecipe = false;
                     }
                 }
             }
@@ -161,6 +180,26 @@ namespace MeasurementSoftware.ViewModels
             {
                 Growl.Error($"打开配方失败: {ex.Message}");
                 _log.Error($"打开配方异常: {ex.Message}");
+                IsOpeningRecipe = false;
+            }
+        }
+
+        private static bool IsSameRecipePath(string selectedPath, string currentPath)
+        {
+            if (string.IsNullOrWhiteSpace(selectedPath) || string.IsNullOrWhiteSpace(currentPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                var normalizedSelectedPath = Path.GetFullPath(selectedPath);
+                var normalizedCurrentPath = Path.GetFullPath(currentPath);
+                return string.Equals(normalizedSelectedPath, normalizedCurrentPath, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return string.Equals(selectedPath, currentPath, StringComparison.OrdinalIgnoreCase);
             }
         }
 

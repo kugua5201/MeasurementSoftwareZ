@@ -4,6 +4,7 @@ using HandyControl.Controls;
 using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
+using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
 using MultiProtocol.Model;
 using MultiProtocol.Services.Siemens;
@@ -20,11 +21,12 @@ namespace MeasurementSoftware.ViewModels
         private readonly ILog _log;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly IRecipeConfigService _recipeConfigService;
+        private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
 
         /// <summary>
         /// 设备集合
         /// </summary>
-        public ObservableCollection<PlcDevice> Devices => _deviceConfigService.Devices;
+        public ObservableCollection<PlcDevice> Devices => (ObservableCollection<PlcDevice>)_deviceConfigService.Devices;
 
         [ObservableProperty]
         private PlcDevice? selectedDevice;
@@ -52,6 +54,7 @@ namespace MeasurementSoftware.ViewModels
         }
 
         private bool _isViewActive;
+        private bool _suppressDeviceEnabledHandling;
 
         /// <summary>
         /// 可用串口列表（供 Modbus RTU 模板绑定）
@@ -114,29 +117,41 @@ namespace MeasurementSoftware.ViewModels
 
         private void ResetDeviceBindingsForTypeChange(PlcDevice device, PlcDeviceType newDeviceType)
         {
-            device.StopCacheReading();
+            _plcDeviceRuntimeService.StopCacheReading(device);
             device.DataPoints.Clear();
             SelectedDataPoint = null;
-
-            var channels = _recipeConfigService.CurrentRecipe?.Channels;
-            if (channels != null)
-            {
-                foreach (var channel in channels.Where(c => c.PlcDeviceId == device.DeviceId))
-                {
-                    channel.PlcDeviceId = 0;
-                    channel.DataPointId = string.Empty;
-                    channel.DataSourceAddress = string.Empty;
-                    channel.AvailableDataPoints = [];
-                    channel.UseCacheValue = false;
-                    channel.WriteBackDataPointIdA = string.Empty;
-                    channel.WriteBackDataPointIdB = string.Empty;
-                }
-            }
+            ClearChannelsBoundToDevice(device);
 
             if (IsSiemensDeviceType(device.DeviceType) && !IsSiemensDeviceType(newDeviceType))
             {
                 device.SiemensReadCache = new SiemensReadCacheConfig();
             }
+        }
+
+        private void ClearChannelsBoundToDevice(PlcDevice device)
+        {
+            foreach (var channel in GetChannelsBoundToDevice(device))
+            {
+                channel.ClearRuntimeBindings();
+            }
+        }
+
+        private List<MeasurementChannel> GetChannelsBoundToDevice(PlcDevice device)
+        {
+            return _recipeConfigService.CurrentRecipe?.Channels?
+                .Where(c => c.RuntimeDevice == device || c.PlcDeviceId == device.DeviceId)
+                .ToList() ?? [];
+        }
+
+        private static string BuildBoundChannelPrompt(IReadOnlyCollection<MeasurementChannel> channels, string action)
+        {
+            if (channels.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var channelNames = string.Join("、", channels.Select(c => c.ChannelName));
+            return $"当前设备已被以下通道绑定（包含未启用通道）：\n\n{channelNames}\n\n继续{action}将清空这些通道的绑定与点位关联，是否继续？";
         }
 
         private static bool IsSiemensDeviceType(PlcDeviceType deviceType)
@@ -155,11 +170,12 @@ namespace MeasurementSoftware.ViewModels
 
         public ObservableCollection<PlcDeviceType> DeviceTypes { get; } = new ObservableCollection<PlcDeviceType>(Enum.GetValues<PlcDeviceType>().Cast<PlcDeviceType>());
 
-        public DeviceSettingViewModel(ILog log, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService)
+        public DeviceSettingViewModel(ILog log, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService, IPlcDeviceRuntimeService plcDeviceRuntimeService)
         {
             _log = log;
             _deviceConfigService = deviceConfigService;
             _recipeConfigService = recipeConfigService;
+            _plcDeviceRuntimeService = plcDeviceRuntimeService;
 
             // 监听配置服务中的设备集合变化（比如新建配方、打开配方导致的 Devices 实例替换）
             if (_deviceConfigService is System.ComponentModel.INotifyPropertyChanged npc)
@@ -238,6 +254,7 @@ namespace MeasurementSoftware.ViewModels
                 newValue.PropertyChanged += Device_PropertyChanged;
                 // 切换设备时，自动选中第一个点位
                 SelectedDataPoint = newValue.DataPoints.FirstOrDefault();
+                RefreshSelectedDeviceCacheFieldDescriptions();
             }
             else
             {
@@ -258,7 +275,9 @@ namespace MeasurementSoftware.ViewModels
                 {
                     try
                     {
-                        await device.InitPlcAsync();
+                        await _plcDeviceRuntimeService.InitializeAsync(device);
+                        await _plcDeviceRuntimeService.ConnectAsync(device);
+
                         _log.Info($"设备类型已更改为: {device.DeviceType}，协议已重新初始化");
                     }
                     catch (Exception ex)
@@ -271,6 +290,34 @@ namespace MeasurementSoftware.ViewModels
                 var currentDevice = SelectedDevice;
                 SelectedDevice = null;
                 SelectedDevice = currentDevice;
+            }
+            else if (e.PropertyName == nameof(PlcDevice.IsEnabled) && sender is PlcDevice enabledDevice)
+            {
+                if (_suppressDeviceEnabledHandling)
+                {
+                    return;
+                }
+
+                if (!enabledDevice.IsEnabled)
+                {
+                    var boundChannels = GetChannelsBoundToDevice(enabledDevice);
+                    if (boundChannels.Count > 0)
+                    {
+                        var prompt = BuildBoundChannelPrompt(boundChannels, "禁用设备");
+                        var res = HandyControl.Controls.MessageBox.Show(prompt, "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        if (res == MessageBoxResult.No)
+                        {
+                            _suppressDeviceEnabledHandling = true;
+                            enabledDevice.IsEnabled = true;
+                            _suppressDeviceEnabledHandling = false;
+                            return;
+                        }
+
+                        ClearChannelsBoundToDevice(enabledDevice);
+                    }
+                }
+
+                _plcDeviceRuntimeService.SetPollingEnabled(enabledDevice, enabledDevice.IsEnabled);
             }
         }
 
@@ -291,16 +338,16 @@ namespace MeasurementSoftware.ViewModels
                     IsEnabled = false
                 };
 
-                await newDevice.InitPlcAsync();
-                var (success, message) = await newDevice.ConnectAsync();
-                if (success)
-                {
-                    _log.Info($"新设备 [{newDevice.DeviceName}] 连接成功");
-                }
-                else
-                {
-                    _log.Warn($"新设备 [{newDevice.DeviceName}] 连接失败: {message}");
-                }
+                //await _plcDeviceRuntimeService.InitializeAsync(newDevice);
+                //var (success, message) = await _plcDeviceRuntimeService.ConnectAsync(newDevice);
+                //if (success)
+                //{
+                //    _log.Info($"新设备 [{newDevice.DeviceName}] 连接成功");
+                //}
+                //else
+                //{
+                //    _log.Warn($"新设备 [{newDevice.DeviceName}] 连接失败: {message}");
+                //}
 
                 Devices.Add(newDevice);
                 SelectedDevice = newDevice;
@@ -328,24 +375,31 @@ namespace MeasurementSoftware.ViewModels
                 Growl.Warning("请选择要删除的设备");
                 return;
             }
-            var channels = _recipeConfigService.CurrentRecipe?.Channels;
-            if (channels != null)
+
+            var device = SelectedDevice;
+            var boundChannels = GetChannelsBoundToDevice(device);
+            if (boundChannels.Count > 0)
             {
-                bool hasBind = channels.Any(c => c.PlcDeviceId == SelectedDevice.DeviceId);
-                if (hasBind)
+                var prompt = BuildBoundChannelPrompt(boundChannels, "删除设备");
+                var result = HandyControl.Controls.MessageBox.Show(prompt, "提示", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                if (result != MessageBoxResult.Yes)
                 {
-                    Growl.Warning("当前设备已被通道绑定，不能删除！");
                     return;
                 }
-
             }
-            var deviceName = SelectedDevice.DeviceName;
+
+            var deviceName = device.DeviceName;
 
             await ExecuteWithLoadingAsync($"正在删除设备 {deviceName}...", async () =>
             {
-                await SelectedDevice.DestroyPlcAsync();
+                if (boundChannels.Count > 0)
+                {
+                    ClearChannelsBoundToDevice(device);
+                }
 
-                Devices.Remove(SelectedDevice);
+                await _plcDeviceRuntimeService.DestroyAsync(device);
+
+                Devices.Remove(device);
                 SelectedDevice = Devices.FirstOrDefault();
                 Growl.Info($"已删除设备: {deviceName}");
                 _log.Info($"删除设备: {deviceName}");
@@ -363,13 +417,13 @@ namespace MeasurementSoftware.ViewModels
 
             Growl.Info($"正在测试 {SelectedDevice.DeviceName} 连接...");
 
-            await ExecuteWithLoadingAsync($"正在测试 {SelectedDevice.DeviceName} 连接...", async () =>
+            await ExecuteWithLoadingAsync($"正在 {SelectedDevice.DeviceName} 连接...", async () =>
             {
                 try
                 {
-                    await SelectedDevice.InitPlcAsync();
+                    await _plcDeviceRuntimeService.InitializeAsync(SelectedDevice);
 
-                    var (success, message) = await SelectedDevice.ConnectAsync();
+                    var (success, message) = await _plcDeviceRuntimeService.ConnectAsync(SelectedDevice);
                     if (success)
                     {
                         Growl.Success($"{SelectedDevice.DeviceName} 连接成功");
@@ -392,6 +446,8 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         private async Task SaveConfiguration()
         {
+            var selectedDeviceId = SelectedDevice?.DeviceId;
+
             await ExecuteWithLoadingAsync("正在保存设备配置...", async () =>
             {
                 try
@@ -399,6 +455,11 @@ namespace MeasurementSoftware.ViewModels
                     var success = await _deviceConfigService.SaveDevicesAsync([.. Devices]);
                     if (success)
                     {
+                        if (selectedDeviceId.HasValue)
+                        {
+                            SelectedDevice = Devices.FirstOrDefault(d => d.DeviceId == selectedDeviceId.Value) ?? SelectedDevice;
+                        }
+
                         Growl.Success($"设备配置已保存");
                         _log.Info($"保存设备配置成功");
                     }
@@ -432,9 +493,9 @@ namespace MeasurementSoftware.ViewModels
             {
                 try
                 {
-                    await SelectedDevice.InitPlcAsync();
+                    await _plcDeviceRuntimeService.InitializeAsync(SelectedDevice);
 
-                    var (success, message) = await SelectedDevice.ConnectAsync();
+                    var (success, message) = await _plcDeviceRuntimeService.ConnectAsync(SelectedDevice);
                     if (success)
                     {
                         Growl.Success($"{SelectedDevice.DeviceName} 配置已保存，重连成功");
@@ -578,7 +639,7 @@ namespace MeasurementSoftware.ViewModels
                 try
                 {
                     CheckAllAddresses();
-                    SelectedDevice.ResetDevicePoints();
+                    _plcDeviceRuntimeService.ResetDevicePoints(SelectedDevice);
 
                     var success = await _recipeConfigService.SaveCurrentRecipeAsync();
                     if (!success)
@@ -587,7 +648,9 @@ namespace MeasurementSoftware.ViewModels
                         return;
                     }
 
-                    Growl.Success("点位配置已保存");
+                    var cacheReadingStarted = await TryStartCacheReadingAsync(SelectedDevice);
+                    RefreshSelectedDeviceCacheFieldDescriptions();
+                    Growl.Success(cacheReadingStarted ? "点位配置已保存，缓存读取已启动" : "点位配置已保存");
                     IsPointSettingOpen = false;
                 }
                 catch (Exception ex)
@@ -717,7 +780,7 @@ namespace MeasurementSoftware.ViewModels
         /// 验证缓存结构定义并生成对应 DataPoint（真实西门子地址，供寄存器读取）
         /// </summary>
         [RelayCommand]
-        private void ApplyCachePoints()
+        private async Task ApplyCachePoints()
         {
             if (SelectedDevice == null)
             {
@@ -821,13 +884,86 @@ namespace MeasurementSoftware.ViewModels
                 SelectedDataPoint = firstGenerated;
             }
 
-            // 下发点位到下位机
-            SelectedDevice.ResetDevicePoints();
-            SelectedDevice.StopCacheReading();
-            SelectedDevice.StartCacheReading();
+            var cacheReadingStarted = await TryStartCacheReadingAsync(SelectedDevice);
+            RefreshSelectedDeviceCacheFieldDescriptions();
             int totalPoints = cache.FieldDefinitions.Count * cache.GroupCount * 2;
-            Growl.Success($"{msg}，已生成 {totalPoints} 个点位（可在点位设置中编辑地址）");
+            Growl.Success(cacheReadingStarted
+                ? $"{msg}，已生成 {totalPoints} 个点位并开始缓存读取"
+                : $"{msg}，已生成 {totalPoints} 个点位（可在点位设置中编辑地址）");
             _log.Info($"设备 [{SelectedDevice.DeviceName}] 缓存结构验证通过，生成 {totalPoints} 个点位");
+        }
+
+        private void RefreshSelectedDeviceCacheFieldDescriptions()
+        {
+            if (SelectedDevice == null)
+            {
+                return;
+            }
+
+            var cache = SelectedDevice.SiemensReadCache;
+            if (cache.ExpandedFieldDefinitions.Count == 0)
+            {
+                return;
+            }
+
+            var channels = _recipeConfigService.CurrentRecipe?.Channels ?? [];
+
+            foreach (var field in cache.ExpandedFieldDefinitions)
+            {
+                var point = SelectedDevice.DataPoints.FirstOrDefault(dp => dp.IsCacheGenerated && dp.CacheFieldKey == field.CacheFieldKey);
+
+                if (point == null)
+                {
+                    field.Description = "未生成对应点位";
+                    continue;
+                }
+
+                if (!point.IsValidated && !string.IsNullOrWhiteSpace(point.ValidationError))
+                {
+                    field.Description = $"{point.ValidationError}";
+                    continue;
+                }
+
+                field.Description = string.Empty;
+            }
+        }
+
+        private async Task<bool> TryStartCacheReadingAsync(PlcDevice device)
+        {
+            if (device.DeviceType is not PlcDeviceType.SiemensS7_1200 and not PlcDeviceType.SiemensS7_1500)
+            {
+                return false;
+            }
+
+            var cache = device.SiemensReadCache;
+            if (!cache.IsEnabled || !cache.IsStructureValid)
+            {
+                return false;
+            }
+
+            try
+            {
+                await _plcDeviceRuntimeService.InitializeAsync(device);
+                var (success, message) = await _plcDeviceRuntimeService.ConnectAsync(device);
+                if (!success)
+                {
+                    _log.Warn($"设备 [{device.DeviceName}] 缓存读取启动失败: {message}");
+                    Growl.Warning($"点位已生成，但缓存读取未启动：{message}");
+                    return false;
+                }
+
+                _plcDeviceRuntimeService.ResetDevicePoints(device);
+                _plcDeviceRuntimeService.StopCacheReading(device);
+                _plcDeviceRuntimeService.StartCacheReading(device);
+                _log.Info($"设备 [{device.DeviceName}] 已在生成/保存后启动缓存读取");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"设备 [{device.DeviceName}] 启动缓存读取异常: {ex.Message}");
+                Growl.Warning($"点位已生成，但缓存读取启动异常：{ex.Message}");
+                return false;
+            }
         }
 
         /// <summary>
@@ -899,7 +1035,7 @@ namespace MeasurementSoftware.ViewModels
 
             ValidateDataPoint(dataPoint, SelectedDevice.DeviceType, out _);
             SelectedDevice.DataPoints.Add(dataPoint);
-            SelectedDevice.ResetDevicePoints();
+            _plcDeviceRuntimeService.ResetDevicePoints(SelectedDevice);
 
             _log.Info($"已为缓存字段 [{field.DisplayName}] 自动创建点位 [{dataPoint.PointName}]，地址: {dataPoint.Address}");
             return dataPoint;

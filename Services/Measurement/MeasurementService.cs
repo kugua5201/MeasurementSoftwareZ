@@ -1,5 +1,6 @@
 ﻿using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
+using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
 
 namespace MeasurementSoftware.Services
@@ -10,8 +11,8 @@ namespace MeasurementSoftware.Services
     public class MeasurementService : IMeasurementService
     {
         private readonly ILog _log;
-        private readonly IDeviceConfigService _deviceConfigService;
         private readonly ICalibrationService _calibrationService;
+        private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
 
         private CancellationTokenSource? _cts;
         private bool _isAcquiring;
@@ -31,11 +32,11 @@ namespace MeasurementSoftware.Services
         public event EventHandler<MeasurementCompletedEventArgs>? MeasurementCompleted;
         public event EventHandler<RealTimeDataEventArgs>? RealTimeDataUpdated;
 
-        public MeasurementService(ILog log, IDeviceConfigService deviceConfigService, ICalibrationService calibrationService)
+        public MeasurementService(ILog log, ICalibrationService calibrationService, IPlcDeviceRuntimeService plcDeviceRuntimeService)
         {
             _log = log;
-            _deviceConfigService = deviceConfigService;
             _calibrationService = calibrationService;
+            _plcDeviceRuntimeService = plcDeviceRuntimeService;
         }
 
         public async Task<MeasurementSessionResult> StartMeasurementAsync(MeasurementRecipe recipe, int stepNumber = 0)
@@ -178,42 +179,24 @@ namespace MeasurementSoftware.Services
         {
             try
             {
-                if (channel.PlcDeviceId == 0 || string.IsNullOrEmpty(channel.DataPointId))
+                var device = channel.RuntimeDevice;
+                var dataPoint = channel.RuntimeDataPoint;
+
+                if (device == null || dataPoint == null)
                 {
                     return null;
                 }
 
-                var device = _deviceConfigService.Devices
-                    .FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
-
-                if (device?.protocol == null || !device.IsConnected)
+                if (!device.IsConnected)
                 {
                     _log.Warn($"通道 {channel.ChannelName} 关联的PLC设备未连接");
                     return null;
                 }
 
-                // 缓存值读取：UseCacheValue 开关开启且点位有 CacheFieldKey
-                if (channel.UseCacheValue)
+                // 缓存值读取：只认运行时绑定的点位对象
+                if (channel.UseCacheValue && !string.IsNullOrEmpty(dataPoint.CacheFieldKey))
                 {
-                    var dp = device.DataPoints.FirstOrDefault(d => d.PointId == channel.DataPointId);
-                    if (dp != null && !string.IsNullOrEmpty(dp.CacheFieldKey))
-                    {
-                        return device.GetCacheFieldValue(dp.CacheFieldKey);
-                    }
-                }
-
-                // 兼容旧的 CACHE: 前缀通道
-                if (channel.DataPointId.StartsWith("CACHE:"))
-                {
-                    return device.GetCacheFieldValue(channel.DataPointId);
-                }
-
-                // 从设备的数据点中查找对应点位
-                var dataPoint = device.DataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId);
-                if (dataPoint == null)
-                {
-                    _log.Warn($"通道 {channel.ChannelName} 的数据点 {channel.DataPointId} 未找到");
-                    return null;
+                    return _plcDeviceRuntimeService.GetCacheFieldValue(device, dataPoint.CacheFieldKey);
                 }
 
                 // 如果设备启用了轮询，DataPoint已经有最新值
@@ -223,13 +206,11 @@ namespace MeasurementSoftware.Services
                 }
 
                 // 设备未启用轮询时主动读取一次
-                var fieldInfo = new MultiProtocol.Model.FieldInfo(dataPoint.Address, dataPoint.DataType, dataPoint.ByteOrder);
-                var results = await device.protocol.ReadDataAsync(device.DeviceId, [fieldInfo]);
-                var readResult = results.FirstOrDefault();
+                var readValue = await _plcDeviceRuntimeService.ReadDataPointValueAsync(device, dataPoint);
 
-                if (readResult != null && readResult.IsSuccess && readResult.Value != null)
+                if (readValue != null)
                 {
-                    return Convert.ToDouble(readResult.Value);
+                    return Convert.ToDouble(readValue);
                 }
 
                 _log.Warn($"通道 {channel.ChannelName} 读取失败");

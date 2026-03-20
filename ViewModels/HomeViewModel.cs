@@ -4,6 +4,7 @@ using HandyControl.Controls;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
+using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -14,8 +15,8 @@ namespace MeasurementSoftware.ViewModels
     {
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
-        private readonly IDeviceConfigService _deviceConfigService;
         private readonly IDataRecordService _dataRecordService;
+        private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
 
         [ObservableProperty]
         private string? productImagePath;
@@ -64,12 +65,12 @@ namespace MeasurementSoftware.ViewModels
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
 
-        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IDataRecordService dataRecordService)
+        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
-            _deviceConfigService = deviceConfigService;
             _dataRecordService = dataRecordService;
+            _plcDeviceRuntimeService = plcDeviceRuntimeService;
 
             // 不再从用户设置加载图片，图片跟随配方
 
@@ -500,25 +501,19 @@ namespace MeasurementSoftware.ViewModels
 
         /// <summary>
         /// 获取通道当前值
-        /// 逻辑：
-        ///   1. 通道勾选了 UseCacheValue + 设备启用了缓存 + 缓存正在读取 → 从缓存字典取值
-        ///   2. 否则 → 从寄存器（DataPoint.CurrentValue）取值
-        /// 缓存读取的启停由设备连接/断开自动管理，测量页面不需要手动控制。
+        /// 统一使用通道当前绑定的运行时设备和点位对象取值。
         /// </summary>
         private double? GetChannelCurrentValue(MeasurementChannel channel)
         {
-            if (channel.PlcDeviceId == 0 || string.IsNullOrEmpty(channel.DataPointId))
+            var device = channel.RuntimeDevice;
+            var dataPoint = channel.RuntimeDataPoint;
+
+            if (device == null || dataPoint == null)
             {
                 channel.ChannelDescription = "未绑定设备或点位";
                 return null;
             }
 
-            var device = _deviceConfigService.Devices.FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
-            if (device == null)
-            {
-                channel.ChannelDescription = $"未找到设备ID {channel.PlcDeviceId}";
-                return null;
-            }
             if (!device.IsEnabled)
             {
                 channel.ChannelDescription = $"设备 {device.DeviceName} 未启用";
@@ -531,13 +526,6 @@ namespace MeasurementSoftware.ViewModels
             }
 
             // 判断是否走缓存读取：通道勾选了 UseCacheValue + 设备启用了缓存 + 点位有 CacheFieldKey
-            var dataPoint = device.DataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId);
-            if (dataPoint == null)
-            {
-                channel.ChannelDescription = "未找到对应点位";
-                return null;
-            }
-
             bool useCachePath = channel.UseCacheValue && device.SiemensReadCache.IsEnabled && !string.IsNullOrEmpty(dataPoint.CacheFieldKey);
 
             if (useCachePath)
@@ -548,7 +536,7 @@ namespace MeasurementSoftware.ViewModels
                     channel.ChannelDescription = "缓存读取未就绪（等待设备连接）";
                     return null;
                 }
-                var cacheValue = device.GetCacheFieldValue(dataPoint.CacheFieldKey);
+                var cacheValue = _plcDeviceRuntimeService.GetCacheFieldValue(device, dataPoint.CacheFieldKey);
                 if (cacheValue == null)
                 {
                     channel.ChannelDescription = "缓存字段暂无数据";

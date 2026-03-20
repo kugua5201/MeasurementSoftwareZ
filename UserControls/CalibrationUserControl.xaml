@@ -17,10 +17,6 @@
         <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
             <Grid>
 
-                <Button Content="写入数据" Command="{Binding WriteCalibrationToPlcCommand}"
-           Style="{StaticResource ButtonPrimary}"
-           Width="{StaticResource FormButtonWidth}" Margin="0,0,10,0" HorizontalAlignment="Left"/>
-
                 <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveCalibrationCommand}"/>
             </Grid>
         </Border>
@@ -58,7 +54,7 @@
                                   Stretch="Uniform" 
                                   Margin="0,0,8,0"
                                   VerticalAlignment="Center"/>
-                            <TextBlock Text="测量通道列表" 
+                            <TextBlock Text="测量通道" 
                                        FontSize="14" 
                                        FontWeight="Bold"
                                        VerticalAlignment="Center"/>
@@ -74,35 +70,93 @@
                              HorizontalContentAlignment="Stretch">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border
-                                        BorderThickness="1"
-                                        Padding="10" 
+                                <Border Background="Transparent" 
+                                        Padding="8,10" 
                                         CornerRadius="4"
-                                        Margin="2,4">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
+                                        Margin="0,2">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Grid VerticalAlignment="Center" Margin="0,0,10,0" Width="24" Height="24">
+                                            <Path Data="M20,18H4V6H20M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4Z" 
+                                                  Width="20" Height="20" Stretch="Uniform"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Path.Style>
+                                                    <Style TargetType="Path">
+                                                        <Setter Property="Fill" Value="{StaticResource StatusInfoBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RequiresCalibration}" Value="False">
+                                                                <Setter Property="Fill" Value="{StaticResource DisabledIconBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Path.Style>
+                                            </Path>
 
-                                        <Ellipse Grid.Column="0" Width="8" Height="8" Margin="0,0,10,0"
-                                                 Fill="{Binding RequiresCalibration, Converter={StaticResource Boolean2ColorConverter}}"/>
+                                            <Ellipse Width="8" Height="8" 
+                                                     HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                     Margin="0,0,-1,-1"
+                                                     Stroke="White" StrokeThickness="1.5"
+                                                     Fill="{Binding RequiresCalibration, Converter={StaticResource Boolean2ColorConverter}}"/>
+                                        </Grid>
 
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding ChannelName}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                            <TextBlock Text="{Binding StepName, StringFormat='工步: {0}'}" 
-                                                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,2,0,0"/>
+                                        <StackPanel>
+                                            <TextBlock FontWeight="SemiBold" FontSize="13">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding ChannelName}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RequiresCalibration}" Value="False">
+                                                                <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}"/>
+                                                                <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border CornerRadius="3" 
+                                                        Padding="6,2" 
+                                                        Margin="0,4,0,0"
+                                                        HorizontalAlignment="Left">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Background" Value="{StaticResource StatusSuccessBgBrush}"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding RequiresCalibration}" Value="False">
+                                                                    <Setter Property="Background" Value="{StaticResource StatusErrorBgBrush}"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock FontSize="10" FontWeight="Medium">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="✓ 已启用"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding RequiresCalibration}" Value="False">
+                                                                        <Setter Property="Text" Value="✗ 已停止"/>
+                                                                        <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </Border>
+                                            </StackPanel>
                                         </StackPanel>
-
-                                        <!--<TextBlock Grid.Column="2" 
-                                                   Text="{Binding RequiresCalibration, Converter={StaticResource Boolean2TextConverter}, ConverterParameter='需要校准|无需校准'}"
-                                                   FontSize="11" VerticalAlignment="Center"
-                                                   Foreground="{Binding RequiresCalibration, Converter={StaticResource Boolean2ColorConverter}}"/>-->
-                                    </Grid>
+                                    </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource ListBoxItemBaseStyle}">
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="2"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
                     </ListBox>
                 </Grid>
             </Border>
@@ -154,13 +208,18 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <!--<Path Data="M20,18H4V6H20M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4Z"
+                                              Fill="{DynamicResource PrimaryBrush}"
+                                              Width="14" Height="14"
+                                              Stretch="Uniform"
+                                              Margin="0,0,6,0"
+                                              VerticalAlignment="Center"/>-->
                                         <TextBlock Text="{Binding SelectedChannel.ChannelName, FallbackValue='--'}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
                                         <TextBlock Text="  " />
                                         <TextBlock Text="A=" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding SelectedChannel.CalibrationCoefficientA, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="B=" FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding SelectedChannel.CalibrationCoefficientB, StringFormat='{}{0:F4}', FallbackValue='--'}" FontSize="12" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding CalibrationStatus}" FontSize="12" FontWeight="SemiBold" Foreground="{Binding CalibrationStatusColor}" VerticalAlignment="Center"/>
                                     </StackPanel>
 
                                     <ComboBox Grid.Column="1"

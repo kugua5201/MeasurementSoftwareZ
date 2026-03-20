@@ -5,6 +5,7 @@ using MeasurementSoftware.Interceptors;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
+using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Events;
 using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.Services.UserSetting;
@@ -41,6 +42,8 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<ICalibrationService, CalibrationService>();
             builder.RegisterSingleton<IMeasurementService, MeasurementService>();
             builder.RegisterSingleton<ISpcService, SpcService>();
+            builder.RegisterSingleton<IPlcDeviceRuntimeFactory, PlcDeviceRuntimeFactory>();
+            builder.RegisterSingleton<IPlcDeviceRuntimeService, PlcDeviceRuntimeService>();
 
             // 注册 AppConfig（全局唯一实例，实现所有配置接口）
             builder.RegisterType<AppConfig>()

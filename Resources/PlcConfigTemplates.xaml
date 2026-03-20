@@ -2,12 +2,15 @@
                     xmlns:converters="clr-namespace:MeasurementSoftware.Converters"
                     xmlns:hc="https://handyorg.github.io/handycontrol"
                     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+                      xmlns:helpers="clr-namespace:MeasurementSoftware.Helpers"
+                    
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
         WPF 限制：MergedDictionaries 同级字典在解析阶段互不可见，
         因此本文件必须自行合并所依赖的字典，StaticResource 才能正常解析。
     -->
+
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="GlobalSizes.xaml"/>
         <ResourceDictionary Source="GlobalConverters.xaml"/>
@@ -220,14 +223,24 @@
                                 <Button Command="{Binding DataContext.ApplyCachePointsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Content="验证并应用" Style="{StaticResource ButtonPrimary}"
                                         Padding="12,4" Margin="0,0,8,0"/>
-                                <!--<TextBlock VerticalAlignment="Center" FontSize="11" Margin="4,0,0,0"
-                                           Foreground="{DynamicResource SuccessBrush}"
-                                           Visibility="{Binding IsCacheReading, Converter={StaticResource Boolean2VisibilityConverter}}"
-                                           Text="● 缓存读取中"/>-->
                             </StackPanel>
-                            <TextBlock Text="{Binding SiemensReadCache.StructureValidationMessage}" FontSize="12" Margin="0,4,0,0"/>
+                            <!--<TextBlock Text="{Binding SiemensReadCache.StructureValidationMessage}" FontSize="12" Margin="0,4,0,0"/>-->
+                            <!--<TextBlock FontSize="11" Margin="0,4,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                        <Setter Property="Text" Value="● 已生成点位后会立即尝试启动缓存读取；若“缓存值”列为空，请检查设备连接、可读标志地址、DB块、长度和结构定义。"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCacheReading}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                <Setter Property="Text" Value="● 缓存读取中；下表会实时显示缓存值，并在说明列展示对应点位和绑定通道。"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>-->
 
-                            <!-- 已验证字段预览（双击定位到对应点位） -->
+                            <!-- 已验证字段预览（实时显示缓存值和说明） -->
                             <DataGrid x:Name="CacheFieldGrid1200"
                                       ItemsSource="{Binding SiemensReadCache.ExpandedFieldDefinitions}"
                                       AutoGenerateColumns="False" CanUserAddRows="False"
@@ -249,6 +262,7 @@
                                     <DataGridTextColumn Header="类型" Binding="{Binding DataType}" Width="100"/>
                                     <DataGridTextColumn Header="字节序" Binding="{Binding ByteOrder}" Width="100"/>
                                     <DataGridTextColumn Header="缓存值" Binding="{Binding ParsedValue}" Width="120"/>
+                                    <DataGridTextColumn Header="说明" Binding="{Binding Description}" Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </StackPanel>
@@ -418,14 +432,24 @@
                                 <Button Command="{Binding DataContext.ApplyCachePointsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         Content="验证并应用" Style="{StaticResource ButtonPrimary}"
                                         Padding="12,4" Margin="0,0,8,0"/>
-                                <!--<TextBlock VerticalAlignment="Center" FontSize="11" Margin="4,0,0,0"
-                                           Foreground="{DynamicResource SuccessBrush}"
-                                           Visibility="{Binding IsCacheReading, Converter={StaticResource Boolean2VisibilityConverter}}"
-                                           Text="● 缓存读取中"/>-->
                             </StackPanel>
-                            <TextBlock Text="{Binding SiemensReadCache.StructureValidationMessage}" FontSize="12" Margin="0,4,0,0"/>
+                            <!--<TextBlock Text="{Binding SiemensReadCache.StructureValidationMessage}" FontSize="12" Margin="0,4,0,0"/>
+                            <TextBlock FontSize="11" Margin="0,4,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource WarningBrush}"/>
+                                        <Setter Property="Text" Value="● 已生成点位后会立即尝试启动缓存读取；若“缓存值”列为空，请检查设备连接、可读标志地址、DB块、长度和结构定义。"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCacheReading}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}"/>
+                                                <Setter Property="Text" Value="● 缓存读取中；下表会实时显示缓存值，并在说明列展示对应点位和绑定通道。"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>-->
 
-                            <!-- 已验证字段预览（双击定位到对应点位） -->
+                            <!-- 已验证字段预览（实时显示缓存值和说明） -->
                             <DataGrid x:Name="CacheFieldGrid1500"
                                       ItemsSource="{Binding SiemensReadCache.ExpandedFieldDefinitions}"
                                       AutoGenerateColumns="False" CanUserAddRows="False"
@@ -447,6 +471,7 @@
                                     <DataGridTextColumn Header="类型" Binding="{Binding DataType}" Width="100"/>
                                     <DataGridTextColumn Header="字节序" Binding="{Binding ByteOrder}" Width="100"/>
                                     <DataGridTextColumn Header="缓存值" Binding="{Binding ParsedValue}" Width="120"/>
+                                    <DataGridTextColumn Header="说明" Binding="{Binding Description}" Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
                         </StackPanel>

@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.Models;
+using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.ViewModels;
 using System.Collections.ObjectModel;
@@ -17,15 +18,17 @@ namespace MeasurementSoftware.Services.Config
     {
 
         private readonly ILog _log;
+        private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
 
-        public AppConfig(ILog log)
+        public AppConfig(ILog log, IPlcDeviceRuntimeService plcDeviceRuntimeService)
         {
             _log = log;
+            _plcDeviceRuntimeService = plcDeviceRuntimeService;
         }
 
         #region 设备配置
 
-        private ObservableCollection<PlcDevice> _devices = new();
+        private ObservableCollection<PlcDevice> _devices = [];
         /// <summary>
         /// 系统中所有的 PLC 设备（来自当前配方）
         /// </summary>
@@ -45,9 +48,9 @@ namespace MeasurementSoftware.Services.Config
             {
                 try
                 {
-                    await device.InitPlcAsync();
+                    await _plcDeviceRuntimeService.InitializeAsync(device);
 
-                    var (success, message) = await device.ConnectAsync();
+                    var (success, message) = await _plcDeviceRuntimeService.ConnectAsync(device);
 
                     if (success)
                     {
@@ -89,8 +92,6 @@ namespace MeasurementSoftware.Services.Config
         {
             try
             {
-                Devices = new ObservableCollection<PlcDevice>(devices);
-
                 // 没有配方时自动创建一个默认配方
                 if (CurrentRecipe == null)
                 {
@@ -103,6 +104,14 @@ namespace MeasurementSoftware.Services.Config
                     };
                     OpenRecipe(defaultRecipe, string.Empty);
                     _log.Info("保存设备时未找到配方，已自动创建默认配方");
+                }
+
+                var devicesToSave = new ObservableCollection<PlcDevice>(devices);
+                SyncSiemensCacheConfigurations(devicesToSave);
+
+                if (!ReferenceEquals(Devices, devicesToSave))
+                {
+                    Devices = devicesToSave;
                 }
 
                 // 同步到配方并保存
@@ -185,7 +194,7 @@ namespace MeasurementSoftware.Services.Config
             // 销毁旧设备的PLC连接
             foreach (var device in Devices)
             {
-                try { _ = device.DestroyPlcAsync(); } catch { }
+                try { _ = _plcDeviceRuntimeService.DestroyAsync(device); } catch { }
             }
 
             CurrentRecipePath = path;
@@ -223,29 +232,19 @@ namespace MeasurementSoftware.Services.Config
             {
                 if (channel.PlcDeviceId == 0)
                 {
-                    channel.AvailableDataPoints = [];
+                    channel.ClearRuntimeBindings();
                     continue;
                 }
 
                 var device = Devices.FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
                 if (device == null)
                 {
-                    channel.AvailableDataPoints = [];
+                    channel.ClearRuntimeBindings();
                     continue;
                 }
 
-                channel.AvailableDataPoints = new ObservableCollection<DataPoint>(
-                    device.DataPoints.Where(dp => dp.IsEnabled)
-                        .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
-
-                if (!string.IsNullOrEmpty(channel.DataPointId))
-                {
-                    var point = channel.AvailableDataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId);
-                    if (point != null)
-                    {
-                        channel.DataSourceAddress = point.Address;
-                    }
-                }
+                channel.BindDevice(device);
+                channel.BindDataPoint(device.DataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId));
             }
         }
 
@@ -256,7 +255,7 @@ namespace MeasurementSoftware.Services.Config
         {
             foreach (var device in Devices)
             {
-                try { _ = device.DestroyPlcAsync(); } catch { }
+                try { _ = _plcDeviceRuntimeService.DestroyAsync(device); } catch { }
             }
             Devices.Clear();
 
@@ -303,6 +302,8 @@ namespace MeasurementSoftware.Services.Config
             try
             {
                 // 同步运行时设备列表到配方
+                SyncSiemensCacheConfigurations(Devices);
+                CurrentRecipe.ModifyTime = DateTime.Now;
                 CurrentRecipe.Devices = Devices;
 
                 var json = JsonSerializer.Serialize(CurrentRecipe, new JsonSerializerOptions { WriteIndented = true });
@@ -343,6 +344,33 @@ namespace MeasurementSoftware.Services.Config
             }
         }
 
+        private void SyncSiemensCacheConfigurations(IEnumerable<PlcDevice> devices)
+        {
+            foreach (var device in devices)
+            {
+                if (device.DeviceType is not PlcDeviceType.SiemensS7_1200 and not PlcDeviceType.SiemensS7_1500)
+                {
+                    continue;
+                }
+
+                var cacheConfig = device.SiemensReadCache;
+                if (!cacheConfig.IsEnabled)
+                {
+                    continue;
+                }
+
+                var (success, message) = cacheConfig.ValidateAndApplyStructure();
+                if (success)
+                {
+                    _log.Info($"设备 [{device.DeviceName}] 双缓冲配置已在保存前同步: {message}");
+                }
+                else
+                {
+                    _log.Warn($"设备 [{device.DeviceName}] 双缓冲配置校验未通过，已保留当前输入文本继续保存: {message}");
+                }
+            }
+        }
+
 
 
 
@@ -364,9 +392,16 @@ namespace MeasurementSoftware.Services.Config
             }
         }
 
+        ObservableCollection<PlcDevice> IDeviceConfigService.Devices => Devices;
+
         public void SetCollect(bool Collect)
         {
             IsCollecting = Collect;
+        }
+
+        ObservableCollection<DataPoint> IDeviceConfigService.GetDataPointsByDeviceId(long deviceId)
+        {
+            return GetDataPointsByDeviceId(deviceId);
         }
 
         #endregion

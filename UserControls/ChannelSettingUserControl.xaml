@@ -217,7 +217,7 @@
                                 <DataGridTextColumn Header="通道名称" Binding="{Binding ChannelName}" Width="100" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="工步" Binding="{Binding StepNumber}" Width="50" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="类型" Binding="{Binding ChannelType}" Width="70" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="PLC设备" Binding="{Binding PlcDeviceId, Converter={StaticResource DeviceIdToNameConverter}}" Width="100" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="PLC设备" Binding="{Binding PlcDeviceName}" Width="100" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="数据点位" Binding="{Binding DataPointName}" Width="100" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="点位地址" Binding="{Binding DataSourceAddress}" Width="100" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue}" Width="70" IsReadOnly="True"/>
@@ -419,14 +419,15 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="PLC设备：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                     <hc:ComboBox Grid.Row="0" Grid.Column="1"
                                           Style="{StaticResource ComboBoxExtend}"
                                           ItemsSource="{Binding AvailablePlcDevices}"
-                                          SelectedValue="{Binding EditingChannel.PlcDeviceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          SelectedValuePath="DeviceId"
+                                           SelectedItem="{Binding EditingChannel.RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           DisplayMemberPath="DeviceName"
                                           Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
                                           hc:InfoElement.Placeholder="选择设备"/>
@@ -435,8 +436,7 @@
                                     <hc:ComboBox Grid.Row="1" Grid.Column="1" 
                                           Style="{StaticResource ComboBoxExtend}"
                                           ItemsSource="{Binding EditingChannel.AvailableDataPoints, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          SelectedValue="{Binding EditingChannel.DataPointId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          SelectedValuePath="PointId"
+                                           SelectedItem="{Binding EditingChannel.RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           DisplayMemberPath="PointName"
                                           Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
                                           hc:InfoElement.Placeholder="选择数据点">

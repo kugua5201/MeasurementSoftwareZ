@@ -6,7 +6,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d">
-	<Grid Style="{StaticResource PageRootGrid}">
+    <Grid Style="{StaticResource PageRootGrid}"
+		  IsEnabled="{Binding IsOpeningRecipe, Converter={StaticResource Boolean2BooleanReConverter}}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto"/>
 			<RowDefinition Height="*"/>
@@ -112,5 +113,23 @@
 									 Foreground="{DynamicResource SecondaryTextBrush}" Opacity="0.6"/>
 			</StackPanel>
 		</Grid>
-	</Grid>
+
+		<Border Grid.RowSpan="2"
+				Background="#66000000"
+               Panel.ZIndex="999"
+				Visibility="{Binding IsOpeningRecipe, Converter={StaticResource Boolean2VisibilityConverter}}">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+				<Border Background="{DynamicResource RegionBrush}" CornerRadius="12" Padding="28,24">
+					<StackPanel HorizontalAlignment="Center">
+						<hc:LoadingCircle Width="56" Height="56" Foreground="{DynamicResource PrimaryBrush}"/>
+						<TextBlock Text="正在初始化..."
+								   Margin="0,16,0,0"
+								   FontSize="14"
+								   HorizontalAlignment="Center"
+								   Foreground="{DynamicResource PrimaryTextBrush}"/>
+					</StackPanel>
+				</Border>
+			</StackPanel>
+		</Border>
+    </Grid>
 </UserControl>

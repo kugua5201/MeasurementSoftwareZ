@@ -5,7 +5,6 @@ using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Logs;
-using MultiProtocol.Model;
 using System.Collections.ObjectModel;
 
 namespace MeasurementSoftware.ViewModels
@@ -14,13 +13,13 @@ namespace MeasurementSoftware.ViewModels
     {
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
-        private readonly IDeviceConfigService _deviceConfigService;
         private readonly ICalibrationService _calibrationService;
 
         [ObservableProperty]
         private string currentRecipeName = "未加载配方";
 
-        public IEnumerable<MeasurementChannel> Channels => _recipeConfigService.CurrentRecipe?.Channels?.Where(c => c.IsEnabled) ?? Enumerable.Empty<MeasurementChannel>();
+        public ObservableCollection<MeasurementChannel> Channels => new(_recipeConfigService.CurrentRecipe?.Channels?.Where(c => c.IsEnabled) ?? []);
+
 
         [ObservableProperty]
         private MeasurementChannel? selectedChannel;
@@ -89,15 +88,10 @@ namespace MeasurementSoftware.ViewModels
 
         private ObservableCollection<MeasurementChannel>? _channels;
 
-        public CalibrationViewModel(
-            ILog log,
-            IRecipeConfigService recipeConfigService,
-            IDeviceConfigService deviceConfigService,
-            ICalibrationService calibrationService)
+        public CalibrationViewModel(ILog log, IRecipeConfigService recipeConfigService, ICalibrationService calibrationService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
-            _deviceConfigService = deviceConfigService;
             _calibrationService = calibrationService;
 
             if (_recipeConfigService is System.ComponentModel.INotifyPropertyChanged notifyPropertyChanged)
@@ -108,6 +102,7 @@ namespace MeasurementSoftware.ViewModels
                     {
                         BindChannels();
                         CurrentRecipeName = _recipeConfigService.CurrentRecipe?.RecipeName ?? "未加载配方";
+                        SelectedChannel = Channels.Any() ? Channels[0] : null;
                         OnPropertyChanged(nameof(Channels));
                     }
                 };
@@ -115,6 +110,7 @@ namespace MeasurementSoftware.ViewModels
 
             BindChannels();
             CurrentRecipeName = _recipeConfigService.CurrentRecipe?.RecipeName ?? "未加载配方";
+            
         }
 
         private void BindChannels()
@@ -161,7 +157,6 @@ namespace MeasurementSoftware.ViewModels
             if (value != null)
             {
                 LoadCalibrationData(value);
-                UpdateCalibrationStatus();
                 LoadCalibrationHistory();
             }
         }
@@ -235,26 +230,7 @@ namespace MeasurementSoftware.ViewModels
             LinearRegressionCalibrationPoints = channel.LinearRegressionCalibration.Points;
         }
 
-        private void UpdateCalibrationStatus()
-        {
-            if (SelectedChannel == null) return;
 
-            if (!SelectedChannel.RequiresCalibration)
-            {
-                CalibrationStatus = "无需校准";
-                CalibrationStatusColor = "#666";
-            }
-            else if (_calibrationService.CheckCalibrationValidity(SelectedChannel))
-            {
-                CalibrationStatus = "校准有效";
-                CalibrationStatusColor = "#4CAF50";
-            }
-            else
-            {
-                CalibrationStatus = "需要校准";
-                CalibrationStatusColor = "#F44336";
-            }
-        }
 
         private async void LoadCalibrationHistory()
         {
@@ -282,59 +258,11 @@ namespace MeasurementSoftware.ViewModels
 
             var record = SelectedCalibrationHistory;
 
-            SelectedChannel.RequiresCalibration = true;
-            SelectedChannel.CalibrationMode = record.Mode;
             SelectedChannel.CalibrationCoefficientA = record.CoefficientA;
             SelectedChannel.CalibrationCoefficientB = record.CoefficientB;
-            SelectedChannel.LastCalibrationTime = record.CalibrationTime;
 
-            SelectedChannel.SinglePointCalibration.CoefficientA = record.CoefficientA;
-            SelectedChannel.SinglePointCalibration.CoefficientB = record.CoefficientB;
-            SelectedChannel.SinglePointCalibration.LastCalibrationTime = record.CalibrationTime;
-            SelectedChannel.LeastSquaresCalibration.CoefficientA = record.CoefficientA;
-            SelectedChannel.LeastSquaresCalibration.CoefficientB = record.CoefficientB;
-            SelectedChannel.LeastSquaresCalibration.LastCalibrationTime = record.CalibrationTime;
-            SelectedChannel.LinearRegressionCalibration.CoefficientA = record.CoefficientA;
-            SelectedChannel.LinearRegressionCalibration.CoefficientB = record.CoefficientB;
-            SelectedChannel.LinearRegressionCalibration.LastCalibrationTime = record.CalibrationTime;
-
-            SelectedCalibrationMode = record.Mode;
-
-            switch (record.Mode)
-            {
-                case CalibrationMode.SinglePoint:
-                    if (record.CalibrationPoints.Count > 0)
-                    {
-                        var point = record.CalibrationPoints[0];
-                        SinglePointStandardValue = point.StandardValue;
-                        SinglePointMeasuredValue = point.MeasuredValue;
-                    }
-                    break;
-                case CalibrationMode.LeastSquares:
-                    LeastSquaresCalibrationPoints = new ObservableCollection<LeastSquaresCalibrationPoint>(
-                        record.CalibrationPoints.Select((p, index) => new LeastSquaresCalibrationPoint
-                        {
-                            Index = index + 1,
-                            StandardValue = p.StandardValue,
-                            MeasuredValue = p.MeasuredValue
-                        }));
-                    SelectedChannel.LeastSquaresCalibration.Points = LeastSquaresCalibrationPoints;
-                    break;
-                case CalibrationMode.LinearRegression:
-                    LinearRegressionCalibrationPoints = new ObservableCollection<LinearRegressionCalibrationPoint>(
-                        record.CalibrationPoints.Select((p, index) => new LinearRegressionCalibrationPoint
-                        {
-                            Index = index + 1,
-                            StandardValue = p.StandardValue,
-                            MeasuredValue = p.MeasuredValue
-                        }));
-                    SelectedChannel.LinearRegressionCalibration.Points = LinearRegressionCalibrationPoints;
-                    break;
-            }
-
-            UpdateCalibrationStatus();
-            Growl.Success($"已回用 {record.MethodName} 历史系数 A={record.CoefficientA:F6}, B={record.CoefficientB:F6}");
-            _log.Info($"通道 {SelectedChannel.ChannelName} 已回用校准历史记录 {record.RecordId}");
+            Growl.Success($"已回用历史系数 A={record.CoefficientA:F6}, B={record.CoefficientB:F6}");
+            _log.Info($"通道 {SelectedChannel.ChannelName} 已回用历史系数 A={record.CoefficientA:F6}, B={record.CoefficientB:F6}");
         }
 
         /// <summary>
@@ -377,15 +305,9 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private double? GetChannelCurrentValue(MeasurementChannel channel)
         {
-            if (channel.PlcDeviceId == 0 || string.IsNullOrEmpty(channel.DataPointId))
+            var dataPoint = channel.RuntimeDataPoint;
+            if (dataPoint == null)
                 return null;
-
-            var device = _deviceConfigService.Devices
-                .FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
-            if (device == null) return null;
-
-            var dataPoint = device.DataPoints
-                .FirstOrDefault(dp => dp.PointId == channel.DataPointId);
             if (dataPoint?.CurrentValue == null || !dataPoint.IsSuccess)
                 return null;
 
@@ -410,7 +332,6 @@ namespace MeasurementSoftware.ViewModels
             if (result.Success)
             {
                 Growl.Info($"单点校准成功！\n偏移量 B = {result.CoefficientB:F6}");
-                UpdateCalibrationStatus();
                 LoadCalibrationHistory();
                 _log.Info($"通道 {SelectedChannel.ChannelName} 单点校准成功");
             }
@@ -471,7 +392,6 @@ namespace MeasurementSoftware.ViewModels
             if (result.Success)
             {
                 Growl.Info($"最小二乘法校准成功！\n线性系数 A = {result.CoefficientA:F6}\n线性系数 B = {result.CoefficientB:F6}\n校准公式: y = {result.CoefficientA:F6} * x + {result.CoefficientB:F6}");
-                UpdateCalibrationStatus();
                 LoadCalibrationHistory();
                 _log.Info($"通道 {SelectedChannel.ChannelName} 最小二乘法校准成功");
             }
@@ -532,7 +452,6 @@ namespace MeasurementSoftware.ViewModels
             if (result.Success)
             {
                 Growl.Info($"线性回归校准成功！\n线性系数 A = {result.CoefficientA:F6}\n线性系数 B = {result.CoefficientB:F6}\n校准公式: y = {result.CoefficientA:F6} * x + {result.CoefficientB:F6}");
-                UpdateCalibrationStatus();
                 LoadCalibrationHistory();
                 _log.Info($"通道 {SelectedChannel.ChannelName} 线性回归校准成功");
             }
@@ -565,132 +484,15 @@ namespace MeasurementSoftware.ViewModels
                 var saved = await _recipeConfigService.SaveCurrentRecipeAsync();
                 if (saved)
                 {
-                    Growl.Info("校准数据已保存到配方文件"); ;
-                    _log.Info("校准数据已保存到配方文件");
+                    Growl.Success("配方保存成功"); ;
+                    _log.Info("配方保存成功");
                 }
                 else
                 {
-                    Growl.Error("校准数据在内存中，配方文件保存失败");
-                    _log.Warn("校准数据保存到配方文件失败");
+                    Growl.Error("配方文件保存失败");
+                    _log.Warn("配方文件失败");
                 }
             }
-        }
-
-        /// <summary>
-        /// 将校准系数写入PLC
-        /// </summary>
-        [RelayCommand]
-        private async Task WriteCalibrationToPlc()
-        {
-            if (SelectedChannel == null)
-            {
-                Growl.Warning("请先选择通道");
-                return;
-            }
-
-            if (string.IsNullOrEmpty(SelectedChannel.WriteBackDataPointIdA) &&
-                string.IsNullOrEmpty(SelectedChannel.WriteBackDataPointIdB))
-            {
-                Growl.Warning("该通道未配置校准写回点位（系数A/B）");
-                return;
-            }
-
-            try
-            {
-                var writeResults = new List<(bool IsSuccess, string Message)>();
-
-                // 系数A写回
-                if (!string.IsNullOrEmpty(SelectedChannel.WriteBackDataPointIdA))
-                {
-                    var (successA, msgA) = await WriteCoeffToPlcAsync(
-                        SelectedChannel.WriteBackDataPointIdA,
-                        SelectedChannel.CalibrationCoefficientA, "A");
-                    writeResults.Add((successA, msgA));
-                }
-
-                // 系数B写回
-                if (!string.IsNullOrEmpty(SelectedChannel.WriteBackDataPointIdB))
-                {
-                    var (successB, msgB) = await WriteCoeffToPlcAsync(
-                        SelectedChannel.WriteBackDataPointIdB,
-                        SelectedChannel.CalibrationCoefficientB, "B");
-                    writeResults.Add((successB, msgB));
-                }
-
-                if (writeResults.Count == 0)
-                {
-                    Growl.Warning("没有有效的写回点位");
-                    return;
-                }
-
-                var allSuccess = writeResults.All(r => r.IsSuccess);
-                if (allSuccess)
-                {
-                    Growl.Success($"校准系数已写入PLC\nA={SelectedChannel.CalibrationCoefficientA:F6}  B={SelectedChannel.CalibrationCoefficientB:F6}");
-                    _log.Info($"通道 {SelectedChannel.ChannelName} 校准系数写入PLC成功");
-                }
-                else
-                {
-                    var errors = string.Join(", ", writeResults.Where(r => !r.IsSuccess).Select(r => r.Message));
-                    Growl.Error($"写入PLC失败: {errors}");
-                    _log.Error($"通道 {SelectedChannel.ChannelName} 校准系数写入PLC失败: {errors}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Growl.Error($"写入PLC异常: {ex.Message}");
-                _log.Error($"写入PLC异常: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// 根据 FieldType 获取对应的 CLR 类型，用于值转换
-        /// </summary>
-        private static Type GetClrType(FieldType fieldType) => fieldType switch
-        {
-            FieldType.Bool => typeof(bool),
-            FieldType.Byte => typeof(byte),
-            FieldType.Int16 => typeof(short),
-            FieldType.UInt16 => typeof(ushort),
-            FieldType.Int32 => typeof(int),
-            FieldType.UInt32 => typeof(uint),
-            FieldType.Int64 => typeof(long),
-            FieldType.UInt64 => typeof(ulong),
-            FieldType.Long => typeof(long),
-            FieldType.Float => typeof(float),
-            FieldType.Double => typeof(double),
-            FieldType.String => typeof(string),
-            FieldType.Char => typeof(char),
-            _ => typeof(float)
-        };
-
-        /// <summary>
-        /// 从所有设备中查找包含指定点位的设备，写入系数值
-        /// </summary>
-        private async Task<(bool IsSuccess, string Message)> WriteCoeffToPlcAsync(
-            string pointId, double coeffValue, string coeffName)
-        {
-            foreach (var device in _deviceConfigService.Devices)
-            {
-                var dataPoint = device.DataPoints.FirstOrDefault(dp => dp.PointId == pointId);
-                if (dataPoint == null) continue;
-
-                if (device.protocol == null || !device.IsConnected)
-                    return (false, $"系数{coeffName}所在设备 [{device.DeviceName}] 未连接");
-
-                var field = new FieldInfo(dataPoint.Address, dataPoint.DataType, dataPoint.ByteOrder)
-                {
-                    Value = Convert.ChangeType(coeffValue, GetClrType(dataPoint.DataType))
-                };
-
-                var results = await device.protocol.WriteDataAsync(device.DeviceId, [field]);
-                var result = results.FirstOrDefault();
-                return result != null && result.IsSuccess
-                    ? (true, string.Empty)
-                    : (false, result?.Message ?? $"系数{coeffName}写入失败");
-            }
-
-            return (false, $"系数{coeffName}写回点位 {pointId} 在所有设备中均未找到");
         }
 
         [RelayCommand]

@@ -40,7 +40,7 @@ namespace MeasurementSoftware.Models
         /// 测量通道集合
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<MeasurementChannel> channels = new ObservableCollection<MeasurementChannel>();
+        private ObservableCollection<MeasurementChannel> channels = [];
 
         /// <summary>
         /// 创建时间
@@ -100,7 +100,7 @@ namespace MeasurementSoftware.Models
         /// PLC设备列表（跟随配方保存，切换配方时设备配置一起切换）
         /// </summary>
         [ObservableProperty]
-        private ObservableCollection<PlcDevice> devices = new();
+        private ObservableCollection<PlcDevice> devices = [];
 
         /// <summary>
         /// 标注点大小（像素）
@@ -233,7 +233,7 @@ namespace MeasurementSoftware.Models
         /// </summary>
         public List<MeasurementChannel> GetEnabledChannels()
         {
-            return Channels.Where(c => c.IsEnabled).ToList();
+            return [.. Channels.Where(c => c.IsEnabled)];
         }
 
         /// <summary>
@@ -241,7 +241,7 @@ namespace MeasurementSoftware.Models
         /// </summary>
         public List<MeasurementChannel> GetChannelsByStep(int stepNumber)
         {
-            return Channels.Where(c => c.IsEnabled && c.StepNumber == stepNumber).ToList();
+            return [.. Channels.Where(c => c.IsEnabled && c.StepNumber == stepNumber)];
         }
     }
 }

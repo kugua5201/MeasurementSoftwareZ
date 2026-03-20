@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.ViewModels;
 using System.Collections.ObjectModel;
+using System.Text.Json.Serialization;
 
 namespace MeasurementSoftware.Models
 {
@@ -91,6 +92,71 @@ namespace MeasurementSoftware.Models
         private ObservableCollection<DataPoint> availableDataPoints = new();
 
         /// <summary>
+        /// 运行时绑定的 PLC 设备实例。
+        /// 仅在程序运行期使用，不参与配方持久化。
+        /// </summary>
+        private PlcDevice? runtimeDevice;
+
+        [JsonIgnore]
+        public PlcDevice? RuntimeDevice
+        {
+            get => runtimeDevice;
+            set
+            {
+                var oldDevice = runtimeDevice;
+                if (ReferenceEquals(runtimeDevice, value))
+                {
+                    return;
+                }
+
+                runtimeDevice = value;
+
+                if (oldDevice != null && oldDevice.DeviceId != value?.DeviceId)
+                {
+                    RuntimeDataPoint = null;
+                    UseCacheValue = false;
+                }
+
+                PlcDeviceId = value?.DeviceId ?? 0;
+                RefreshAvailableDataPoints();
+
+                if (runtimeDataPoint == null || !AvailableDataPoints.Contains(runtimeDataPoint))
+                {
+                    RuntimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
+                }
+
+                OnPropertyChanged(nameof(RuntimeDevice));
+                OnPropertyChanged(nameof(PlcDeviceName));
+                OnPropertyChanged(nameof(DataPointName));
+            }
+        }
+
+        /// <summary>
+        /// 运行时绑定的采集点位实例。
+        /// 仅在程序运行期使用，不参与配方持久化。
+        /// </summary>
+        private DataPoint? runtimeDataPoint;
+
+        [JsonIgnore]
+        public DataPoint? RuntimeDataPoint
+        {
+            get => runtimeDataPoint;
+            set
+            {
+                if (ReferenceEquals(runtimeDataPoint, value))
+                {
+                    return;
+                }
+
+                runtimeDataPoint = value;
+                DataPointId = value?.PointId ?? string.Empty;
+                DataSourceAddress = value?.Address ?? string.Empty;
+                OnPropertyChanged(nameof(RuntimeDataPoint));
+                OnPropertyChanged(nameof(DataPointName));
+            }
+        }
+
+        /// <summary>
         /// PLC设备名称（用于显示）
         /// </summary>
         public string PlcDeviceName
@@ -100,7 +166,7 @@ namespace MeasurementSoftware.Models
                 if (PlcDeviceId == 0)
                     return string.Empty;
 
-                return PlcDeviceId.ToString();
+                return RuntimeDevice?.DeviceName ?? PlcDeviceId.ToString();
             }
         }
 
@@ -113,6 +179,9 @@ namespace MeasurementSoftware.Models
             {
                 if (string.IsNullOrEmpty(DataPointId))
                     return string.Empty;
+
+                if (RuntimeDataPoint != null)
+                    return RuntimeDataPoint.PointName;
 
                 // 从可用数据点列表中查找点位名称
                 var point = AvailableDataPoints?.FirstOrDefault(p => p.PointId == DataPointId);
@@ -217,18 +286,6 @@ namespace MeasurementSoftware.Models
         private ChannelAnnotation? annotation;
 
         /// <summary>
-        /// 校准系数A写回PLC点位ID（关联到已配置的DataPoint）
-        /// </summary>
-        [ObservableProperty]
-        private string writeBackDataPointIdA = string.Empty;
-
-        /// <summary>
-        /// 校准系数B写回PLC点位ID（关联到已配置的DataPoint）
-        /// </summary>
-        [ObservableProperty]
-        private string writeBackDataPointIdB = string.Empty;
-
-        /// <summary>
         /// 是否使用缓存值（仅适用于 S7-1200/1500 启用缓存的点位）
         /// true = 读取缓存解析值，false = 读取寄存器实时值
         /// </summary>
@@ -245,6 +302,58 @@ namespace MeasurementSoftware.Models
         /// 历史数据（用于计算最大值、最小值等）
         /// </summary>
         public List<double> HistoricalData { get; set; } = [];
+
+        /// <summary>
+        /// 绑定运行时设备实例，并同步可用点位集合。
+        /// </summary>
+        public void BindDevice(PlcDevice? device)
+        {
+            RuntimeDevice = device;
+        }
+
+        /// <summary>
+        /// 绑定运行时采集点位实例。
+        /// </summary>
+        public void BindDataPoint(DataPoint? dataPoint)
+        {
+            RuntimeDataPoint = dataPoint;
+        }
+
+        /// <summary>
+        /// 清空运行时设备与点位绑定。
+        /// </summary>
+        public void ClearRuntimeBindings()
+        {
+            RuntimeDevice = null;
+            RuntimeDataPoint = null;
+            PlcDeviceId = 0;
+            DataPointId = string.Empty;
+            DataSourceAddress = string.Empty;
+            AvailableDataPoints = [];
+            UseCacheValue = false;
+            OnPropertyChanged(nameof(PlcDeviceName));
+            OnPropertyChanged(nameof(DataPointName));
+        }
+
+        /// <summary>
+        /// 根据当前绑定设备刷新可用点位列表，并回填运行时点位引用。
+        /// </summary>
+        public void RefreshAvailableDataPoints()
+        {
+            AvailableDataPoints = RuntimeDevice == null
+                ? []
+                : new ObservableCollection<DataPoint>(RuntimeDevice.DataPoints
+                    .Where(dp => dp.IsEnabled)
+                    .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
+
+            RuntimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
+            if (RuntimeDataPoint != null)
+            {
+                DataSourceAddress = RuntimeDataPoint.Address;
+            }
+
+            OnPropertyChanged(nameof(DataPointName));
+        }
 
         /// <summary>
         /// 检查测量结果是否合格
@@ -279,40 +388,9 @@ namespace MeasurementSoftware.Models
                 // 保持缓存大小
                 if (HistoricalData.Count > SampleCount)
                 {
-                    HistoricalData.RemoveAt(0); // 移除最旧的数据
+                    HistoricalData.RemoveAt(0);
                 }
                 HistoricalData.Add(rawValue);
-                //if (HistoricalData.Count > 0)
-                //{
-                //    double calculatedValue = rawValue;
-                //    switch (ChannelType)
-                //    {
-                //        case ChannelType.结果值:
-                //            calculatedValue = rawValue;
-                //            break;
-                //        case ChannelType.最大值:
-                //            calculatedValue = HistoricalData.Max();
-                //            break;
-                //        case ChannelType.最小值:
-                //            calculatedValue = HistoricalData.Min();
-                //            break;
-                //        case ChannelType.平均值:
-                //            calculatedValue = HistoricalData.Average();
-                //            break;
-                //        case ChannelType.跳动值:
-                //        case ChannelType.齿跳动值:
-                //            calculatedValue = HistoricalData.Max() - HistoricalData.Min();
-                //            break;
-                //    }
-
-                //    // 保留指定小数位数
-                //    // StandardValue = Math.Round(calculatedValue, DecimalPlaces);
-                //    //读取的原始测量值
-                //    MeasuredValue = rawValue;
-                //}
-
-                // 进行预判
-                //CheckResult();
             }
         }
 
@@ -328,18 +406,6 @@ namespace MeasurementSoftware.Models
             return rawValue;
         }
 
-        /// <summary>
-        /// 检查校准是否过期
-        /// </summary>
-        public bool IsCalibrationExpired()
-        {
-            if (!RequiresCalibration || !LastCalibrationTime.HasValue)
-                return false;
-
-            var expiryDate = LastCalibrationTime.Value.AddDays(CalibrationValidityDays);
-            return DateTime.Now > expiryDate;
-        }
-
 
         /// <summary>
         /// 最终结果
@@ -348,7 +414,9 @@ namespace MeasurementSoftware.Models
         private double reusltValue;
 
 
-        //更新最终结果值
+        /// <summary>
+        /// 更新最终结果值
+        /// </summary>
         public void UpdateResultValue()
         {
             if (HistoricalData == null || HistoricalData.Count == 0)
