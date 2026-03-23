@@ -237,11 +237,6 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private DateTime? lastCalibrationTime;
 
-        /// <summary>
-        /// 校准有效期（天）
-        /// </summary>
-        [ObservableProperty]
-        private int calibrationValidityDays = 30;
 
         /// <summary>
         /// 单点校准配置
@@ -298,6 +293,7 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private int sampleCount = 100;
 
+        [JsonIgnore]
         /// <summary>
         /// 历史数据（用于计算最大值、最小值等）
         /// </summary>

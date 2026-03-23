@@ -2,6 +2,7 @@
 using Autofac.Builder;
 using Autofac.Core;
 using Autofac.Extras.DynamicProxy;
+using MeasurementSoftware.Services.Appearance;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -264,6 +265,7 @@ namespace MeasurementSoftware.Extensions
             {
                 var viewModel = _container.Resolve<TViewModel>();
                 view.DataContext = viewModel;
+                _container.ResolveOptional<IAppAppearanceService>()?.Attach(view);
             }
         }
 

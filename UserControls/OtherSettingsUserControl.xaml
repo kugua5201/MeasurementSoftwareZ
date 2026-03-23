@@ -6,6 +6,17 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900">
+    <UserControl.Resources>
+        <Style x:Key="SettingsRowPanelStyle" TargetType="StackPanel">
+            <Setter Property="Orientation" Value="Horizontal"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <Style x:Key="SettingsLabelTextStyle" TargetType="TextBlock">
+            <Setter Property="Width" Value="90"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
     <Grid Style="{StaticResource PageRootGrid}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -24,9 +35,52 @@
         <Grid Grid.Row="1" >
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
+                    <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0" Padding="20,15" VerticalAlignment="Top" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="界面字体" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
+                                       Foreground="{DynamicResource PrimaryBrush}"/>
+
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="统一字体：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppFontFamilyName}" VerticalAlignment="Center" Margin="0,0,0,8"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"/>
+
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="字体大小：" VerticalAlignment="Center"/>
+                                <Slider Grid.Row="1" Grid.Column="1"
+                                        Minimum="10"
+                                        Maximum="24"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True"
+                                        AutoToolTipPlacement="TopLeft"
+                                        AutoToolTipPrecision="0"
+                                        Value="{Binding AppFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,12,0"/>
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AppFontSize, StringFormat={}{0:F0}px}"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource SecondaryTextBrush}"/>
+                            </Grid>
+
+                            <TextBlock Text="拖动后会立即同步到整个界面，标题、菜单和页面内容会按比例联动。"
+                                       Margin="0,12,0,0"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
 
                     <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="0"  Padding="20,15" VerticalAlignment="Top" 
+                            BorderThickness="0"  Padding="20,15" VerticalAlignment="Top" Margin="0,0,0,12"
                             Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <StackPanel>
                             <StackPanel Margin="0,0,0,20">
@@ -50,6 +104,102 @@
                                 </Grid>
                             </StackPanel>
                             <Separator Margin="0,5,0,15"/>
+
+                            <TextBlock Text="存储规则设置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
+                                       Foreground="{DynamicResource InfoBrush}"/>
+
+                            <StackPanel Margin="0,0,0,20">
+                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Text="是否存储：" Style="{StaticResource SettingsLabelTextStyle}"/>
+                                    <ToggleButton Content="启用"
+                                              IsChecked="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.AutoSaveEnabled}"
+                                              VerticalAlignment="Center" HorizontalAlignment="Left" Style="{StaticResource ToggleButtonSwitch}"/>
+                                </StackPanel>
+
+                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Text="存储规则：" Style="{StaticResource SettingsLabelTextStyle}"/>
+                                    <TextBox Style="{StaticResource TextBoxExtend}"
+                                             Text="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.FileNamePattern, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="300" HorizontalAlignment="Left"
+                                             hc:InfoElement.Placeholder="例如：{RecipeName}"/>
+                                    <TextBlock Text="支持 {RecipeName}、{Time:yyyyMMdd_HHmmss} 占位符"
+                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
+                                </StackPanel>
+
+                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Text="存储文件夹：" Style="{StaticResource SettingsLabelTextStyle}"/>
+                                    <StackPanel Orientation="Horizontal" >
+                                        <TextBox Style="{StaticResource TextBoxExtend}"
+                                                 Text="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.OutputFolder, UpdateSourceTrigger=PropertyChanged}"
+                                                 Width="300" HorizontalAlignment="Left"
+                                                 hc:InfoElement.Placeholder="默认：软件目录\AcquisitionRecords" IsReadOnly="True"/>
+                                        <Button Content="选择" Command="{Binding SelectStorageFolderCommand}" Style="{StaticResource ButtonPrimary}" Width="60" Margin="8,0,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Text="文件上限：" Style="{StaticResource SettingsLabelTextStyle}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <hc:NumericUpDown Value="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.MaxFileSizeMb}"
+                                                           Minimum="1" Maximum="1024"
+                                                           Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"/>
+                                        <TextBlock Text="MB，超过后自动生成 _1、_2、_3... 新文件"
+                                                   Margin="10,0,0,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}" VerticalAlignment="Top">
+                                    <TextBlock Text="列配置：" Style="{StaticResource SettingsLabelTextStyle}"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <StackPanel>
+                                            <TextBlock Text="可选列" Margin="0,0,0,6"/>
+                                            <ListBox ItemsSource="{Binding AvailableCsvColumns}"
+                                                     SelectedItem="{Binding SelectedAvailableCsvColumn}"
+                                                     Height="180" Width="180">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Header}"/>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </StackPanel>
+
+                                        <StackPanel Margin="10,24,10,0" VerticalAlignment="Center">
+                                            <Button Content=">>" Command="{Binding AddCsvColumnCommand}" Style="{StaticResource ButtonPrimary.Small}" Width="42" Margin="0,0,0,10"/>
+                                            <Button Content="移除" Command="{Binding RemoveCsvColumnCommand}" Style="{StaticResource ButtonDanger.Small}" Width="42"/>
+                                        </StackPanel>
+
+                                        <StackPanel>
+                                            <TextBlock Text="已选列" Margin="0,0,0,6"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <ListBox ItemsSource="{Binding ConfiguredCsvColumns}"
+                                                         SelectedItem="{Binding SelectedConfiguredCsvColumn}"
+                                                         Height="180" Width="180">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Header}"/>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+
+                                               
+                                            </StackPanel>
+                                            
+                                        </StackPanel>
+                                        <StackPanel Margin="10,24,10,0" VerticalAlignment="Center">
+                                            <Button Content="上移" Command="{Binding MoveCsvColumnUpCommand}" Style="{StaticResource ButtonPrimary.Small}" Width="42" Margin="0,0,0,10"/>
+                                            <Button Content="下移" Command="{Binding MoveCsvColumnDownCommand}" Style="{StaticResource ButtonPrimary.Small}" Width="42" Margin="0,0,0,10"/>
+                                            <Button Content="重置" Command="{Binding ResetCsvColumnsCommand}" Style="{StaticResource ButtonPrimary.Small}" Width="42"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Separator Margin="0,5,0,15"/>
+                            
+                            
+                            
                             <!-- 工步配置 -->
                             <TextBlock Text="工步配置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
                                        Foreground="{DynamicResource PrimaryBrush}"/>
@@ -127,17 +277,7 @@
                                 <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
                                     <Border Background="{Binding CurrentRecipe.OtherSettings.OkBrush}" Width="40" Height="24" CornerRadius="3"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <ToggleButton x:Name="OkColorToggle" Content="选择颜色"
-                                              Padding="8,4"/>
-                                    <Popup IsOpen="{Binding IsChecked, ElementName=OkColorToggle}" StaysOpen="False"
-                                       PlacementTarget="{Binding ElementName=OkColorToggle}" Placement="Bottom"
-                                       Closed="ColorPopup_Closed">
-                                        <hc:ColorPicker Tag="Ok"
-                                                    Width="280"
-                                                    Loaded="ColorPicker_Loaded"
-                                                    Confirmed="ColorPicker_Confirmed"
-                                                    Canceled="ColorPicker_Canceled"/>
-                                    </Popup>
+                                    <Button Content="选择颜色" Tag="Ok" Click="ChooseColor_Click" Padding="8,4"/>
                                 </StackPanel>
 
                                 <!-- NG颜色 -->
@@ -145,17 +285,7 @@
                                 <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
                                     <Border Background="{Binding CurrentRecipe.OtherSettings.NgBrush}" Width="40" Height="24" CornerRadius="3"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <ToggleButton x:Name="NgColorToggle" Content="选择颜色"
-                                              Padding="8,4"/>
-                                    <Popup IsOpen="{Binding IsChecked, ElementName=NgColorToggle}" StaysOpen="False"
-                                       PlacementTarget="{Binding ElementName=NgColorToggle}" Placement="Bottom"
-                                       Closed="ColorPopup_Closed">
-                                        <hc:ColorPicker Tag="Ng"
-                                                    Width="280"
-                                                    Loaded="ColorPicker_Loaded"
-                                                    Confirmed="ColorPicker_Confirmed"
-                                                    Canceled="ColorPicker_Canceled"/>
-                                    </Popup>
+                                    <Button Content="选择颜色" Tag="Ng" Click="ChooseColor_Click" Padding="8,4"/>
                                 </StackPanel>
 
                                 <!-- 默认颜色（未测量） -->
@@ -163,17 +293,7 @@
                                 <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
                                     <Border Background="{Binding CurrentRecipe.OtherSettings.DefaultBrush}" Width="40" Height="24" CornerRadius="3"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <ToggleButton x:Name="DefaultColorToggle" Content="选择颜色"
-                                              Padding="8,4"/>
-                                    <Popup IsOpen="{Binding IsChecked, ElementName=DefaultColorToggle}" StaysOpen="False"
-                                       PlacementTarget="{Binding ElementName=DefaultColorToggle}" Placement="Bottom"
-                                       Closed="ColorPopup_Closed">
-                                        <hc:ColorPicker Tag="Default"
-                                                    Width="280"
-                                                    Loaded="ColorPicker_Loaded"
-                                                    Confirmed="ColorPicker_Confirmed"
-                                                    Canceled="ColorPicker_Canceled"/>
-                                    </Popup>
+                                    <Button Content="选择颜色" Tag="Default" Click="ChooseColor_Click" Padding="8,4"/>
                                 </StackPanel>
 
                                 <!-- 字体大小 -->
@@ -188,17 +308,7 @@
                                 <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal">
                                     <Border Background="{Binding CurrentRecipe.OtherSettings.AnnotationTextBrush}" Width="40" Height="24" CornerRadius="3"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <ToggleButton x:Name="AnnotationTextColorToggle" Content="选择颜色"
-                                              Padding="8,4"/>
-                                    <Popup IsOpen="{Binding IsChecked, ElementName=AnnotationTextColorToggle}" StaysOpen="False"
-                                       PlacementTarget="{Binding ElementName=AnnotationTextColorToggle}" Placement="Bottom"
-                                       Closed="ColorPopup_Closed">
-                                        <hc:ColorPicker Tag="AnnotationText"
-                                                    Width="280"
-                                                    Loaded="ColorPicker_Loaded"
-                                                    Confirmed="ColorPicker_Confirmed"
-                                                    Canceled="ColorPicker_Canceled"/>
-                                    </Popup>
+                                    <Button Content="选择颜色" Tag="AnnotationText" Click="ChooseColor_Click" Padding="8,4"/>
                                 </StackPanel>
                             </Grid>
 

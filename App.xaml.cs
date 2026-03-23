@@ -3,6 +3,7 @@ using Autofac.Core;
 using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Interceptors;
 using MeasurementSoftware.Models;
+using MeasurementSoftware.Services.Appearance;
 using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
@@ -36,6 +37,7 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<ILog, Log>();
             builder.RegisterSingleton<IEventAggregator, EventAggregator>();
             builder.RegisterSingleton<IUserSettingsService, UserSettingsService>();
+            builder.RegisterSingleton<IAppAppearanceService, AppAppearanceService>();
 
             builder.RegisterSingleton<IMesService, MesService>();
             builder.RegisterSingleton<IDataRecordService, DataRecordService>();
@@ -79,6 +81,7 @@ namespace MeasurementSoftware
 
             var userSettings = _container.Resolve<IUserSettingsService>();
             userSettings.LoadSettings();
+            _container.Resolve<IAppAppearanceService>().Initialize();
 
             // 显示主窗口
             var mainWindow = _container.Resolve<MainWindow>();

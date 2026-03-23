@@ -110,6 +110,8 @@ namespace MeasurementSoftware.ViewModels
                 Devices = new ObservableCollection<PlcDevice>(),
                 QrCodeConfig = new QrCodeConfig()
             };
+            _recipeConfigService.EnsureRecipeStatistics(newRecipe);
+            _recipeConfigService.ResetRecipeStatistics(newRecipe);
             _recipeConfigService.OpenRecipe(newRecipe, string.Empty);
             NotifyRecipeChanged();
             Growl.Success("已创建新配方，请在各配置页面进行设置");

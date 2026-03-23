@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:MeasurementSoftware"
-             xmlns:converters="clr-namespace:MeasurementSoftware.Converters">
+             xmlns:converters="clr-namespace:MeasurementSoftware.Converters"
+             xmlns:sys="clr-namespace:System;assembly=System.Runtime">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -12,6 +13,9 @@
             </ResourceDictionary.MergedDictionaries>
 
          
+
+            <FontFamily x:Key="GlobalAppFontFamily">Microsoft YaHei UI</FontFamily>
+            <sys:Double x:Key="GlobalAppFontSize">14</sys:Double>
 
             <FontFamily x:Key="AntDesignIcon">
                 pack://application:,,,/MeasurementSoftware;component/Resources/iconfont.ttf#iconfont

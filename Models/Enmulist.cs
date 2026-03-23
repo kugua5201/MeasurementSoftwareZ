@@ -77,16 +77,18 @@ namespace MeasurementSoftware.Models
     /// </summary>
     public enum MeasurementResult
     {
+        [Description("未测量")]
         /// <summary>
         /// 未测量
         /// </summary>
         NotMeasured,
 
+        [Description("OK")]
         /// <summary>
         /// 合格
         /// </summary>
         Pass,
-
+        [Description("NG")]
         /// <summary>
         /// 不合格
         /// </summary>

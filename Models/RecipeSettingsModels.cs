@@ -99,6 +99,7 @@ namespace MeasurementSoftware.Models
         private AnnotationDisplayFormat annotationDisplayFormat = AnnotationDisplayFormat.通道编号;
         private double annotationFontSize = 10;
         private string annotationTextColor = "#FFFFFF";
+        private AcquisitionStorageConfig acquisitionStorage = new();
 
         /// <summary>
         /// 是否启用分步测量模式。
@@ -151,7 +152,7 @@ namespace MeasurementSoftware.Models
         public string OkColor
         {
             get => okColor;
-            set => SetProperty(ref okColor, value, () => OnPropertyChanged(nameof(OkBrush)));
+            set => SetProperty(ref okColor, NormalizeColorString(value, "#4CAF50"), () => OnPropertyChanged(nameof(OkBrush)));
         }
 
         /// <summary>
@@ -160,7 +161,7 @@ namespace MeasurementSoftware.Models
         public string NgColor
         {
             get => ngColor;
-            set => SetProperty(ref ngColor, value, () => OnPropertyChanged(nameof(NgBrush)));
+            set => SetProperty(ref ngColor, NormalizeColorString(value, "#F44336"), () => OnPropertyChanged(nameof(NgBrush)));
         }
 
         /// <summary>
@@ -169,7 +170,7 @@ namespace MeasurementSoftware.Models
         public string DefaultColor
         {
             get => defaultColor;
-            set => SetProperty(ref defaultColor, value, () => OnPropertyChanged(nameof(DefaultBrush)));
+            set => SetProperty(ref defaultColor, NormalizeColorString(value, "#2196F3"), () => OnPropertyChanged(nameof(DefaultBrush)));
         }
 
         /// <summary>
@@ -196,7 +197,16 @@ namespace MeasurementSoftware.Models
         public string AnnotationTextColor
         {
             get => annotationTextColor;
-            set => SetProperty(ref annotationTextColor, value, () => OnPropertyChanged(nameof(AnnotationTextBrush)));
+            set => SetProperty(ref annotationTextColor, NormalizeColorString(value, "#FFFFFF"), () => OnPropertyChanged(nameof(AnnotationTextBrush)));
+        }
+
+        /// <summary>
+        /// 采集结果存储规则配置。
+        /// </summary>
+        public AcquisitionStorageConfig AcquisitionStorage
+        {
+            get => acquisitionStorage;
+            set => SetProperty(ref acquisitionStorage, value ?? new AcquisitionStorageConfig());
         }
 
         /// <summary>
@@ -209,7 +219,7 @@ namespace MeasurementSoftware.Models
             get => TryParseBrush(OkColor);
             set
             {
-                OkColor = value?.Color.ToString() ?? "#4CAF50";
+                OkColor = ToHexColorString(value?.Color, "#4CAF50");
                 OnPropertyChanged();
             }
         }
@@ -224,7 +234,7 @@ namespace MeasurementSoftware.Models
             get => TryParseBrush(NgColor);
             set
             {
-                NgColor = value?.Color.ToString() ?? "#F44336";
+                NgColor = ToHexColorString(value?.Color, "#F44336");
                 OnPropertyChanged();
             }
         }
@@ -239,7 +249,7 @@ namespace MeasurementSoftware.Models
             get => TryParseBrush(DefaultColor);
             set
             {
-                DefaultColor = value?.Color.ToString() ?? "#2196F3";
+                DefaultColor = ToHexColorString(value?.Color, "#2196F3");
                 OnPropertyChanged();
             }
         }
@@ -254,9 +264,37 @@ namespace MeasurementSoftware.Models
             get => TryParseBrush(AnnotationTextColor);
             set
             {
-                AnnotationTextColor = value?.Color.ToString() ?? "#FFFFFF";
+                AnnotationTextColor = ToHexColorString(value?.Color, "#FFFFFF");
                 OnPropertyChanged();
             }
+        }
+
+        private static string NormalizeColorString(string? colorStr, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(colorStr))
+            {
+                return fallback;
+            }
+
+            try
+            {
+                var color = (Color)ColorConverter.ConvertFromString(colorStr);
+                return ToHexColorString(color, fallback);
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
+        private static string ToHexColorString(Color? color, string fallback)
+        {
+            if (color is not Color actualColor)
+            {
+                return fallback;
+            }
+
+            return $"#{actualColor.R:X2}{actualColor.G:X2}{actualColor.B:X2}";
         }
 
         private static SolidColorBrush? TryParseBrush(string? colorStr)

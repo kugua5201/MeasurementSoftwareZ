@@ -3,7 +3,8 @@
 
     <!-- ===== 应用主题色 ===== -->
     <SolidColorBrush x:Key="MainPrimaryColor"    Color="#3F51B5"/>
-    <SolidColorBrush x:Key="AccentColor"          Color="#FF4081"/>
+	<Color x:Key="AccentColor">#FF4081</Color>
+<SolidColorBrush x:Key="AppAccentBrush" Color="{StaticResource AccentColor}"/>
     <SolidColorBrush x:Key="MainBackgroundColor"  Color="#F5F5F5"/>
     <SolidColorBrush x:Key="SidebarColor"         Color="#FFFFFF"/>
     <SolidColorBrush x:Key="TextPrimaryColor"     Color="#212121"/>

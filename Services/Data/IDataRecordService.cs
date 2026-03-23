@@ -53,6 +53,11 @@ namespace MeasurementSoftware.Services
         Task<bool> ExportToExcelAsync(List<MeasurementRecord> records, string filePath);
 
         /// <summary>
+        /// 按配方定义的规则将记录追加到文件。
+        /// </summary>
+        Task<bool> SaveRecordToConfiguredFileAsync(MeasurementRecord record, MeasurementRecipe recipe);
+
+        /// <summary>
         /// 删除记录
         /// </summary>
         Task<bool> DeleteRecordAsync(string recordId);

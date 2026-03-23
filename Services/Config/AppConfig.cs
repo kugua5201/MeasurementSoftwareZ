@@ -213,6 +213,7 @@ namespace MeasurementSoftware.Services.Config
                 }
             }
             recipe.Devices = Devices; // 确保双向引用一致
+            EnsureRecipeStatistics(recipe);
             HydrateChannelRuntimeData(recipe);
 
             CurrentRecipe = recipe;
@@ -337,6 +338,7 @@ namespace MeasurementSoftware.Services.Config
 
                 var json = await File.ReadAllTextAsync(path);
                 var recipe = JsonSerializer.Deserialize<MeasurementRecipe>(json);
+                EnsureRecipeStatistics(recipe);
                 _log.Info($"配方已加载: {path}");
                 return recipe;
             }
@@ -372,6 +374,36 @@ namespace MeasurementSoftware.Services.Config
                     _log.Warn($"设备 [{device.DeviceName}] 双缓冲配置校验未通过，已保留当前输入文本继续保存: {message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// 确保配方统计信息对象存在，兼容旧版本配方文件。
+        /// </summary>
+        public void EnsureRecipeStatistics(MeasurementRecipe? recipe)
+        {
+            if (recipe == null)
+            {
+                return;
+            }
+
+            recipe.Statistics ??= new RecipeStatisticsConfig();
+        }
+
+        /// <summary>
+        /// 重置指定配方的统计信息。
+        /// 仅作用于当前传入的配方，不影响其他配方。
+        /// </summary>
+        public void ResetRecipeStatistics(MeasurementRecipe? recipe)
+        {
+            if (recipe == null)
+            {
+                return;
+            }
+
+            EnsureRecipeStatistics(recipe);
+            recipe.Statistics.PassCount = 0;
+            recipe.Statistics.FailCount = 0;
+            recipe.Statistics.TotalCount = 0;
         }
 
 

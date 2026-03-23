@@ -13,6 +13,7 @@ namespace MeasurementSoftware.Models
     {
         private RecipeBasicInfoConfig basicInfo = new();
         private RecipeOtherSettingsConfig otherSettings = new();
+        private RecipeStatisticsConfig statistics = new();
 
         //public MeasurementRecipe()
         //{
@@ -44,6 +45,16 @@ namespace MeasurementSoftware.Models
             //    //SubscribeBasicInfo(basicInfo);
             //    OnPropertyChanged();
             //}
+        }
+
+        /// <summary>
+        /// 配方统计信息。
+        /// 首页采集计数按配方隔离保存。
+        /// </summary>
+        public RecipeStatisticsConfig Statistics
+        {
+            get => statistics;
+            set => SetProperty(ref statistics, value ?? new RecipeStatisticsConfig());
         }
 
         /// <summary>

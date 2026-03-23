@@ -3,7 +3,7 @@ using MeasurementSoftware.ViewModels;
 
 namespace MeasurementSoftware.Models
 {
-   
+
 
     /// <summary>
     /// 测量记录模型
@@ -76,6 +76,12 @@ namespace MeasurementSoftware.Models
         private int totalSteps = 1;
 
         /// <summary>
+        /// 是否为工步测量。
+        /// </summary>
+        [ObservableProperty]
+        private bool isStepMeasurement;
+
+        /// <summary>
         /// MES上传状态
         /// </summary>
         [ObservableProperty]
@@ -122,6 +128,77 @@ namespace MeasurementSoftware.Models
         public string ChannelName { get; set; } = string.Empty;
 
         /// <summary>
+        /// 通道说明。
+        /// </summary>
+        public string ChannelDescription { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 通道类型。
+        /// </summary>
+        public string ChannelType { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 数据源地址。
+        /// </summary>
+        public string DataSourceAddress { get; set; } = string.Empty;
+
+        /// <summary>
+        /// PLC设备名称。
+        /// </summary>
+        public string PlcDeviceName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 数据点名称。
+        /// </summary>
+        public string DataPointName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 是否启用。
+        /// </summary>
+        public bool IsEnabled { get; set; }
+
+        /// <summary>
+        /// 小数位数。
+        /// </summary>
+        public int DecimalPlaces { get; set; }
+
+        /// <summary>
+        /// 是否需要校准。
+        /// </summary>
+        public bool RequiresCalibration { get; set; }
+
+        /// <summary>
+        /// 校准方式。
+        /// </summary>
+        public CalibrationMode CalibrationMode { get; set; } = CalibrationMode.SinglePoint;
+
+        /// <summary>
+        /// 校准系数A。
+        /// </summary>
+        public double CalibrationCoefficientA { get; set; }
+
+        /// <summary>
+        /// 校准系数B。
+        /// </summary>
+        public double CalibrationCoefficientB { get; set; }
+
+        /// <summary>
+        /// 上次校准时间。
+        /// </summary>
+        //public DateTime? LastCalibrationTime { get; set; }
+
+
+        /// <summary>
+        /// 是否使用缓存值。
+        /// </summary>
+        public bool UseCacheValue { get; set; }
+
+        /// <summary>
+        /// 采样数量。
+        /// </summary>
+        public int SampleCount { get; set; }
+
+        /// <summary>
         /// 标准值
         /// </summary>
         public double StandardValue { get; set; }
@@ -140,6 +217,21 @@ namespace MeasurementSoftware.Models
         /// 测量值
         /// </summary>
         public double MeasuredValue { get; set; }
+
+        /// <summary>
+        /// 单位。
+        /// </summary>
+        public string Unit { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 通道所属工步编号。
+        /// </summary>
+        public int StepNumber { get; set; }
+
+        /// <summary>
+        /// 通道所属工步名称。
+        /// </summary>
+        public string StepName { get; set; } = string.Empty;
 
         /// <summary>
         /// 测量结果

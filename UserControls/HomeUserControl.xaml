@@ -249,7 +249,7 @@
                     </Border>
 
                     <!-- 数据表格 -->
-                    <DataGrid Grid.Row="1"
+                    <DataGrid Grid.Row="1" 
 													ItemsSource="{Binding Channels}"
 													AutoGenerateColumns="False"
 													IsReadOnly="True"

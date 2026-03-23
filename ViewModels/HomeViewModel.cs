@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HandyControl.Controls;
+using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
@@ -17,6 +18,7 @@ namespace MeasurementSoftware.ViewModels
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDataRecordService _dataRecordService;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
+        private DateTime? _acquisitionStartTime;
 
         [ObservableProperty]
         private string? productImagePath;
@@ -47,14 +49,50 @@ namespace MeasurementSoftware.ViewModels
         [ObservableProperty]
         private MeasurementResult overallResult = MeasurementResult.NotMeasured;
 
-        [ObservableProperty]
-        private int passCount;
+        public int PassCount
+        {
+            get => CurrentRecipe?.Statistics.PassCount ?? 0;
+            set
+            {
+                if (CurrentRecipe?.Statistics == null || CurrentRecipe.Statistics.PassCount == value)
+                {
+                    return;
+                }
 
-        [ObservableProperty]
-        private int failCount;
+                CurrentRecipe.Statistics.PassCount = value;
+                OnPropertyChanged();
+            }
+        }
 
-        [ObservableProperty]
-        private int totalCount;
+        public int FailCount
+        {
+            get => CurrentRecipe?.Statistics.FailCount ?? 0;
+            set
+            {
+                if (CurrentRecipe?.Statistics == null || CurrentRecipe.Statistics.FailCount == value)
+                {
+                    return;
+                }
+
+                CurrentRecipe.Statistics.FailCount = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public int TotalCount
+        {
+            get => CurrentRecipe?.Statistics.TotalCount ?? 0;
+            set
+            {
+                if (CurrentRecipe?.Statistics == null || CurrentRecipe.Statistics.TotalCount == value)
+                {
+                    return;
+                }
+
+                CurrentRecipe.Statistics.TotalCount = value;
+                OnPropertyChanged();
+            }
+        }
 
 
         /// <summary>
@@ -91,6 +129,9 @@ namespace MeasurementSoftware.ViewModels
                         OnPropertyChanged(nameof(CurrentRecipe));
                         OnPropertyChanged(nameof(Channels));
                         OnPropertyChanged(nameof(Annotations));
+                        OnPropertyChanged(nameof(PassCount));
+                        OnPropertyChanged(nameof(FailCount));
+                        OnPropertyChanged(nameof(TotalCount));
 
                         ProductImagePath = CurrentRecipe?.BasicInfo.ProductImagePath ?? string.Empty;
                         CurrentStep = 1;
@@ -117,6 +158,9 @@ namespace MeasurementSoftware.ViewModels
             // 监听配方基本信息变化（图片路径等）
             if (CurrentRecipe?.BasicInfo != null)
                 CurrentRecipe.BasicInfo.PropertyChanged += BasicInfo_PropertyChanged;
+
+            if (CurrentRecipe?.Statistics != null)
+                CurrentRecipe.Statistics.PropertyChanged += Statistics_PropertyChanged;
         }
 
         private void UnsubscribeRecipe()
@@ -126,6 +170,9 @@ namespace MeasurementSoftware.ViewModels
 
             if (CurrentRecipe?.BasicInfo != null)
                 CurrentRecipe.BasicInfo.PropertyChanged -= BasicInfo_PropertyChanged;
+
+            if (CurrentRecipe?.Statistics != null)
+                CurrentRecipe.Statistics.PropertyChanged -= Statistics_PropertyChanged;
         }
 
         private void BasicInfo_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -133,6 +180,22 @@ namespace MeasurementSoftware.ViewModels
             if (e.PropertyName == nameof(RecipeBasicInfoConfig.ProductImagePath))
             {
                 ProductImagePath = CurrentRecipe?.BasicInfo.ProductImagePath ?? string.Empty;
+            }
+        }
+
+        private void Statistics_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(RecipeStatisticsConfig.PassCount))
+            {
+                OnPropertyChanged(nameof(PassCount));
+            }
+            else if (e.PropertyName == nameof(RecipeStatisticsConfig.FailCount))
+            {
+                OnPropertyChanged(nameof(FailCount));
+            }
+            else if (e.PropertyName == nameof(RecipeStatisticsConfig.TotalCount))
+            {
+                OnPropertyChanged(nameof(TotalCount));
             }
         }
         private void Channels_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -165,6 +228,7 @@ namespace MeasurementSoftware.ViewModels
             }
 
             _recipeConfigService.SetCollect(true);
+            _acquisitionStartTime = DateTime.Now;
             OverallResult = MeasurementResult.NotMeasured;
             _cts = new CancellationTokenSource();
 
@@ -263,22 +327,42 @@ namespace MeasurementSoftware.ViewModels
                 RecipeId = CurrentRecipe.BasicInfo.RecipeId,
                 RecipeName = CurrentRecipe.BasicInfo.RecipeName,
                 MeasurementTime = DateTime.Now,
+                IsStepMeasurement = isStepMode,
                 OverallResult = OverallResult,
                 ChannelData = [.. Channels.Select(c => new ChannelMeasurementData
                 {
                     ChannelNumber = c.ChannelNumber,
                     ChannelName = c.ChannelName,
+                    ChannelDescription = c.ChannelDescription,
+                    ChannelType = c.ChannelType.ToString(),
+                    DataSourceAddress = c.DataSourceAddress,
+                    PlcDeviceName = c.PlcDeviceName,
+                    DataPointName = c.DataPointName,
+                    IsEnabled = c.IsEnabled,
+                    DecimalPlaces = c.DecimalPlaces,
+                    RequiresCalibration = c.RequiresCalibration,
+                    CalibrationMode = c.CalibrationMode,
+                    CalibrationCoefficientA = c.CalibrationCoefficientA,
+                    CalibrationCoefficientB = c.CalibrationCoefficientB,
+                    //LastCalibrationTime = c.LastCalibrationTime,
+                    UseCacheValue = c.UseCacheValue,
+                    SampleCount = c.SampleCount,
                     StandardValue = c.StandardValue,
                     UpperTolerance = c.UpperTolerance,
                     LowerTolerance = c.LowerTolerance,
                     MeasuredValue = c.MeasuredValue,
+                    Unit = c.Unit,
+                    StepNumber = c.StepNumber,
+                    StepName = c.StepName,
                     Result = c.Result
                 })],
                 StepNumber = CurrentStep,
                 TotalSteps = CurrentRecipe.OtherSettings.TotalSteps
             };
             await _dataRecordService.SaveRecordAsync(record);
+            await _dataRecordService.SaveRecordToConfiguredFileAsync(record, CurrentRecipe);
             _log.Info($"测量记录已保存: {OverallResult}");
+            _acquisitionStartTime = null;
         }
 
         /// <summary>
@@ -497,9 +581,7 @@ namespace MeasurementSoftware.ViewModels
 
             OverallResult = MeasurementResult.NotMeasured;
             MeasurementStatus = "就绪";
-            PassCount = 0;
-            FailCount = 0;
-            TotalCount = 0;
+            _recipeConfigService.ResetRecipeStatistics(CurrentRecipe);
             CurrentStep = 1;
             _log.Info("数据已清除");
         }

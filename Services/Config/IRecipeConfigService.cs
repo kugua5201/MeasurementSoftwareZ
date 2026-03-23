@@ -25,6 +25,17 @@ namespace MeasurementSoftware.Services.Config
         /// </summary>
         int AcquisitionDelayMs { get; set; }
 
+        /// <summary>
+        /// 确保配方统计信息已初始化。
+        /// 用于兼容旧配方缺少统计节点的情况。
+        /// </summary>
+        void EnsureRecipeStatistics(MeasurementRecipe? recipe);
+
+        /// <summary>
+        /// 重置指定配方的统计信息。
+        /// </summary>
+        void ResetRecipeStatistics(MeasurementRecipe? recipe);
+
         void SetCollect(bool Collect);
     }
 }
