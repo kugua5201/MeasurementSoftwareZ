@@ -70,14 +70,14 @@
 						<TextBlock Grid.Row="0" Grid.Column="0" Text="配方名称：" VerticalAlignment="Center" Margin="0,0,10,8"/>
 						<TextBox Grid.Row="0" Grid.Column="1"
 										 Style="{StaticResource TextBoxExtend}"
-										 Text="{Binding CurrentRecipe.RecipeName, UpdateSourceTrigger=PropertyChanged}"
+                                  Text="{Binding CurrentRecipe.BasicInfo.RecipeName, UpdateSourceTrigger=PropertyChanged}"
 										 Margin="0,0,0,8"
 										 hc:InfoElement.Placeholder="请输入配方名称"/>
 
 						<TextBlock Grid.Row="1" Grid.Column="0" Text="配方描述：" VerticalAlignment="Center" Margin="0,0,10,8"/>
 						<TextBox Grid.Row="1" Grid.Column="1"
 										 Style="{StaticResource TextBoxExtend}"
-										 Text="{Binding CurrentRecipe.Description, UpdateSourceTrigger=PropertyChanged}"
+                                     Text="{Binding CurrentRecipe.BasicInfo.Description, UpdateSourceTrigger=PropertyChanged}"
 										 Margin="0,0,0,8"
 										 hc:InfoElement.Placeholder="请输入配方描述"/>
 						<Separator Grid.Row="2" Grid.ColumnSpan="2" Margin="0,5,0,12"/>

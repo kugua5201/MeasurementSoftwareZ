@@ -388,9 +388,12 @@ namespace MeasurementSoftware.Models
                 // 保持缓存大小
                 if (HistoricalData.Count > SampleCount)
                 {
-                    HistoricalData.RemoveAt(0);
+                    while (HistoricalData.Count > SampleCount)
+                    {
+                        HistoricalData.RemoveAt(0);
+                    }
                 }
-                HistoricalData.Add(rawValue);
+                HistoricalData.Add(MeasuredValue);
             }
         }
 

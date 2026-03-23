@@ -39,11 +39,11 @@ namespace MeasurementSoftware.ViewModels
         {
             if (CurrentRecipe == null)
             {
-                Growl.Warning("没有配方需要保存");
+                Growl.Warning("请先选择一个配方");
                 return;
             }
 
-            CurrentRecipe.ModifyTime = DateTime.Now;
+            CurrentRecipe.BasicInfo.ModifyTime = DateTime.Now;
             var success = await _recipeConfigService.SaveCurrentRecipeAsync();
             if (success)
                 Growl.Success("配方保存成功");

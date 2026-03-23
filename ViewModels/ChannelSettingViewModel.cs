@@ -24,12 +24,12 @@ namespace MeasurementSoftware.ViewModels
         /// <summary>
         /// 产品图片路径
         /// </summary>
-        public string? ProductImagePath => CurrentRecipe?.ProductImagePath;
+        public string? ProductImagePath => CurrentRecipe?.BasicInfo.ProductImagePath;
 
         /// <summary>
         /// 标注点集合（从通道中聚合）
         /// </summary>
-        public IEnumerable<ChannelAnnotation> Annotations => CurrentRecipe?.Channels?.Where(c => c.Annotation != null).Select(c => c.Annotation!) ?? Enumerable.Empty<ChannelAnnotation>();
+        public IEnumerable<ChannelAnnotation> Annotations => CurrentRecipe?.Channels?.Where(c => c.Annotation != null).Select(c => c.Annotation!) ?? [];
 
         /// <summary>
         /// 选中的标注点
@@ -135,11 +135,11 @@ namespace MeasurementSoftware.ViewModels
         {
             if (CurrentRecipe == null)
             {
-                Growl.Warning("没有配方需要保存");
+                Growl.Warning("请先选择一个配方");
                 return;
             }
 
-            CurrentRecipe.ModifyTime = DateTime.Now;
+            CurrentRecipe.BasicInfo.ModifyTime = DateTime.Now;
             var success = await _recipeConfigService.SaveCurrentRecipeAsync();
             if (success)
                 Growl.Success("配方保存成功");
@@ -520,6 +520,11 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         private void ImportProductImage()
         {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("请先选择一个配方");
+                return;
+            }
             var openFileDialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "Image Files (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp|All Files (*.*)|*.*",
@@ -530,7 +535,7 @@ namespace MeasurementSoftware.ViewModels
             {
                 if (CurrentRecipe != null)
                 {
-                    CurrentRecipe.ProductImagePath = openFileDialog.FileName;
+                    CurrentRecipe.BasicInfo.ProductImagePath = openFileDialog.FileName;
                     OnPropertyChanged(nameof(ProductImagePath));
                     _log.Info($"已设置产品图片: {openFileDialog.FileName}");
                 }

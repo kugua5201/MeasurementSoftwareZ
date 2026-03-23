@@ -73,7 +73,13 @@ namespace MeasurementSoftware.ViewModels
         private ObservableCollection<LinearRegressionCalibrationPoint> linearRegressionCalibrationPoints = [];
 
         [ObservableProperty]
-        private ObservableCollection<CalibrationRecord> calibrationHistory = new();
+        private LeastSquaresCalibrationPoint? selectedLeastSquaresCalibrationPoint;
+
+        [ObservableProperty]
+        private LinearRegressionCalibrationPoint? selectedLinearRegressionCalibrationPoint;
+
+        [ObservableProperty]
+        private ObservableCollection<CalibrationRecord> calibrationHistory = [];
 
         [ObservableProperty]
         private CalibrationRecord? selectedCalibrationHistory;
@@ -88,6 +94,8 @@ namespace MeasurementSoftware.ViewModels
 
         private ObservableCollection<MeasurementChannel>? _channels;
 
+        public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
+
         public CalibrationViewModel(ILog log, IRecipeConfigService recipeConfigService, ICalibrationService calibrationService)
         {
             _log = log;
@@ -101,7 +109,7 @@ namespace MeasurementSoftware.ViewModels
                     if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
                     {
                         BindChannels();
-                        CurrentRecipeName = _recipeConfigService.CurrentRecipe?.RecipeName ?? "未加载配方";
+                        CurrentRecipeName = _recipeConfigService.CurrentRecipe?.BasicInfo.RecipeName ?? "未加载配方";
                         SelectedChannel = Channels.Any() ? Channels[0] : null;
                         OnPropertyChanged(nameof(Channels));
                     }
@@ -109,7 +117,7 @@ namespace MeasurementSoftware.ViewModels
             }
 
             BindChannels();
-            CurrentRecipeName = _recipeConfigService.CurrentRecipe?.RecipeName ?? "未加载配方";
+            CurrentRecipeName = _recipeConfigService.CurrentRecipe?.BasicInfo.RecipeName ?? "未加载配方";
             
         }
 
@@ -356,13 +364,21 @@ namespace MeasurementSoftware.ViewModels
         }
 
         [RelayCommand]
-        private void RemoveLeastSquaresCalibrationPoint(LeastSquaresCalibrationPoint point)
+        private void RemoveLeastSquaresCalibrationPoint(LeastSquaresCalibrationPoint? point)
         {
+            if (point == null)
+            {
+                Growl.Warning("请先选择要删除的最小二乘法校准点");
+                return;
+            }
+
             LeastSquaresCalibrationPoints.Remove(point);
             for (int i = 0; i < LeastSquaresCalibrationPoints.Count; i++)
             {
                 LeastSquaresCalibrationPoints[i].Index = i + 1;
             }
+
+            SelectedLeastSquaresCalibrationPoint = LeastSquaresCalibrationPoints.FirstOrDefault();
         }
 
         [RelayCommand]
@@ -416,13 +432,21 @@ namespace MeasurementSoftware.ViewModels
         }
 
         [RelayCommand]
-        private void RemoveLinearRegressionCalibrationPoint(LinearRegressionCalibrationPoint point)
+        private void RemoveLinearRegressionCalibrationPoint(LinearRegressionCalibrationPoint? point)
         {
+            if (point == null)
+            {
+                Growl.Warning("请先选择要删除的线性回归校准点");
+                return;
+            }
+
             LinearRegressionCalibrationPoints.Remove(point);
             for (int i = 0; i < LinearRegressionCalibrationPoints.Count; i++)
             {
                 LinearRegressionCalibrationPoints[i].Index = i + 1;
             }
+
+            SelectedLinearRegressionCalibrationPoint = LinearRegressionCalibrationPoints.FirstOrDefault();
         }
 
         [RelayCommand]
@@ -469,8 +493,34 @@ namespace MeasurementSoftware.ViewModels
         }
 
         [RelayCommand]
+        private void RemoveSelectedCalibrationHistory()
+        {
+            if (SelectedChannel == null)
+            {
+                Growl.Warning("请先选择通道");
+                return;
+            }
+
+            if (SelectedCalibrationHistory == null)
+            {
+                Growl.Warning("请先选择要删除的校准历史");
+                return;
+            }
+
+            SelectedChannel.CalibrationHistory.Remove(SelectedCalibrationHistory);
+            CalibrationHistory.Remove(SelectedCalibrationHistory);
+            SelectedCalibrationHistory = CalibrationHistory.FirstOrDefault();
+            Growl.Success("校准历史已删除");
+        }
+
+        [RelayCommand]
         private async Task SaveCalibration()
         {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("请先选择一个配方");
+                return;
+            }
             if (SelectedChannel == null)
             {
                 Growl.Error("请先选中通道");

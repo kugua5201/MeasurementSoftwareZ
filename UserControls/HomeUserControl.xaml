@@ -28,11 +28,11 @@
 					<Button Content="上一工步" Command="{Binding PreviousStepCommand}"
 							Style="{StaticResource ButtonPrimary}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"
-							Visibility="{Binding CurrentRecipe.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}"/>
+                           Visibility="{Binding CurrentRecipe.OtherSettings.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}"/>
 					<Button Content="下一工步" Command="{Binding NextStepCommand}"
 							Style="{StaticResource ButtonSuccess}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"
-							Visibility="{Binding CurrentRecipe.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}"/>
+                           Visibility="{Binding CurrentRecipe.OtherSettings.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}"/>
                     <Button Content="清空数据" Command="{Binding ClearDataCommand}"
 							Style="{StaticResource ButtonWarning}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
@@ -49,7 +49,7 @@
                         </hc:ContextMenuButton.Menu>
                     </hc:ContextMenuButton>
                     <TextBlock VerticalAlignment="Center" FontSize="13" Margin="10,0,0,0"
-							   Visibility="{Binding CurrentRecipe.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                            Visibility="{Binding CurrentRecipe.OtherSettings.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}">
 						<Run Text="当前工步："/>
 						<Run Text="{Binding CurrentStep}" FontWeight="Bold" Foreground="{StaticResource StatusInfoBrush}"/>
                     </TextBlock>

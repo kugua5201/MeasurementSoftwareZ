@@ -97,10 +97,13 @@ namespace MeasurementSoftware.Services.Config
                 {
                     var defaultRecipe = new MeasurementRecipe
                     {
-                        RecipeId = Guid.NewGuid().ToString(),
-                        RecipeName = $"默认配方_{DateTime.Now:yyyyMMddHHmmss}",
-                        CreateTime = DateTime.Now,
-                        ModifyTime = DateTime.Now
+                        BasicInfo = new RecipeBasicInfoConfig
+                        {
+                            RecipeId = Guid.NewGuid().ToString(),
+                            RecipeName = $"默认配方_{DateTime.Now:yyyyMMddHHmmss}",
+                            CreateTime = DateTime.Now,
+                            ModifyTime = DateTime.Now
+                        }
                     };
                     OpenRecipe(defaultRecipe, string.Empty);
                     _log.Info("保存设备时未找到配方，已自动创建默认配方");
@@ -218,7 +221,7 @@ namespace MeasurementSoftware.Services.Config
             OnPropertyChanged(nameof(Devices));
             OnPropertyChanged(nameof(QrCodeConfig));
 
-            _log.Info($"已打开配方: {recipe.RecipeName}，包含 {Devices.Count} 个设备");
+            _log.Info($"已打开配方: {recipe.BasicInfo.RecipeName}，包含 {Devices.Count} 个设备");
         }
 
         private void HydrateChannelRuntimeData(MeasurementRecipe recipe)
@@ -295,7 +298,7 @@ namespace MeasurementSoftware.Services.Config
             {
                 var recipesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Recipes");
                 Directory.CreateDirectory(recipesDir);
-                CurrentRecipePath = Path.Combine(recipesDir, $"{CurrentRecipe.RecipeName}.json");
+                CurrentRecipePath = Path.Combine(recipesDir, $"{CurrentRecipe.BasicInfo.RecipeName}.json");
                 _log.Info($"新配方自动分配路径: {CurrentRecipePath}");
             }
 
@@ -303,7 +306,7 @@ namespace MeasurementSoftware.Services.Config
             {
                 // 同步运行时设备列表到配方
                 SyncSiemensCacheConfigurations(Devices);
-                CurrentRecipe.ModifyTime = DateTime.Now;
+                CurrentRecipe.BasicInfo.ModifyTime = DateTime.Now;
                 CurrentRecipe.Devices = Devices;
 
                 var json = JsonSerializer.Serialize(CurrentRecipe, new JsonSerializerOptions { WriteIndented = true });
@@ -382,12 +385,12 @@ namespace MeasurementSoftware.Services.Config
 
         public int AcquisitionDelayMs
         {
-            get => CurrentRecipe?.AcquisitionDelayMs ?? 500;
+            get => CurrentRecipe?.OtherSettings.AcquisitionDelayMs ?? 500;
             set
             {
                 if (CurrentRecipe != null)
                 {
-                    CurrentRecipe.AcquisitionDelayMs = Math.Max(1, value);
+                    CurrentRecipe.OtherSettings.AcquisitionDelayMs = Math.Max(1, value);
                 }
             }
         }

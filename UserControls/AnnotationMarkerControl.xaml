@@ -3,18 +3,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Name="MarkerRoot"
              Background="Transparent">
-    <Grid Margin="{Binding Recipe.AnnotationSize, ElementName=MarkerRoot, Converter={StaticResource SizeToOffsetMarginConverter}}"
+    <Grid Margin="{Binding Recipe.OtherSettings.AnnotationSize, ElementName=MarkerRoot, Converter={StaticResource SizeToOffsetMarginConverter}}"
           ToolTip="{Binding ChannelName}">
-        <Grid Width="{Binding Recipe.AnnotationSize, ElementName=MarkerRoot}"
-              Height="{Binding Recipe.AnnotationSize, ElementName=MarkerRoot}">
+        <Grid Width="{Binding Recipe.OtherSettings.AnnotationSize, ElementName=MarkerRoot}"
+              Height="{Binding Recipe.OtherSettings.AnnotationSize, ElementName=MarkerRoot}">
             <Path Stretch="Fill" Opacity="0.85"
-                  Data="{Binding Recipe.AnnotationShape, ElementName=MarkerRoot, Converter={StaticResource AnnotationShapeToGeometryConverter}}"
+                  Data="{Binding Recipe.OtherSettings.AnnotationShape, ElementName=MarkerRoot, Converter={StaticResource AnnotationShapeToGeometryConverter}}"
                   StrokeThickness="2">
                 <Path.Fill>
                     <MultiBinding Converter="{StaticResource AnnotationBrushConverter}">
-                        <Binding Path="Recipe.OkColor" ElementName="MarkerRoot"/>
-                        <Binding Path="Recipe.NgColor" ElementName="MarkerRoot"/>
-                        <Binding Path="Recipe.DefaultColor" ElementName="MarkerRoot"/>
+                        <Binding Path="Recipe.OtherSettings.OkColor" ElementName="MarkerRoot"/>
+                        <Binding Path="Recipe.OtherSettings.NgColor" ElementName="MarkerRoot"/>
+                        <Binding Path="Recipe.OtherSettings.DefaultColor" ElementName="MarkerRoot"/>
                         <Binding Path="Result"/>
                         <Binding Path="ForceDefaultColor" ElementName="MarkerRoot"/>
                     </MultiBinding>
@@ -22,15 +22,15 @@
             </Path>
             <TextBlock FontWeight="Bold"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Foreground="{Binding Recipe.AnnotationTextBrush, ElementName=MarkerRoot}"
-                       FontSize="{Binding Recipe.AnnotationFontSize, ElementName=MarkerRoot}">
+                       Foreground="{Binding Recipe.OtherSettings.AnnotationTextBrush, ElementName=MarkerRoot}"
+                       FontSize="{Binding Recipe.OtherSettings.AnnotationFontSize, ElementName=MarkerRoot}">
                 <TextBlock.Text>
                     <MultiBinding Converter="{StaticResource AnnotationDisplayTextConverter}">
                         <Binding Path="ChannelNumber"/>
                         <Binding Path="ChannelName"/>
                         <Binding Path="StepNumber"/>
                         <Binding Path="DisplayText"/>
-                        <Binding Path="Recipe.AnnotationDisplayFormat" ElementName="MarkerRoot"/>
+                        <Binding Path="Recipe.OtherSettings.AnnotationDisplayFormat" ElementName="MarkerRoot"/>
                     </MultiBinding>
                 </TextBlock.Text>
             </TextBlock>

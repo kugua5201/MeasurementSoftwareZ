@@ -92,10 +92,10 @@ namespace MeasurementSoftware.ViewModels
                         OnPropertyChanged(nameof(Channels));
                         OnPropertyChanged(nameof(Annotations));
 
-                        ProductImagePath = CurrentRecipe?.ProductImagePath ?? string.Empty;
+                        ProductImagePath = CurrentRecipe?.BasicInfo.ProductImagePath ?? string.Empty;
                         CurrentStep = 1;
 
-                        _log.Info($"当前配方已更新: {CurrentRecipe?.RecipeName}");
+                        _log.Info($"当前配方已更新: {CurrentRecipe?.BasicInfo.RecipeName}");
                     }
                 };
             }
@@ -114,9 +114,9 @@ namespace MeasurementSoftware.ViewModels
                     ch.PropertyChanged += Channel_PropertyChanged;
             }
 
-            // 监听配方属性变化（图片路径、标注等）
-            if (CurrentRecipe != null)
-                CurrentRecipe.PropertyChanged += CurrentRecipe_PropertyChanged;
+            // 监听配方基本信息变化（图片路径等）
+            if (CurrentRecipe?.BasicInfo != null)
+                CurrentRecipe.BasicInfo.PropertyChanged += BasicInfo_PropertyChanged;
         }
 
         private void UnsubscribeRecipe()
@@ -124,15 +124,15 @@ namespace MeasurementSoftware.ViewModels
             if (_channels != null)
                 _channels.CollectionChanged -= Channels_CollectionChanged;
 
-            if (CurrentRecipe != null)
-                CurrentRecipe.PropertyChanged -= CurrentRecipe_PropertyChanged;
+            if (CurrentRecipe?.BasicInfo != null)
+                CurrentRecipe.BasicInfo.PropertyChanged -= BasicInfo_PropertyChanged;
         }
 
-        private void CurrentRecipe_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        private void BasicInfo_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(MeasurementRecipe.ProductImagePath))
+            if (e.PropertyName == nameof(RecipeBasicInfoConfig.ProductImagePath))
             {
-                ProductImagePath = CurrentRecipe?.ProductImagePath ?? string.Empty;
+                ProductImagePath = CurrentRecipe?.BasicInfo.ProductImagePath ?? string.Empty;
             }
         }
         private void Channels_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -160,7 +160,7 @@ namespace MeasurementSoftware.ViewModels
         {
             if (CurrentRecipe == null)
             {
-                Growl.Warning("未选择配方");
+                Growl.Warning("请先选择一个配方");
                 return;
             }
 
@@ -169,7 +169,7 @@ namespace MeasurementSoftware.ViewModels
             _cts = new CancellationTokenSource();
 
             // 清空通道和标注
-            bool isStepMode = CurrentRecipe.EnableStepMode && CurrentRecipe.TotalSteps > 1;
+            bool isStepMode = CurrentRecipe.OtherSettings.EnableStepMode && CurrentRecipe.OtherSettings.TotalSteps > 1;
             if (isStepMode && CurrentStep > 1)
             {
                 // 工步模式且不是第1步：只清当前工步
@@ -194,7 +194,7 @@ namespace MeasurementSoftware.ViewModels
                 {
                     var activeChannels = GetActiveChannels();
 
-                    MeasurementStatus = isStepMode ? $"工步 {CurrentStep}/{CurrentRecipe.TotalSteps} 采集中..." : "采集中...";
+                    MeasurementStatus = isStepMode ? $"工步 {CurrentStep}/{CurrentRecipe.OtherSettings.TotalSteps} 采集中..." : "采集中...";
 
                     foreach (var channel in activeChannels)
                     {
@@ -221,6 +221,11 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         private async Task StopAcquisitionAsync()
         {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("请先选择一个配方");
+                return;
+            }
             _cts?.Cancel();
             _log.Info("停止数据采集");
             MeasurementStatus = "采集已停止";
@@ -229,7 +234,7 @@ namespace MeasurementSoftware.ViewModels
             if (CurrentRecipe == null) return;
 
             // 根据工步模式选择参与判定的通道
-            bool isStepMode = CurrentRecipe.EnableStepMode && CurrentRecipe.TotalSteps > 1;
+            bool isStepMode = CurrentRecipe.OtherSettings.EnableStepMode && CurrentRecipe.OtherSettings.TotalSteps > 1;
             var relevantChannels = isStepMode
                 ? Channels.Where(c => c.StepNumber == CurrentStep).ToList()
                 : Channels.ToList();
@@ -255,8 +260,8 @@ namespace MeasurementSoftware.ViewModels
 
             var record = new MeasurementRecord
             {
-                RecipeId = CurrentRecipe.RecipeId,
-                RecipeName = CurrentRecipe.RecipeName,
+                RecipeId = CurrentRecipe.BasicInfo.RecipeId,
+                RecipeName = CurrentRecipe.BasicInfo.RecipeName,
                 MeasurementTime = DateTime.Now,
                 OverallResult = OverallResult,
                 ChannelData = [.. Channels.Select(c => new ChannelMeasurementData
@@ -270,7 +275,7 @@ namespace MeasurementSoftware.ViewModels
                     Result = c.Result
                 })],
                 StepNumber = CurrentStep,
-                TotalSteps = CurrentRecipe.TotalSteps
+                TotalSteps = CurrentRecipe.OtherSettings.TotalSteps
             };
             await _dataRecordService.SaveRecordAsync(record);
             _log.Info($"测量记录已保存: {OverallResult}");
@@ -283,7 +288,7 @@ namespace MeasurementSoftware.ViewModels
         {
             var enabled = Channels.Where(c => c.IsEnabled && !string.IsNullOrEmpty(c.PlcDeviceName) && !string.IsNullOrEmpty(c.DataPointName));
 
-            if (CurrentRecipe?.EnableStepMode == true && CurrentRecipe.TotalSteps > 1)
+            if (CurrentRecipe?.OtherSettings.EnableStepMode == true && CurrentRecipe.OtherSettings.TotalSteps > 1)
             {
                 // 分步模式：只采集当前工步的通道
                 return enabled.Where(c => c.StepNumber == CurrentStep);
@@ -299,7 +304,7 @@ namespace MeasurementSoftware.ViewModels
         /// <returns></returns>
         private int GetPollIntervalMs()
         {
-            var delay = CurrentRecipe?.AcquisitionDelayMs ?? _recipeConfigService.AcquisitionDelayMs;
+            var delay = CurrentRecipe?.OtherSettings.AcquisitionDelayMs ?? _recipeConfigService.AcquisitionDelayMs;
             return delay > 0 ? delay : DefaultPollIntervalMs;
         }
         /// <summary>
@@ -333,7 +338,7 @@ namespace MeasurementSoftware.ViewModels
         private int GetMaxStep()
         {
             if (CurrentRecipe == null) return 1;
-            int maxStep = CurrentRecipe.TotalSteps;
+            int maxStep = CurrentRecipe.OtherSettings.TotalSteps;
             if (CurrentRecipe.Channels.Count > 0)
             {
                 var channelMax = CurrentRecipe.Channels.Max(c => c.StepNumber);
@@ -395,7 +400,7 @@ namespace MeasurementSoftware.ViewModels
         private void UpdateAnnotationActiveState()
         {
             if (CurrentRecipe == null) return;
-            bool isStepMode = CurrentRecipe.EnableStepMode && CurrentRecipe.TotalSteps > 1;
+            bool isStepMode = CurrentRecipe.OtherSettings.EnableStepMode && CurrentRecipe.OtherSettings.TotalSteps > 1;
             foreach (var channel in Channels)
             {
                 channel.Annotation?.IsActiveInCurrentStep = !isStepMode || channel.StepNumber == CurrentStep;
@@ -462,11 +467,11 @@ namespace MeasurementSoftware.ViewModels
         {
             if (CurrentRecipe == null)
             {
-                Growl.Warning("没有配方需要保存");
+                Growl.Warning("请先选择一个配方");
                 return;
             }
 
-            CurrentRecipe.ModifyTime = DateTime.Now;
+            CurrentRecipe.BasicInfo.ModifyTime = DateTime.Now;
             var success = await _recipeConfigService.SaveCurrentRecipeAsync();
             if (success)
                 Growl.Success("配方保存成功");

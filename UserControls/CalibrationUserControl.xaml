@@ -269,27 +269,29 @@
                                         <TextBlock Text="测量值:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
                                         <hc:NumericUpDown Value="{Binding LeastSquaresMeasuredValue}" Width="{StaticResource FormButtonWidth}" Margin="0,0,10,0" DecimalPlaces="3"/>
                                         <Button Content="添加" Command="{Binding AddLeastSquaresCalibrationPointCommand}" Style="{StaticResource ButtonPrimary}" Width="60" Height="28"/>
+                                        <Button Content="删除" Command="{Binding RemoveLeastSquaresCalibrationPointCommand}" CommandParameter="{Binding SelectedLeastSquaresCalibrationPoint}" Style="{StaticResource ButtonDanger}" Width="60" Height="28" Margin="8,0,0,0"/>
                                     </StackPanel>
 
                                     <DataGrid Grid.Row="1" ItemsSource="{Binding LeastSquaresCalibrationPoints}"
+                                             SelectedItem="{Binding SelectedLeastSquaresCalibrationPoint, Mode=TwoWay}"
+                                             SelectionUnit="FullRow"
                                              AutoGenerateColumns="False" CanUserAddRows="False"
                                              HeadersVisibility="Column" Margin="0,0,0,8"
                                              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                              MinHeight="120" MaxHeight="250"
                                              Background="{StaticResource BackgroundColor}"
                                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <DataGrid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="删除"
+                                                          Command="{Binding RemoveLeastSquaresCalibrationPointCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            </ContextMenu>
+                                        </DataGrid.ContextMenu>
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="40" IsReadOnly="True"/>
                                             <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue, StringFormat=F3}" Width="*"/>
                                             <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue, StringFormat=F3}" Width="*"/>
-                                            <DataGridTemplateColumn Header="" Width="60">
-                                                <DataGridTemplateColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <Button Content="删除" Command="{Binding DataContext.RemoveLeastSquaresCalibrationPointCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                               CommandParameter="{Binding}" Style="{StaticResource ButtonDanger.Small}" />
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.CellTemplate>
-                                            </DataGridTemplateColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
 
@@ -317,27 +319,29 @@
                                         <TextBlock Text="测量值:" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{DynamicResource PrimaryTextBrush}"/>
                                         <hc:NumericUpDown Value="{Binding LinearRegressionMeasuredValue}" Width="{StaticResource FormButtonWidth}" Margin="0,0,10,0" DecimalPlaces="3"/>
                                         <Button Content="添加" Command="{Binding AddLinearRegressionCalibrationPointCommand}" Style="{StaticResource ButtonPrimary}" Width="60" Height="28"/>
+                                        <Button Content="删除" Command="{Binding RemoveLinearRegressionCalibrationPointCommand}" CommandParameter="{Binding SelectedLinearRegressionCalibrationPoint}" Style="{StaticResource ButtonDanger}" Width="60" Height="28" Margin="8,0,0,0"/>
                                     </StackPanel>
 
                                     <DataGrid Grid.Row="1" ItemsSource="{Binding LinearRegressionCalibrationPoints}"
+                                             SelectedItem="{Binding SelectedLinearRegressionCalibrationPoint, Mode=TwoWay}"
+                                             SelectionUnit="FullRow"
                                              AutoGenerateColumns="False" CanUserAddRows="False"
                                              HeadersVisibility="Column" Margin="0,0,0,8"
                                              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                                              MinHeight="120" MaxHeight="250"
                                              Background="{StaticResource BackgroundColor}"
                                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <DataGrid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="删除"
+                                                          Command="{Binding RemoveLinearRegressionCalibrationPointCommand}"
+                                                          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            </ContextMenu>
+                                        </DataGrid.ContextMenu>
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="40" IsReadOnly="True"/>
                                             <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue, StringFormat=F3}" Width="*"/>
                                             <DataGridTextColumn Header="测量值" Binding="{Binding MeasuredValue, StringFormat=F3}" Width="*"/>
-                                            <DataGridTemplateColumn Header="" Width="60">
-                                                <DataGridTemplateColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <Button Content="删除" Command="{Binding DataContext.RemoveLinearRegressionCalibrationPointCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                               CommandParameter="{Binding}" Style="{StaticResource ButtonDanger}" Width="50" Height="22" Padding="0" FontSize="11"/>
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.CellTemplate>
-                                            </DataGridTemplateColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
 
@@ -362,23 +366,26 @@
                                         <TextBlock Text="{Binding CalibrationHistory.Count, StringFormat='({0}条)'}" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="6,0,0,0" VerticalAlignment="Center"/>
                                         <Button Content="回用" Command="{Binding ApplySelectedCalibrationHistoryCommand}" Style="{StaticResource ButtonWarning}" Width="50" Height="24" FontSize="11" Margin="12,0,0,0"/>
                                         <Button Content="刷新" Command="{Binding RefreshCalibrationHistoryCommand}" Style="{StaticResource ButtonPrimary}" Width="50" Height="24" FontSize="11" Margin="8,0,0,0"/>
+                                        <Button Content="删除" Command="{Binding RemoveSelectedCalibrationHistoryCommand}" Style="{StaticResource ButtonDanger}" Width="50" Height="24" FontSize="11" Margin="8,0,0,0"/>
                                     </StackPanel>
 
                                     <DataGrid Grid.Row="1" ItemsSource="{Binding CalibrationHistory}"
                                              SelectedItem="{Binding SelectedCalibrationHistory, Mode=TwoWay}"
+                                             SelectionUnit="FullRow"
                                              AutoGenerateColumns="False" IsReadOnly="True"
                                              BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                                             MinHeight="100" MaxHeight="220"
+                                             MinHeight="100" MaxHeight="350"
                                              Background="{StaticResource BackgroundColor}"
                                              ScrollViewer.VerticalScrollBarVisibility="Auto">
                                         <DataGrid.ContextMenu>
                                             <ContextMenu>
                                                 <MenuItem Header="回用" Command="{Binding ApplySelectedCalibrationHistoryCommand}" />
+                                                <MenuItem Header="删除" Command="{Binding RemoveSelectedCalibrationHistoryCommand}" />
                                                 <MenuItem Header="刷新" Command="{Binding RefreshCalibrationHistoryCommand}" />
                                             </ContextMenu>
                                         </DataGrid.ContextMenu>
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Header="时间" Binding="{Binding CalibrationTime, StringFormat='MM-dd HH:mm'}" Width="100"/>
+                                            <DataGridTextColumn Header="时间" Binding="{Binding CalibrationTime, StringFormat='yyyy-MM-dd HH:mm'}" Width="150"/>
                                             <DataGridTextColumn Header="方式" Binding="{Binding MethodName}" Width="90"/>
                                             <DataGridTextColumn Header="A" Binding="{Binding CoefficientA, StringFormat=F4}" Width="*"/>
                                             <DataGridTextColumn Header="B" Binding="{Binding CoefficientB, StringFormat=F4}" Width="*"/>

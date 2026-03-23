@@ -15,7 +15,7 @@
         <!-- 顶部工具栏 -->
         <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
             <Grid>
-      
+
                 <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveRecipeCommand}"/>
             </Grid>
         </Border>
@@ -24,36 +24,33 @@
         <Grid Grid.Row="1" >
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                   
+
                     <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="0"  Padding="20,15" VerticalAlignment="Top" 
                             Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <StackPanel>
-
-													
-
-													<StackPanel Margin="0,0,0,20">
-														<TextBlock Text="采集设置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
+                            <StackPanel Margin="0,0,0,20">
+                                <TextBlock Text="采集设置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
 																			 Foreground="{DynamicResource SuccessBrush}"/>
 
-														<Grid>
-															<Grid.ColumnDefinitions>
-																<ColumnDefinition Width="90"/>
-																<ColumnDefinition Width="*"/>
-															</Grid.ColumnDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
 
-															<TextBlock Grid.Column="0" Text="采集速度：" VerticalAlignment="Center"/>
-															<StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-																<hc:NumericUpDown Value="{Binding CurrentRecipe.AcquisitionDelayMs}"
+                                    <TextBlock Grid.Column="0" Text="采集速度：" VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <hc:NumericUpDown Value="{Binding CurrentRecipe.OtherSettings.AcquisitionDelayMs}"
 																									Minimum="1" Maximum="10000"
 																									Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"/>
-																<TextBlock Text="ms" Margin="10,0,0,0" VerticalAlignment="Center"
+                                        <TextBlock Text="ms" Margin="10,0,0,0" VerticalAlignment="Center"
 																					 Foreground="{DynamicResource SecondaryTextBrush}"/>
-															</StackPanel>
-														</Grid>
-													</StackPanel>
-													<Separator Margin="0,5,0,15"/>
-													<!-- 工步配置 -->
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                            <Separator Margin="0,5,0,15"/>
+                            <!-- 工步配置 -->
                             <TextBlock Text="工步配置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
                                        Foreground="{DynamicResource PrimaryBrush}"/>
 
@@ -69,7 +66,7 @@
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="分步模式：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                 <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                    <ToggleButton IsChecked="{Binding CurrentRecipe.EnableStepMode}"
+                                    <ToggleButton IsChecked="{Binding CurrentRecipe.OtherSettings.EnableStepMode}"
                                                   Style="{StaticResource ToggleButtonSwitch}" VerticalAlignment="Center"/>
                                     <TextBlock Text="启用后按工步分步采集" FontSize="11" Margin="10,0,0,0"
                                                Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
@@ -77,10 +74,10 @@
 
                                 <TextBlock Grid.Row="1" Grid.Column="0" Text="总工步数：" VerticalAlignment="Center"/>
                                 <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
-                                                  Value="{Binding CurrentRecipe.TotalSteps}"
+                                                  Value="{Binding CurrentRecipe.OtherSettings.TotalSteps}"
                                                   Minimum="1" Maximum="99"
                                                   Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
-                                                  IsEnabled="{Binding CurrentRecipe.EnableStepMode}"/>
+                                                  IsEnabled="{Binding CurrentRecipe.OtherSettings.EnableStepMode}"/>
                             </Grid>
 
                             <Separator Margin="0,5,0,15"/>
@@ -90,119 +87,119 @@
                                        Foreground="{DynamicResource WarningBrush}"/>
 
                             <Grid Margin="0,0,0,10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="90"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="标注大小：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                            <hc:NumericUpDown Grid.Row="0" Grid.Column="1"
-                                              Value="{Binding CurrentRecipe.AnnotationSize}"
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="标注大小：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <hc:NumericUpDown Grid.Row="0" Grid.Column="1"
+                                              Value="{Binding CurrentRecipe.OtherSettings.AnnotationSize}"
                                               Minimum="16" Maximum="80"
                                               Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="标注形状：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                            <ComboBox Grid.Row="1" Grid.Column="1"
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="标注形状：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <ComboBox Grid.Row="1" Grid.Column="1"
                                       Style="{StaticResource ComboBoxExtend}"
                                       ItemsSource="{Binding Source={StaticResource AnnotationShapeValues}}"
-                                      SelectedItem="{Binding CurrentRecipe.AnnotationShape}"
+                                      SelectedItem="{Binding CurrentRecipe.OtherSettings.AnnotationShape}"
                                       Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="显示内容：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                            <ComboBox Grid.Row="2" Grid.Column="1"
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="显示内容：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <ComboBox Grid.Row="2" Grid.Column="1"
                                       Style="{StaticResource ComboBoxExtend}"
                                       ItemsSource="{Binding Source={StaticResource AnnotationDisplayFormatValues}}"
-                                      SelectedItem="{Binding CurrentRecipe.AnnotationDisplayFormat}"
+                                      SelectedItem="{Binding CurrentRecipe.OtherSettings.AnnotationDisplayFormat}"
                                       Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                            <!-- OK颜色 -->
-                            <TextBlock Grid.Row="3" Grid.Column="0" Text="OK颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                <Border Background="{Binding CurrentRecipe.OkBrush}" Width="40" Height="24" CornerRadius="3"
+                                <!-- OK颜色 -->
+                                <TextBlock Grid.Row="3" Grid.Column="0" Text="OK颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Border Background="{Binding CurrentRecipe.OtherSettings.OkBrush}" Width="40" Height="24" CornerRadius="3"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                <ToggleButton x:Name="OkColorToggle" Content="选择颜色"
+                                    <ToggleButton x:Name="OkColorToggle" Content="选择颜色"
                                               Padding="8,4"/>
-                                <Popup IsOpen="{Binding IsChecked, ElementName=OkColorToggle}" StaysOpen="False"
-                                       PlacementTarget="{Binding ElementName=OkColorToggle}" Placement="Bottom">
-                                    <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                            BorderThickness="1" CornerRadius="5" Padding="8">
-                                        <hc:ColorPicker SelectedBrush="{Binding CurrentRecipe.OkBrush, Mode=TwoWay}"
-                                                        SelectedColorChanged="ColorPicker_SelectedColorChanged"
-                                                        Canceled="ColorPicker_Canceled"/>
-                                    </Border>
-                                </Popup>
-                            </StackPanel>
+                                    <Popup IsOpen="{Binding IsChecked, ElementName=OkColorToggle}" StaysOpen="False"
+                                       PlacementTarget="{Binding ElementName=OkColorToggle}" Placement="Bottom"
+                                       Closed="ColorPopup_Closed">
+                                        <hc:ColorPicker Tag="Ok"
+                                                    Width="280"
+                                                    Loaded="ColorPicker_Loaded"
+                                                    Confirmed="ColorPicker_Confirmed"
+                                                    Canceled="ColorPicker_Canceled"/>
+                                    </Popup>
+                                </StackPanel>
 
-                            <!-- NG颜色 -->
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="NG颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                <Border Background="{Binding CurrentRecipe.NgBrush}" Width="40" Height="24" CornerRadius="3"
+                                <!-- NG颜色 -->
+                                <TextBlock Grid.Row="4" Grid.Column="0" Text="NG颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Border Background="{Binding CurrentRecipe.OtherSettings.NgBrush}" Width="40" Height="24" CornerRadius="3"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                <ToggleButton x:Name="NgColorToggle" Content="选择颜色"
+                                    <ToggleButton x:Name="NgColorToggle" Content="选择颜色"
                                               Padding="8,4"/>
-                                <Popup IsOpen="{Binding IsChecked, ElementName=NgColorToggle}" StaysOpen="False"
-                                       PlacementTarget="{Binding ElementName=NgColorToggle}" Placement="Bottom">
-                                    <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                            BorderThickness="1" CornerRadius="5" Padding="8">
-                                        <hc:ColorPicker SelectedBrush="{Binding CurrentRecipe.NgBrush, Mode=TwoWay}"
-                                                        SelectedColorChanged="ColorPicker_SelectedColorChanged"
-                                                        Canceled="ColorPicker_Canceled"/>
-                                    </Border>
-                                </Popup>
-                            </StackPanel>
+                                    <Popup IsOpen="{Binding IsChecked, ElementName=NgColorToggle}" StaysOpen="False"
+                                       PlacementTarget="{Binding ElementName=NgColorToggle}" Placement="Bottom"
+                                       Closed="ColorPopup_Closed">
+                                        <hc:ColorPicker Tag="Ng"
+                                                    Width="280"
+                                                    Loaded="ColorPicker_Loaded"
+                                                    Confirmed="ColorPicker_Confirmed"
+                                                    Canceled="ColorPicker_Canceled"/>
+                                    </Popup>
+                                </StackPanel>
 
-                            <!-- 默认颜色（未测量） -->
-                            <TextBlock Grid.Row="5" Grid.Column="0" Text="默认颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                            <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                <Border Background="{Binding CurrentRecipe.DefaultBrush}" Width="40" Height="24" CornerRadius="3"
+                                <!-- 默认颜色（未测量） -->
+                                <TextBlock Grid.Row="5" Grid.Column="0" Text="默认颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+                                    <Border Background="{Binding CurrentRecipe.OtherSettings.DefaultBrush}" Width="40" Height="24" CornerRadius="3"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                <ToggleButton x:Name="DefaultColorToggle" Content="选择颜色"
+                                    <ToggleButton x:Name="DefaultColorToggle" Content="选择颜色"
                                               Padding="8,4"/>
-                                <Popup IsOpen="{Binding IsChecked, ElementName=DefaultColorToggle}" StaysOpen="False"
-                                       PlacementTarget="{Binding ElementName=DefaultColorToggle}" Placement="Bottom">
-                                    <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                            BorderThickness="1" CornerRadius="5" Padding="8">
-                                        <hc:ColorPicker SelectedBrush="{Binding CurrentRecipe.DefaultBrush, Mode=TwoWay}"
-                                                        SelectedColorChanged="ColorPicker_SelectedColorChanged"
-                                                        Canceled="ColorPicker_Canceled"/>
-                                    </Border>
-                                </Popup>
-                            </StackPanel>
+                                    <Popup IsOpen="{Binding IsChecked, ElementName=DefaultColorToggle}" StaysOpen="False"
+                                       PlacementTarget="{Binding ElementName=DefaultColorToggle}" Placement="Bottom"
+                                       Closed="ColorPopup_Closed">
+                                        <hc:ColorPicker Tag="Default"
+                                                    Width="280"
+                                                    Loaded="ColorPicker_Loaded"
+                                                    Confirmed="ColorPicker_Confirmed"
+                                                    Canceled="ColorPicker_Canceled"/>
+                                    </Popup>
+                                </StackPanel>
 
-                            <!-- 字体大小 -->
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="字体大小：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                            <hc:NumericUpDown Grid.Row="6" Grid.Column="1"
-                                              Value="{Binding CurrentRecipe.AnnotationFontSize}"
+                                <!-- 字体大小 -->
+                                <TextBlock Grid.Row="6" Grid.Column="0" Text="字体大小：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                <hc:NumericUpDown Grid.Row="6" Grid.Column="1"
+                                              Value="{Binding CurrentRecipe.OtherSettings.AnnotationFontSize}"
                                               Minimum="6" Maximum="36"
                                               Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                            <!-- 文字颜色 -->
-                            <TextBlock Grid.Row="7" Grid.Column="0" Text="文字颜色：" VerticalAlignment="Center"/>
-                            <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal">
-                                <Border Background="{Binding CurrentRecipe.AnnotationTextBrush}" Width="40" Height="24" CornerRadius="3"
+                                <!-- 文字颜色 -->
+                                <TextBlock Grid.Row="7" Grid.Column="0" Text="文字颜色：" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal">
+                                    <Border Background="{Binding CurrentRecipe.OtherSettings.AnnotationTextBrush}" Width="40" Height="24" CornerRadius="3"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                <ToggleButton x:Name="AnnotationTextColorToggle" Content="选择颜色"
+                                    <ToggleButton x:Name="AnnotationTextColorToggle" Content="选择颜色"
                                               Padding="8,4"/>
-                                <Popup IsOpen="{Binding IsChecked, ElementName=AnnotationTextColorToggle}" StaysOpen="False"
-                                       PlacementTarget="{Binding ElementName=AnnotationTextColorToggle}" Placement="Bottom">
-                                    <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                                            BorderThickness="1" CornerRadius="5" Padding="8">
-                                        <hc:ColorPicker SelectedBrush="{Binding CurrentRecipe.AnnotationTextBrush, Mode=TwoWay}"
-                                                        SelectedColorChanged="ColorPicker_SelectedColorChanged"
-                                                        Canceled="ColorPicker_Canceled"/>
-                                    </Border>
-                                </Popup>
-                            </StackPanel>
+                                    <Popup IsOpen="{Binding IsChecked, ElementName=AnnotationTextColorToggle}" StaysOpen="False"
+                                       PlacementTarget="{Binding ElementName=AnnotationTextColorToggle}" Placement="Bottom"
+                                       Closed="ColorPopup_Closed">
+                                        <hc:ColorPicker Tag="AnnotationText"
+                                                    Width="280"
+                                                    Loaded="ColorPicker_Loaded"
+                                                    Confirmed="ColorPicker_Confirmed"
+                                                    Canceled="ColorPicker_Canceled"/>
+                                    </Popup>
+                                </StackPanel>
                             </Grid>
 
                         </StackPanel>

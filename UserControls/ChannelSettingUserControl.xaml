@@ -42,10 +42,10 @@
                             <Grid>
                                 <!--<TextBlock Text="产品图片 / 点位标注" FontSize="13" FontWeight="Bold" VerticalAlignment="Center"/>-->
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                    <!--<Button Command="{Binding ImportProductImageCommand}" 
+                                    <Button Command="{Binding ImportProductImageCommand}" 
                                             Content="导入图片"
                                             Style="{StaticResource ButtonPrimary}"
-                                            Padding="12,5" Margin="0,0,8,0"/>-->
+                                            Padding="12,5" Margin="0,0,8,0"/>
                                     <Button Command="{Binding DeleteAnnotationCommand}" 
                                             Content="删除标注"
                                             Style="{StaticResource ButtonDanger}"
@@ -332,7 +332,7 @@
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="工步编号：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                     <hc:NumericUpDown Grid.Row="0" Grid.Column="1"
                                                   Value="{Binding EditingChannel.StepNumber}"
-                                                  Minimum="1" Maximum="{Binding CurrentRecipe.TotalSteps, FallbackValue=99}"
+                                                  Minimum="1" Maximum="{Binding CurrentRecipe.OtherSettings.TotalSteps, FallbackValue=99}"
                                                   Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="工步名称：" VerticalAlignment="Center"/>

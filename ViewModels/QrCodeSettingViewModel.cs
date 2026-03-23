@@ -30,7 +30,8 @@ namespace MeasurementSoftware.ViewModels
         public bool IsEthernetVisible => Config?.IsEnabled == true && Config?.SourceType == QrCodeSourceType.Ethernet;
         public bool IsPlcRegisterVisible => Config?.IsEnabled == true && Config?.SourceType == QrCodeSourceType.PlcRegister;
         public bool IsBatchModeVisible => Config?.IsEnabled == false;
-
+        private readonly IRecipeConfigService _recipeConfigService;
+        public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
         // 以太网协议选项
         public Array ProtocolList => Enum.GetValues<NetworkProtocol>();
         // 数据源类型选项
@@ -50,7 +51,7 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         public ObservableCollection<string> AvailableComPorts { get; } = new();
 
-        public QrCodeSettingViewModel(ILog log, IQrCodeConfigService qrCodeConfigService, IDeviceConfigService deviceConfigService)
+        public QrCodeSettingViewModel(ILog log, IQrCodeConfigService qrCodeConfigService, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService)
         {
             _log = log;
             _qrCodeConfigService = qrCodeConfigService;
@@ -73,6 +74,7 @@ namespace MeasurementSoftware.ViewModels
             }
             Config = _qrCodeConfigService.QrCodeConfig;
             RefreshComPorts();
+            _recipeConfigService = recipeConfigService;
         }
 
         /// <summary>
@@ -227,6 +229,11 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         private async Task SaveConfiguration()
         {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("请先选择一个配方");
+                return;
+            }
             try
             {
                 // 验证配置

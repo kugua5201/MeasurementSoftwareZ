@@ -15,12 +15,8 @@ namespace MeasurementSoftware.Services
             _log = log;
         }
 
-        /// <summary>
-        /// 多点校准（最小二乘法线性拟合）
-        /// </summary>
-        public async Task<(bool Success, double CoefficientA, double CoefficientB)> CalibrateLeastSquaresAsync(
-            MeasurementChannel channel,
-            List<(double StandardValue, double MeasuredValue)> calibrationPoints)
+
+        public async Task<(bool Success, double CoefficientA, double CoefficientB)> CalibrateLeastSquaresAsync(MeasurementChannel channel, List<(double StandardValue, double MeasuredValue)> calibrationPoints)
         {
             try
             {
@@ -30,8 +26,23 @@ namespace MeasurementSoftware.Services
                     return (false, 1.0, 0.0);
                 }
 
-                // 使用最小二乘法计算线性系数
-                // y = Ax + B，其中 x 是测量值，y 是标准值
+                // 使用一元最小二乘法拟合直线：y = A * x + B
+                // 其中：
+                // x = MeasuredValue（测量值）
+                // y = StandardValue（标准值）
+                // n = 校准点数量
+                // Σx = sumX
+                // Σy = sumY
+                // Σxy = sumXY
+                // Σx² = sumX2
+                //
+                // 斜率公式：
+                // A = (n * Σxy - Σx * Σy) / (n * Σx² - (Σx)²)
+                //
+                // 截距公式：
+                // B = (Σy - A * Σx) / n
+                //
+                // 说明：这里是一元线性最小二乘拟合，不是多元线性回归。
                 var n = calibrationPoints.Count;
                 double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
@@ -96,12 +107,8 @@ namespace MeasurementSoftware.Services
             }
         }
 
-        /// <summary>
-        /// 线性回归校准
-        /// </summary>
-        public async Task<(bool Success, double CoefficientA, double CoefficientB)> CalibrateLinearRegressionAsync(
-            MeasurementChannel channel,
-            List<(double StandardValue, double MeasuredValue)> calibrationPoints)
+
+        public async Task<(bool Success, double CoefficientA, double CoefficientB)> CalibrateLinearRegressionAsync(MeasurementChannel channel, List<(double StandardValue, double MeasuredValue)> calibrationPoints)
         {
             try
             {
@@ -111,6 +118,21 @@ namespace MeasurementSoftware.Services
                     return (false, 1.0, 0.0);
                 }
 
+                // 使用一元线性回归拟合直线：y = A * x + B
+                // 其中：
+                // x = MeasuredValue（测量值）
+                // y = StandardValue（标准值）
+                // x̄ = meanX = Σx / n
+                // ȳ = meanY = Σy / n
+                //
+                // 斜率公式：
+                // A = Σ[(xi - x̄) * (yi - ȳ)] / Σ[(xi - x̄)²]
+                //
+                // 截距公式：
+                // B = ȳ - A * x̄
+                //
+                // 当自变量只有一个 x 时，一元线性回归与一元最小二乘法求得的 A、B 本质一致。
+                // 说明：这里不是多元线性回归；多元线性回归应为 y = b0 + b1*x1 + b2*x2 + ... + bk*xk。
                 var measuredValues = calibrationPoints.Select(p => p.MeasuredValue).ToList();
                 var standardValues = calibrationPoints.Select(p => p.StandardValue).ToList();
                 var meanX = measuredValues.Average();
@@ -174,17 +196,16 @@ namespace MeasurementSoftware.Services
             }
         }
 
-        /// <summary>
-        /// 单点校准（简单偏移）
-        /// </summary>
-        public async Task<(bool Success, double CoefficientB)> CalibrateSinglePointAsync(
-            MeasurementChannel channel,
-            double standardValue,
-            double measuredValue)
+
+        public async Task<(bool Success, double CoefficientB)> CalibrateSinglePointAsync(MeasurementChannel channel, double standardValue, double measuredValue)
         {
             try
             {
-                // 单点校准：y = x + B，其中 B = 标准值 - 测量值
+                // 单点校准公式：y = x + B
+                // 其中：
+                // x = MeasuredValue（测量值）
+                // y = StandardValue（标准值）
+                // B = y - x = 标准值 - 测量值
                 var coefficientB = standardValue - measuredValue;
 
                 channel.CalibrationMode = CalibrationMode.SinglePoint;
@@ -236,24 +257,7 @@ namespace MeasurementSoftware.Services
             return await Task.FromResult(channel.CalibrationHistory.OrderByDescending(r => r.CalibrationTime).ToList());
         }
 
-        public bool CheckCalibrationValidity(MeasurementChannel channel)
-        {
-            if (!channel.RequiresCalibration)
-                return true;
 
-            if (!channel.LastCalibrationTime.HasValue)
-                return false;
-
-            var expiryDate = channel.LastCalibrationTime.Value.AddDays(channel.CalibrationValidityDays);
-            var isValid = DateTime.Now <= expiryDate;
-
-            if (!isValid)
-            {
-                _log.Warn($"通道 {channel.ChannelName} 校准已过期");
-            }
-
-            return isValid;
-        }
 
         public double ApplyCalibration(MeasurementChannel channel, double rawValue)
         {

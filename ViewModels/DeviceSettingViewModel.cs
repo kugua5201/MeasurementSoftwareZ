@@ -56,6 +56,8 @@ namespace MeasurementSoftware.ViewModels
         private bool _isViewActive;
         private bool _suppressDeviceEnabledHandling;
 
+        public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
+
         /// <summary>
         /// 可用串口列表（供 Modbus RTU 模板绑定）
         /// </summary>
@@ -324,6 +326,11 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         private async Task AddDevice()
         {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("请先选择一个配方");
+                return;
+            }
             await ExecuteWithLoadingAsync("正在添加设备并初始化连接...", async () =>
             {
                 long newDeviceId = Devices.Count > 0 ? Devices.Max(d => d.DeviceId) + 1 : 1;
@@ -446,6 +453,11 @@ namespace MeasurementSoftware.ViewModels
         [RelayCommand]
         private async Task SaveConfiguration()
         {
+            if (CurrentRecipe == null)
+            {
+                Growl.Warning("请先选择一个配方");
+                return;
+            }
             var selectedDeviceId = SelectedDevice?.DeviceId;
 
             await ExecuteWithLoadingAsync("正在保存设备配置...", async () =>

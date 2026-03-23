@@ -39,10 +39,7 @@ namespace MeasurementSoftware.Services
         /// </summary>
         Task<List<CalibrationRecord>> GetCalibrationHistoryAsync(MeasurementChannel channel);
 
-        /// <summary>
-        /// 检查校准有效期
-        /// </summary>
-        bool CheckCalibrationValidity(MeasurementChannel channel);
+   
 
         /// <summary>
         /// 应用校准到测量值

@@ -48,8 +48,8 @@ namespace MeasurementSoftware.ViewModels
                 var enabledCount = CurrentRecipe.Channels?.Count(c => c.IsEnabled) ?? 0;
                 var deviceCount = CurrentRecipe.Devices?.Count ?? 0;
                 return $"通道: {enabledCount}/{channelCount} 启用  |  设备: {deviceCount} 个  |  " +
-                       $"创建: {CurrentRecipe.CreateTime:yyyy-MM-dd HH:mm}  |  " +
-                       $"修改: {CurrentRecipe.ModifyTime:yyyy-MM-dd HH:mm}";
+                       $"创建: {CurrentRecipe.BasicInfo.CreateTime:yyyy-MM-dd HH:mm}  |  " +
+                       $"修改: {CurrentRecipe.BasicInfo.ModifyTime:yyyy-MM-dd HH:mm}";
             }
         }
 
@@ -100,17 +100,20 @@ namespace MeasurementSoftware.ViewModels
 
             var newRecipe = new MeasurementRecipe
             {
-                RecipeId = Guid.NewGuid().ToString(),
-                RecipeName = $"新配方_{DateTime.Now:yyyyMMddHHmmss}",
-                CreateTime = DateTime.Now,
-                ModifyTime = DateTime.Now,
+                BasicInfo = new RecipeBasicInfoConfig
+                {
+                    RecipeId = Guid.NewGuid().ToString(),
+                    RecipeName = $"新配方_{DateTime.Now:yyyyMMddHHmmss}",
+                    CreateTime = DateTime.Now,
+                    ModifyTime = DateTime.Now
+                },
                 Devices = new ObservableCollection<PlcDevice>(),
                 QrCodeConfig = new QrCodeConfig()
             };
             _recipeConfigService.OpenRecipe(newRecipe, string.Empty);
             NotifyRecipeChanged();
             Growl.Success("已创建新配方，请在各配置页面进行设置");
-            _log.Info($"新建配方: {newRecipe.RecipeName}");
+            _log.Info($"新建配方: {newRecipe.BasicInfo.RecipeName}");
         }
 
         /// <summary>
@@ -161,8 +164,8 @@ namespace MeasurementSoftware.ViewModels
                             _userSettingsService.SaveSettings();
 
                             NotifyRecipeChanged();
-                            Growl.Success($"配方 {recipe.RecipeName} 加载成功");
-                            _log.Info($"打开配方: {recipe.RecipeName}");
+                            Growl.Success($"配方 {recipe.BasicInfo.RecipeName} 加载成功");
+                            _log.Info($"打开配方: {recipe.BasicInfo.RecipeName}");
                         }
                         else
                         {
@@ -220,8 +223,8 @@ namespace MeasurementSoftware.ViewModels
                 if (!string.IsNullOrEmpty(CurrentRecipePath))
                 {
                     // 配方名称与文件名保持一致
-                    CurrentRecipe.RecipeName = Path.GetFileNameWithoutExtension(CurrentRecipePath);
-                    CurrentRecipe.ModifyTime = DateTime.Now;
+                    CurrentRecipe.BasicInfo.RecipeName = Path.GetFileNameWithoutExtension(CurrentRecipePath);
+                    CurrentRecipe.BasicInfo.ModifyTime = DateTime.Now;
                     var success = await _recipeConfigService.SaveCurrentRecipeAsync();
                     if (success)
                     {
@@ -231,7 +234,7 @@ namespace MeasurementSoftware.ViewModels
 
                         NotifyRecipeChanged();
                         Growl.Success("配方保存成功");
-                        _log.Info($"配方 {CurrentRecipe.RecipeName} 保存成功");
+                        _log.Info($"配方 {CurrentRecipe.BasicInfo.RecipeName} 保存成功");
                     }
                     else
                     {
@@ -264,7 +267,7 @@ namespace MeasurementSoftware.ViewModels
                 {
                     Filter = "配方文件 (*.json)|*.json|所有文件 (*.*)|*.*",
                     Title = "另存为配方",
-                    FileName = CurrentRecipe?.RecipeName + ".json"
+                    FileName = CurrentRecipe?.BasicInfo.RecipeName + ".json"
                 };
 
                 var lastRecipeDirectory = Path.GetDirectoryName(_userSettingsService.Settings.LastRecipePath);
@@ -277,8 +280,11 @@ namespace MeasurementSoftware.ViewModels
                 if (dialog.ShowDialog() == true)
                 {
                     // 配方名称与文件名保持一致
-                    CurrentRecipe?.RecipeName = Path.GetFileNameWithoutExtension(dialog.FileName);
-                    CurrentRecipe?.ModifyTime = DateTime.Now;
+                    if (CurrentRecipe != null)
+                    {
+                        CurrentRecipe.BasicInfo.RecipeName = Path.GetFileNameWithoutExtension(dialog.FileName);
+                        CurrentRecipe.BasicInfo.ModifyTime = DateTime.Now;
+                    }
                     _recipeConfigService.UpdateRecipePath(dialog.FileName);
                     var success = await _recipeConfigService.SaveCurrentRecipeAsync();
                     if (success)

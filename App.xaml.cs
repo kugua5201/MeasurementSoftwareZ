@@ -40,7 +40,6 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<IMesService, MesService>();
             builder.RegisterSingleton<IDataRecordService, DataRecordService>();
             builder.RegisterSingleton<ICalibrationService, CalibrationService>();
-            builder.RegisterSingleton<IMeasurementService, MeasurementService>();
             builder.RegisterSingleton<ISpcService, SpcService>();
             builder.RegisterSingleton<IPlcDeviceRuntimeFactory, PlcDeviceRuntimeFactory>();
             builder.RegisterSingleton<IPlcDeviceRuntimeService, PlcDeviceRuntimeService>();
@@ -122,7 +121,7 @@ namespace MeasurementSoftware
                         // 初始化配方中的PLC设备连接
                         await appConfig.LoadDevicesAsync();
 
-                        log.Info($"已自动加载配方: {recipe.RecipeName}（含 {appConfig.Devices.Count} 个设备）");
+                        log.Info($"已自动加载配方: {recipe.BasicInfo.RecipeName}（含 {appConfig.Devices.Count} 个设备）");
                     }
                 }
 
