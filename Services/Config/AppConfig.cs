@@ -26,6 +26,8 @@ namespace MeasurementSoftware.Services.Config
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
         }
 
+        public string LastSaveErrorMessage { get; private set; } = string.Empty;
+
         #region 设备配置
 
         private ObservableCollection<PlcDevice> _devices = [];
@@ -288,9 +290,19 @@ namespace MeasurementSoftware.Services.Config
         /// </summary>
         public async Task<bool> SaveCurrentRecipeAsync()
         {
+            LastSaveErrorMessage = string.Empty;
+
             if (CurrentRecipe == null)
             {
+                LastSaveErrorMessage = "没有打开的配方，无法保存";
                 _log.Warn("没有打开的配方，无法保存");
+                return false;
+            }
+
+            if (!CurrentRecipe.TryValidateStepConfiguration(out var validationError))
+            {
+                LastSaveErrorMessage = validationError;
+                _log.Warn($"保存配方前校验失败: {validationError}");
                 return false;
             }
 
@@ -318,6 +330,7 @@ namespace MeasurementSoftware.Services.Config
             }
             catch (Exception ex)
             {
+                LastSaveErrorMessage = ex.Message;
                 _log.Error($"保存配方失败: {ex.Message}");
                 return false;
             }

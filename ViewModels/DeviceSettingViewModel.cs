@@ -656,7 +656,7 @@ namespace MeasurementSoftware.ViewModels
                     var success = await _recipeConfigService.SaveCurrentRecipeAsync();
                     if (!success)
                     {
-                        Growl.Error("点位配置保存到配方失败");
+                        Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "点位配置保存到配方失败" : _recipeConfigService.LastSaveErrorMessage);
                         return;
                     }
 

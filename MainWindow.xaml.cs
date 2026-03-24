@@ -41,7 +41,7 @@ namespace MeasurementSoftware
 
             this.Loaded += MainWindow_Loaded;
             this.Closing += MainWindow_Closing;
-            this.StateChanged += MainWindow_StateChanged;
+            //this.StateChanged += MainWindow_StateChanged;
             this.Closed += MainWindow_Closed;
         }
 
@@ -81,18 +81,18 @@ namespace MeasurementSoftware
             RestoreSelectedMenuButton();
         }
 
-        private void MainWindow_StateChanged(object? sender, EventArgs e)
-        {
-            if (_isExitRequested)
-            {
-                return;
-            }
+        //private void MainWindow_StateChanged(object? sender, EventArgs e)
+        //{
+        //    if (_isExitRequested)
+        //    {
+        //        return;
+        //    }
 
-            if (WindowState == WindowState.Minimized)
-            {
-                HideToBackground();
-            }
-        }
+        //    if (WindowState == WindowState.Minimized)
+        //    {
+        //        HideToBackground();
+        //    }
+        //}
 
         private void MainWindow_Closed(object? sender, EventArgs e)
         {

@@ -269,7 +269,7 @@ namespace MeasurementSoftware.ViewModels
                             // 应用校准（线性 y = Ax + B）
                             var calibratedValue = channel.ApplyCalibration(rawValue.Value);
                             channel.UpdateMeasuredValue(calibratedValue);
-                            channel.CheckResult();
+                            //channel.CheckResult();
                         }
                     }
 
@@ -335,6 +335,7 @@ namespace MeasurementSoftware.ViewModels
                     ChannelName = c.ChannelName,
                     ChannelDescription = c.ChannelDescription,
                     ChannelType = c.ChannelType.ToString(),
+                    MeasurementType = c.MeasurementType,
                     DataSourceAddress = c.DataSourceAddress,
                     PlcDeviceName = c.PlcDeviceName,
                     DataPointName = c.DataPointName,
@@ -560,7 +561,7 @@ namespace MeasurementSoftware.ViewModels
             if (success)
                 Growl.Success("配方保存成功");
             else
-                Growl.Error("配方保存失败");
+                Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方保存失败" : _recipeConfigService.LastSaveErrorMessage);
         }
 
         [RelayCommand]

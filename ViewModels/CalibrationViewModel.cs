@@ -539,7 +539,7 @@ namespace MeasurementSoftware.ViewModels
                 }
                 else
                 {
-                    Growl.Error("配方文件保存失败");
+                    Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方文件保存失败" : _recipeConfigService.LastSaveErrorMessage);
                     _log.Warn("配方文件失败");
                 }
             }

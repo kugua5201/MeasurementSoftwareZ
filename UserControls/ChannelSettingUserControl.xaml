@@ -30,7 +30,7 @@
 
                 <!-- 左侧：产品图片 + 标注 -->
                 <Border x:Name="ImagePanel" Grid.Column="0" Background="{DynamicResource RegionBrush}" 
-                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5">
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="5" Padding="0"> 
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -66,18 +66,25 @@
 
                         <!-- 图片显示区（支持右键标注 + 标注可拖动） -->
                         <Grid Grid.Row="1" x:Name="ImageContainer" ClipToBounds="True">
+                            <Grid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="在此添加标注" Command="{Binding AddAnnotationAtPointCommand}"/>
+                                    <MenuItem Header="导入图片" Command="{Binding ImportProductImageCommand}"/>
+                                </ContextMenu>
+                            </Grid.ContextMenu>
                             <!-- 图片 + 同尺寸标注层叠加 -->
                             <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                
                                 <Image x:Name="ProductImage"
                                        Source="{Binding ProductImagePath, Converter={StaticResource StringToImageSourceConverter}}"
-                                       Stretch="Uniform"
+                                       Stretch="Uniform"  ContextMenu="{x:Null}"
                                        MouseRightButtonDown="ProductImage_MouseRightButtonDown">
-                                    <Image.ContextMenu>
+                                    <!--<Image.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="在此添加标注" Command="{Binding AddAnnotationAtPointCommand}"/>
                                             <MenuItem Header="导入图片" Command="{Binding ImportProductImageCommand}"/>
                                         </ContextMenu>
-                                    </Image.ContextMenu>
+                                    </Image.ContextMenu>-->
                                 </Image>
 
                                 <!-- 标注点叠加层：可拖动 -->
@@ -216,7 +223,8 @@
                                 <DataGridTextColumn Header="编号" Binding="{Binding ChannelNumber}" Width="50" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="通道名称" Binding="{Binding ChannelName}" Width="100" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="工步" Binding="{Binding StepNumber}" Width="50" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="类型" Binding="{Binding ChannelType}" Width="70" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="取值类型" Binding="{Binding ChannelType}" Width="110" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="测量类型" Binding="{Binding MeasurementType}" Width="110" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="PLC设备" Binding="{Binding PlcDeviceName}" Width="100" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="数据点位" Binding="{Binding DataPointName}" Width="100" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="点位地址" Binding="{Binding DataSourceAddress}" Width="100" IsReadOnly="True"/>
@@ -278,6 +286,7 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="通道编号：" VerticalAlignment="Center" Margin="0,0,0,8"/>
@@ -301,15 +310,22 @@
                                          Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
                                          hc:InfoElement.Placeholder="请输入通道说明"/>
 
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="通道类型：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="测量取值类型：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                     <ComboBox Grid.Row="3" Grid.Column="1"
                                           Style="{StaticResource ComboBoxExtend}"
                                           ItemsSource="{Binding ChannelTypes}"
                                           SelectedItem="{Binding EditingChannel.ChannelType}"
                                           Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="启用：" VerticalAlignment="Center"/>
-                                    <ToggleButton Grid.Row="4" Grid.Column="1" 
+                                     <TextBlock Grid.Row="4" Grid.Column="0" Text="测量类型：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                     <TextBox Grid.Row="4" Grid.Column="1"
+                                          Style="{StaticResource TextBoxExtend}"
+                                          Text="{Binding EditingChannel.MeasurementType, UpdateSourceTrigger=PropertyChanged}"
+                                          Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                          hc:InfoElement.Placeholder="例如：直径、跳动、多段跳动"/>
+
+                                     <TextBlock Grid.Row="5" Grid.Column="0" Text="启用：" VerticalAlignment="Center"/>
+                                     <ToggleButton Grid.Row="5" Grid.Column="1" 
                                               IsChecked="{Binding EditingChannel.IsEnabled}" 
                                               Style="{StaticResource ToggleButtonSwitch}" 
                                               HorizontalAlignment="Left"/>

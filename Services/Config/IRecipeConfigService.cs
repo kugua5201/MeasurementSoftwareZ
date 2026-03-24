@@ -9,6 +9,7 @@ namespace MeasurementSoftware.Services.Config
     {
         MeasurementRecipe? CurrentRecipe { get; }
         string CurrentRecipePath { get; }
+        string LastSaveErrorMessage { get; }
         void OpenRecipe(MeasurementRecipe recipe, string path);
         void CloseRecipe();
         void UpdateRecipePath(string path);

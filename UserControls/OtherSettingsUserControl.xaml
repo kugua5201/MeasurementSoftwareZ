@@ -36,50 +36,6 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="0" Padding="20,15" VerticalAlignment="Top" Margin="0,0,0,12">
-                        <StackPanel>
-                            <TextBlock Text="界面字体" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
-                                       Foreground="{DynamicResource PrimaryBrush}"/>
-
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="统一字体：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding AppFontFamilyName}" VerticalAlignment="Center" Margin="0,0,0,8"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"/>
-
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="字体大小：" VerticalAlignment="Center"/>
-                                <Slider Grid.Row="1" Grid.Column="1"
-                                        Minimum="10"
-                                        Maximum="24"
-                                        TickFrequency="1"
-                                        IsSnapToTickEnabled="True"
-                                        AutoToolTipPlacement="TopLeft"
-                                        AutoToolTipPrecision="0"
-                                        Value="{Binding AppFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        VerticalAlignment="Center"
-                                        Margin="0,0,12,0"/>
-                                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding AppFontSize, StringFormat={}{0:F0}px}"
-                                           VerticalAlignment="Center"
-                                           Foreground="{DynamicResource SecondaryTextBrush}"/>
-                            </Grid>
-
-                            <TextBlock Text="拖动后会立即同步到整个界面，标题、菜单和页面内容会按比例联动。"
-                                       Margin="0,12,0,0"
-                                       Foreground="{DynamicResource SecondaryTextBrush}"
-                                       TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="0"  Padding="20,15" VerticalAlignment="Top" Margin="0,0,0,12"
                             Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <StackPanel>
@@ -121,9 +77,8 @@
                                     <TextBox Style="{StaticResource TextBoxExtend}"
                                              Text="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.FileNamePattern, UpdateSourceTrigger=PropertyChanged}"
                                              Width="300" HorizontalAlignment="Left"
-                                             hc:InfoElement.Placeholder="例如：{RecipeName}"/>
-                                    <TextBlock Text="支持 {RecipeName}、{Time:yyyyMMdd_HHmmss} 占位符"
-                                               FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
+                                             hc:InfoElement.Placeholder="例如: {RecipeName}、{Time:yyyyMMdd_HHmmss} 占位符"/>
+                          
                                 </StackPanel>
 
                                 <StackPanel Style="{StaticResource SettingsRowPanelStyle}">

@@ -34,27 +34,6 @@
         /// 通道设置页面布局设置
         /// </summary>
         public ChannelSettingLayoutSettings ChannelSettingLayout { get; set; } = new();
-
-        /// <summary>
-        /// 应用外观设置
-        /// </summary>
-        public AppAppearanceSettings Appearance { get; set; } = new();
-    }
-
-    /// <summary>
-    /// 应用外观设置
-    /// </summary>
-    public class AppAppearanceSettings
-    {
-        /// <summary>
-        /// 统一字体名称
-        /// </summary>
-        public string FontFamily { get; set; } = "Microsoft YaHei UI";
-
-        /// <summary>
-        /// 基准字体大小
-        /// </summary>
-        public double FontSize { get; set; } = 14;
     }
 
     /// <summary>

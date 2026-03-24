@@ -2,10 +2,8 @@
 using CommunityToolkit.Mvvm.Input;
 using HandyControl.Controls;
 using MeasurementSoftware.Models;
-using MeasurementSoftware.Services.Appearance;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Logs;
-using MeasurementSoftware.Services.UserSetting;
 using System.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -19,7 +17,6 @@ namespace MeasurementSoftware.ViewModels
     {
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
-        private readonly IAppAppearanceService _appAppearanceService;
 
         [ObservableProperty]
         private AcquisitionCsvColumnDefinition? selectedAvailableCsvColumn;
@@ -27,20 +24,14 @@ namespace MeasurementSoftware.ViewModels
         [ObservableProperty]
         private AcquisitionCsvColumnConfig? selectedConfiguredCsvColumn;
 
-        [ObservableProperty]
-        private double appFontSize;
-
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
         public bool HasRecipe => CurrentRecipe != null;
         public ObservableCollection<AcquisitionCsvColumnDefinition> AvailableCsvColumns { get; } = [.. AcquisitionCsvColumnCatalog.All];
-        public string AppFontFamilyName => _appAppearanceService.CurrentFontFamily;
 
-        public OtherSettingsViewModel(ILog log, IRecipeConfigService recipeConfigService, IUserSettingsService userSettingsService, IAppAppearanceService appAppearanceService)
+        public OtherSettingsViewModel(ILog log, IRecipeConfigService recipeConfigService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
-            _appAppearanceService = appAppearanceService;
-            appFontSize = userSettingsService.Settings.Appearance.FontSize;
 
             if (_recipeConfigService is INotifyPropertyChanged npc)
             {
@@ -54,11 +45,6 @@ namespace MeasurementSoftware.ViewModels
                     }
                 };
             }
-        }
-
-        partial void OnAppFontSizeChanged(double value)
-        {
-            _appAppearanceService.UpdateFontSize(value);
         }
 
         public ObservableCollection<AcquisitionCsvColumnConfig> ConfiguredCsvColumns => CurrentRecipe?.OtherSettings.AcquisitionStorage.CsvColumns ?? [];
@@ -77,7 +63,7 @@ namespace MeasurementSoftware.ViewModels
             if (success)
                 Growl.Success("配方保存成功");
             else
-                Growl.Error("配方保存失败");
+                Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方保存失败" : _recipeConfigService.LastSaveErrorMessage);
         }
 
         [RelayCommand]

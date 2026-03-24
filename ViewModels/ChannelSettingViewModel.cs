@@ -144,7 +144,7 @@ namespace MeasurementSoftware.ViewModels
             if (success)
                 Growl.Success("配方保存成功");
             else
-                Growl.Error("配方保存失败");
+                Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方保存失败" : _recipeConfigService.LastSaveErrorMessage);
         }
 
         private void Channel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -241,6 +241,7 @@ namespace MeasurementSoftware.ViewModels
             {
                 ChannelNumber = CurrentRecipe.Channels.Count + 1,
                 ChannelName = $"通道{CurrentRecipe.Channels.Count + 1}",
+                MeasurementType = string.Empty,
                 IsEnabled = true,
                 RequiresCalibration = false,
                 StandardValue = 0,
@@ -286,6 +287,7 @@ namespace MeasurementSoftware.ViewModels
                 ChannelNumber = channel.ChannelNumber,
                 ChannelName = channel.ChannelName,
                 ChannelDescription = channel.ChannelDescription,
+                MeasurementType = channel.MeasurementType,
                 IsEnabled = channel.IsEnabled,
                 StandardValue = channel.StandardValue,
                 UpperTolerance = channel.UpperTolerance,
@@ -391,6 +393,26 @@ namespace MeasurementSoftware.ViewModels
             {
                 return;
             }
+            //如果启用工步测量，则需要检查已经启用的通道是否跟添加或者编辑的通道的工步练习，
+            if (CurrentRecipe.OtherSettings.EnableStepMode)
+            {
+                if (EditingChannel.IsEnabled)
+                {
+                    var channels = CurrentRecipe.Channels.Where(c => c.ChannelNumber != EditingChannel.ChannelNumber && c.IsEnabled).Select(c => c.StepNumber).ToList();
+                    int editChannelsStepNumber = EditingChannel.StepNumber;
+                    channels.Add(editChannelsStepNumber);
+                    var stepNumbers = channels.Distinct().OrderBy(n => n).ToList();
+                    // 判断是否连续
+                    bool isContinuous = stepNumbers.Zip(stepNumbers.Skip(1), (a, b) => b - a).All(diff => diff == 1);
+
+                    if (!isContinuous)
+                    {
+                        MessageBox.Show("启用通道的工步号不连续，请检查所有已启用通道的工步号设置！", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                }
+            }
+
 
             SyncChannelBindingState(EditingChannel);
 
@@ -403,6 +425,7 @@ namespace MeasurementSoftware.ViewModels
                     // 更新所有属性
                     originalChannel.ChannelName = EditingChannel.ChannelName;
                     originalChannel.ChannelDescription = EditingChannel.ChannelDescription;
+                    originalChannel.MeasurementType = EditingChannel.MeasurementType;
                     originalChannel.IsEnabled = EditingChannel.IsEnabled;
                     originalChannel.StandardValue = EditingChannel.StandardValue;
                     originalChannel.UpperTolerance = EditingChannel.UpperTolerance;

@@ -138,6 +138,11 @@ namespace MeasurementSoftware.Models
         public string ChannelType { get; set; } = string.Empty;
 
         /// <summary>
+        /// 测量类型。
+        /// </summary>
+        public string MeasurementType { get; set; } = string.Empty;
+
+        /// <summary>
         /// 数据源地址。
         /// </summary>
         public string DataSourceAddress { get; set; } = string.Empty;

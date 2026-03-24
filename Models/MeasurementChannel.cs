@@ -35,6 +35,12 @@ namespace MeasurementSoftware.Models
         private ChannelType channelType = ChannelType.结果值;
 
         /// <summary>
+        /// 测量类型
+        /// </summary>
+        [ObservableProperty]
+        private string measurementType = string.Empty;
+
+        /// <summary>
         /// 标准值
         /// </summary>
         [ObservableProperty]

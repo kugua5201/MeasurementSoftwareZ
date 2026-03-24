@@ -9,6 +9,47 @@
 			 mc:Ignorable="d"
 			 d:DesignHeight="700" d:DesignWidth="1200"
 			 x:Name="HomeControl">
+
+    <UserControl.Resources>
+        <Style x:Key="ColoredHeaderStyle" TargetType="DataGridColumnHeader">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridColumnHeader">
+                        <Border
+                        Background="#0099cc"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                    
+                        Padding="8,0">
+                            <ContentPresenter
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                            RecognizesAccessKey="True"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="MeasurementDataGridRowStyle" TargetType="DataGridRow" BasedOn="{StaticResource DataGridRowStyle}">
+            <Style.Triggers>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsSelected" Value="False"/>
+                        <Condition Property="AlternationIndex" Value="0"/>
+                    </MultiTrigger.Conditions>
+
+                </MultiTrigger>
+                <MultiTrigger>
+                    <MultiTrigger.Conditions>
+                        <Condition Property="IsSelected" Value="False"/>
+                        <Condition Property="AlternationIndex" Value="1"/>
+                    </MultiTrigger.Conditions>
+                    <Setter Property="Background" Value="#FFD9E2F3"/>
+                </MultiTrigger>
+            </Style.Triggers>
+        </Style>
+
+    </UserControl.Resources>
     <Grid Style="{StaticResource PageRootGrid}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -25,36 +66,38 @@
                     <Button Content="停止采集" Command="{Binding StopAcquisitionCommand}"
 							Style="{StaticResource ButtonDanger}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
-					<Button Content="上一工步" Command="{Binding PreviousStepCommand}"
+                    <Button Content="上一工步" Command="{Binding PreviousStepCommand}"
 							Style="{StaticResource ButtonPrimary}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"
                            Visibility="{Binding CurrentRecipe.OtherSettings.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}"/>
-					<Button Content="下一工步" Command="{Binding NextStepCommand}"
+                    <Button Content="下一工步" Command="{Binding NextStepCommand}"
 							Style="{StaticResource ButtonSuccess}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"
                            Visibility="{Binding CurrentRecipe.OtherSettings.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}"/>
                     <Button Content="清空数据" Command="{Binding ClearDataCommand}"
 							Style="{StaticResource ButtonWarning}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
-                    <hc:ContextMenuButton Content="更多 ▾"
-							Style="{StaticResource ButtonInfo}"
-							Padding="12,5" Margin="0,0,5,0" ToolTip="布局与显示选项">
-                        <hc:ContextMenuButton.Menu>
-                            <ContextMenu>
-                                <MenuItem Header="切换为水平布局" Click="ToggleLayout_Click" x:Name="LayoutMenuItem"/>
-                                <MenuItem Header="恢复默认布局" Click="RestoreDefaultLayout_Click"/>
-                                <Separator/>
-                                <MenuItem Header="隐藏导向区" Click="ToggleGuidePanel_Click" x:Name="showNg"/>
-                            </ContextMenu>
-                        </hc:ContextMenuButton.Menu>
-                    </hc:ContextMenuButton>
+
                     <TextBlock VerticalAlignment="Center" FontSize="13" Margin="10,0,0,0"
                             Visibility="{Binding CurrentRecipe.OtherSettings.EnableStepMode, Converter={StaticResource Boolean2VisibilityConverter}}">
 						<Run Text="当前工步："/>
 						<Run Text="{Binding CurrentStep}" FontWeight="Bold" Foreground="{StaticResource StatusInfoBrush}"/>
                     </TextBlock>
                 </StackPanel>
-                <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveRecipeCommand}"/>
+                <!--<Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveRecipeCommand}"/>-->
+
+                <hc:ContextMenuButton Content="更多 ▾"
+					Style="{StaticResource ButtonInfo}"
+					Padding="12,5" Margin="0,0,5,0" ToolTip="布局与显示选项" HorizontalAlignment="Right">
+                    <hc:ContextMenuButton.Menu>
+                        <ContextMenu>
+                            <MenuItem Header="切换为水平布局" Click="ToggleLayout_Click" x:Name="LayoutMenuItem"/>
+                            <MenuItem Header="恢复默认布局" Click="RestoreDefaultLayout_Click"/>
+                            <Separator/>
+                            <MenuItem Header="隐藏导向区" Click="ToggleGuidePanel_Click" x:Name="showNg"/>
+                        </ContextMenu>
+                    </hc:ContextMenuButton.Menu>
+                </hc:ContextMenuButton>
             </Grid>
         </Border>
 
@@ -144,8 +187,8 @@
                 </Grid>
             </Border>
 
-			<!-- 左右拖动分割条 -->
-			<GridSplitter x:Name="HorizontalSplitter" Grid.Column="1" Grid.Row="0" Width="6"
+            <!-- 左右拖动分割条 -->
+            <GridSplitter x:Name="HorizontalSplitter" Grid.Column="1" Grid.Row="0" Width="6"
 						  HorizontalAlignment="Center" VerticalAlignment="Stretch"
 						  Background="Transparent" Cursor="SizeWE" ShowsPreview="True"
 						  DragCompleted="Splitter_DragCompleted"/>
@@ -250,24 +293,27 @@
 
                     <!-- 数据表格 -->
                     <DataGrid Grid.Row="1" 
-													ItemsSource="{Binding Channels}"
-													AutoGenerateColumns="False"
-													IsReadOnly="True"
-													SelectionMode="Single"
-													HeadersVisibility="Column"
-													RowHeight="35"
-													FontSize="12"
-													Background="White"
-													BorderThickness="0">
+						ItemsSource="{Binding Channels}"
+						AutoGenerateColumns="False"
+						IsReadOnly="True"
+						SelectionMode="Single"
+						HeadersVisibility="Column"
+                        AlternationCount="2"
+						RowHeight="35"
+						FontSize="12"
+						Background="White"
+                        BorderThickness="0"
+                        RowStyle="{StaticResource MeasurementDataGridRowStyle}"
+                        ColumnHeaderStyle="{StaticResource ColoredHeaderStyle}">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="通道" Binding="{Binding ChannelNumber}" Width="60"/>
-                            <DataGridTextColumn Header="名称" Binding="{Binding ChannelName}" Width="120"/>
-                            <DataGridTextColumn Header="工步" Binding="{Binding StepNumber}" Width="50"/>
-                            <DataGridTextColumn Header="说明" Binding="{Binding ChannelDescription}" Width="150"/>
-                            <DataGridTextColumn Header="类型" Binding="{Binding ChannelType}" Width="100"/>
-                            <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue}" Width="80"/>
-                            <DataGridTextColumn Header="上公差" Binding="{Binding UpperTolerance}" Width="70"/>
-                            <DataGridTextColumn Header="下公差" Binding="{Binding LowerTolerance}" Width="70"/>
+                            <DataGridTextColumn Header="通道" Binding="{Binding ChannelNumber}" Width="60" />
+                            <DataGridTextColumn Header="名称" Binding="{Binding ChannelName}" Width="120" />
+                            <DataGridTextColumn Header="工步" Binding="{Binding StepNumber}" Width="50" />
+                            <DataGridTextColumn Header="测量类型" Binding="{Binding MeasurementType}" Width="120" />
+                            <DataGridTextColumn Header="说明" Binding="{Binding ChannelDescription}" Width="150" />
+                            <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue}" Width="80" />
+                            <DataGridTextColumn Header="上公差" Binding="{Binding UpperTolerance}" Width="70" />
+                            <DataGridTextColumn Header="下公差" Binding="{Binding LowerTolerance}" Width="70" />
                             <DataGridTextColumn Header="实时值" Binding="{Binding MeasuredValue}" Width="90" />
                             <DataGridTextColumn Header="结果值" Binding="{Binding ReusltValue}" Width="90" />
                             <DataGridTemplateColumn Header="结果" Width="70">
