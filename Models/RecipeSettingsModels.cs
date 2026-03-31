@@ -336,9 +336,14 @@ namespace MeasurementSoftware.Models
         {
             EnsureStepOperationBindings();
 
+            var deviceList = devices.ToList();
+
             foreach (var binding in StepOperationBindings)
             {
-                var device = devices.FirstOrDefault(d => d.DeviceId == binding.PlcDeviceId);
+                var device = binding.RuntimeDevice != null && deviceList.Contains(binding.RuntimeDevice)
+                    ? binding.RuntimeDevice
+                    : deviceList.FirstOrDefault(d => d.DeviceId == binding.PlcDeviceId);
+
                 binding.HydrateRuntimeBindings(device);
             }
         }

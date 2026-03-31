@@ -224,8 +224,7 @@
                                                     <DataTemplate>
                                                         <ComboBox Style="{StaticResource ComboBoxBaseStyle}"
                                                                    ItemsSource="{Binding DataContext.StepOperationDevices, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                    SelectedValuePath="DeviceId"
-                                                                    SelectedValue="{Binding PlcDeviceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedItem="{Binding RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                    DisplayMemberPath="DeviceName"/>
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
@@ -235,8 +234,7 @@
                                                     <DataTemplate>
                                                         <ComboBox Style="{StaticResource ComboBoxBaseStyle}"
                                                                    ItemsSource="{Binding AvailableDataPoints}"
-                                                                    SelectedValuePath="PointId"
-                                                                    SelectedValue="{Binding DataPointId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    SelectedItem="{Binding RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                                                     DisplayMemberPath="PointName"/>
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>

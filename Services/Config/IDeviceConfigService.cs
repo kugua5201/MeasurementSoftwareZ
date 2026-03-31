@@ -9,6 +9,8 @@ namespace MeasurementSoftware.Services.Config
     public interface IDeviceConfigService
     {
         ObservableCollection<PlcDevice> Devices { get; }
+
+
         Task<List<PlcDevice>> GetAllDevicesAsync();
         Task<PlcDevice?> GetDeviceByIdAsync(long deviceId);
         Task<List<DataPoint>> GetDataPointsByDeviceIdAsync(long deviceId);

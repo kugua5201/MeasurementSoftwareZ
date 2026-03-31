@@ -6,6 +6,7 @@ using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Logs;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO.Ports;
 
 namespace MeasurementSoftware.ViewModels
@@ -32,6 +33,7 @@ namespace MeasurementSoftware.ViewModels
         public bool IsBatchModeVisible => Config?.IsEnabled == false;
         private readonly IRecipeConfigService _recipeConfigService;
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
+
         // 以太网协议选项
         public Array ProtocolList => Enum.GetValues<NetworkProtocol>();
         // 数据源类型选项
@@ -43,43 +45,108 @@ namespace MeasurementSoftware.ViewModels
             QrCodeSourceType.PlcRegister
         };
 
-        // PLC设备列表
-        public ObservableCollection<PlcDevice> PlcDevices => new(_deviceConfigService.Devices.Where(c => c.IsEnabled));
-
         /// <summary>
         /// 可用串口列表
         /// </summary>
-        public ObservableCollection<string> AvailableComPorts { get; } = new();
+        public ObservableCollection<string> AvailableComPorts { get; } = [];
+
+
+        private readonly ObservableCollection<PlcDevice> _enabledStepOperationDevices = [];
+        /// <summary>
+        /// 工步操作可选设备。
+        /// 仅显示已启用设备，并随设备启用状态实时联动。
+        /// </summary>
+        public ObservableCollection<PlcDevice> PlcDevices => _enabledStepOperationDevices;
 
         public QrCodeSettingViewModel(ILog log, IQrCodeConfigService qrCodeConfigService, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService)
         {
             _log = log;
             _qrCodeConfigService = qrCodeConfigService;
             _deviceConfigService = deviceConfigService;
+            _recipeConfigService = recipeConfigService;
 
-            // 监听配方和设备变化
-            if (_qrCodeConfigService is System.ComponentModel.INotifyPropertyChanged npc)
+            // 监听配方变化
+            if (_recipeConfigService is INotifyPropertyChanged recipeNpc)
             {
-                npc.PropertyChanged += (s, e) =>
+                recipeNpc.PropertyChanged += (_, e) =>
                 {
                     if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
                     {
                         Config = _qrCodeConfigService.QrCodeConfig;
+                        RebindDeviceCollectionNotifications();
+                        RefreshStepOperationDeviceState();
                         OnPropertyChanged(nameof(PlcDevices));
+                        OnPropertyChanged(nameof(AvailablePoints));
                     }
-                    else if (e.PropertyName == nameof(IDeviceConfigService.Devices))
+                };
+            }
+
+            // 监听设备集合变化
+            if (_deviceConfigService is INotifyPropertyChanged deviceNpc)
+            {
+                deviceNpc.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(IDeviceConfigService.Devices))
                     {
+                        RebindDeviceCollectionNotifications();
+                        RefreshStepOperationDeviceState();
                         RestoreSelectedDeviceAndPoint();
                         OnPropertyChanged(nameof(PlcDevices));
                         OnPropertyChanged(nameof(AvailablePoints));
                     }
                 };
             }
+
             Config = _qrCodeConfigService.QrCodeConfig;
             RefreshComPorts();
-            _recipeConfigService = recipeConfigService;
+            RebindDeviceCollectionNotifications();
+            RefreshStepOperationDeviceState();
+
+        }
+        private void RefreshStepOperationDeviceState()
+        {
+            _enabledStepOperationDevices.Clear();
+            foreach (var device in _deviceConfigService.Devices.Where(device => device.IsEnabled))
+            {
+                _enabledStepOperationDevices.Add(device);
+            }
+        }
+        private void RebindDeviceCollectionNotifications()
+        {
+            if (PlcDevices is not null)
+            {
+                foreach (var device in _deviceConfigService.Devices)
+                {
+                    device.PropertyChanged -= Device_PropertyChanged;
+                }
+
+                _deviceConfigService.Devices.CollectionChanged -= Devices_CollectionChanged;
+            }
+
+            _deviceConfigService.Devices.CollectionChanged += Devices_CollectionChanged;
+
+            foreach (var device in _deviceConfigService.Devices)
+            {
+                device.PropertyChanged -= Device_PropertyChanged;
+                device.PropertyChanged += Device_PropertyChanged;
+            }
+        }
+        private void Devices_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            RefreshStepOperationDeviceState();
+            OnPropertyChanged(nameof(PlcDevices));
+            OnPropertyChanged(nameof(AvailablePoints));
         }
 
+        private void Device_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(PlcDevice.IsEnabled))
+            {
+                return;
+            }
+            RefreshStepOperationDeviceState();
+            OnPropertyChanged(nameof(PlcDevices));
+        }
         /// <summary>
         /// 刷新可用串口列表
         /// </summary>

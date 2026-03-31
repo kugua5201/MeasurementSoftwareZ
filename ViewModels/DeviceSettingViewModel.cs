@@ -54,9 +54,42 @@ namespace MeasurementSoftware.ViewModels
         }
 
         private bool _isViewActive;
-        private bool _suppressDeviceEnabledHandling;
 
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
+
+        public bool? SelectedDeviceEnabled
+        {
+            get => SelectedDevice?.IsEnabled;
+            set
+            {
+                if (SelectedDevice == null || value == null || SelectedDevice.IsEnabled == value.Value)
+                {
+                    OnPropertyChanged(nameof(SelectedDeviceEnabled));
+                    return;
+                }
+
+                if (!value.Value)
+                {
+                    var boundChannels = GetChannelsBoundToDevice(SelectedDevice);
+                    if (boundChannels.Count > 0)
+                    {
+                        var prompt = BuildBoundChannelPrompt(boundChannels, "禁用设备");
+                        var result = HandyControl.Controls.MessageBox.Show(prompt, "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        if (result != MessageBoxResult.Yes)
+                        {
+                            OnPropertyChanged(nameof(SelectedDeviceEnabled));
+                            return;
+                        }
+
+                        ClearChannelsBoundToDevice(SelectedDevice);
+                    }
+                }
+
+                SelectedDevice.IsEnabled = value.Value;
+                _plcDeviceRuntimeService.SetPollingEnabled(SelectedDevice, value.Value);
+                OnPropertyChanged(nameof(SelectedDeviceEnabled));
+            }
+        }
 
         /// <summary>
         /// 可用串口列表（供 Modbus RTU 模板绑定）
@@ -140,9 +173,7 @@ namespace MeasurementSoftware.ViewModels
 
         private List<MeasurementChannel> GetChannelsBoundToDevice(PlcDevice device)
         {
-            return _recipeConfigService.CurrentRecipe?.Channels?
-                .Where(c => c.RuntimeDevice == device || c.PlcDeviceId == device.DeviceId)
-                .ToList() ?? [];
+            return _recipeConfigService.CurrentRecipe?.Channels?.Where(c => c.RuntimeDevice == device || c.PlcDeviceId == device.DeviceId).ToList() ?? [];
         }
 
         private static string BuildBoundChannelPrompt(IReadOnlyCollection<MeasurementChannel> channels, string action)
@@ -264,6 +295,7 @@ namespace MeasurementSoftware.ViewModels
             }
 
             OnPropertyChanged(nameof(SelectedDeviceType));
+            OnPropertyChanged(nameof(SelectedDeviceEnabled));
         }
 
         private async void Device_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -293,33 +325,9 @@ namespace MeasurementSoftware.ViewModels
                 SelectedDevice = null;
                 SelectedDevice = currentDevice;
             }
-            else if (e.PropertyName == nameof(PlcDevice.IsEnabled) && sender is PlcDevice enabledDevice)
+            else if (e.PropertyName == nameof(PlcDevice.IsEnabled))
             {
-                if (_suppressDeviceEnabledHandling)
-                {
-                    return;
-                }
-
-                if (!enabledDevice.IsEnabled)
-                {
-                    var boundChannels = GetChannelsBoundToDevice(enabledDevice);
-                    if (boundChannels.Count > 0)
-                    {
-                        var prompt = BuildBoundChannelPrompt(boundChannels, "禁用设备");
-                        var res = HandyControl.Controls.MessageBox.Show(prompt, "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                        if (res == MessageBoxResult.No)
-                        {
-                            _suppressDeviceEnabledHandling = true;
-                            enabledDevice.IsEnabled = true;
-                            _suppressDeviceEnabledHandling = false;
-                            return;
-                        }
-
-                        ClearChannelsBoundToDevice(enabledDevice);
-                    }
-                }
-
-                _plcDeviceRuntimeService.SetPollingEnabled(enabledDevice, enabledDevice.IsEnabled);
+                OnPropertyChanged(nameof(SelectedDeviceEnabled));
             }
         }
 
@@ -556,7 +564,7 @@ namespace MeasurementSoftware.ViewModels
             int newPointId = SelectedDevice.DataPoints.Count > 0
                 ? SelectedDevice.DataPoints.Max(p => int.TryParse(p.PointId, out int id) ? id : 0) + 1
                 : 1;
-            
+
             var newPoint = new DataPoint
             {
                 PointId = newPointId.ToString(),

@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.ViewModels;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace MeasurementSoftware.Models
@@ -55,7 +57,11 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private ObservableCollection<DataPoint> availableDataPoints = [];
 
+        private ObservableCollection<PlcDevice>? availableDevices;
+
         private PlcDevice? runtimeDevice;
+
+        private DataPoint? runtimeDataPoint;
 
         [JsonIgnore]
         public PlcDevice? RuntimeDevice
@@ -63,26 +69,9 @@ namespace MeasurementSoftware.Models
             get => runtimeDevice;
             set
             {
-                if (ReferenceEquals(runtimeDevice, value))
-                {
-                    return;
-                }
-
-                runtimeDevice = value;
-                PlcDeviceId = value?.DeviceId ?? 0;
-                //RefreshAvailableDataPoints();
-
-                if (runtimeDataPoint == null || !AvailableDataPoints.Contains(runtimeDataPoint))
-                {
-                    RuntimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId)
-                        ?? AvailableDataPoints.FirstOrDefault();
-                }
-
-                OnPropertyChanged(nameof(RuntimeDevice));
+                SetRuntimeDevice(value, updatePersistedDeviceId: true, preservePersistedDataPointId: false);
             }
         }
-
-        private DataPoint? runtimeDataPoint;
 
         [JsonIgnore]
         public DataPoint? RuntimeDataPoint
@@ -90,14 +79,7 @@ namespace MeasurementSoftware.Models
             get => runtimeDataPoint;
             set
             {
-                if (ReferenceEquals(runtimeDataPoint, value))
-                {
-                    return;
-                }
-
-                runtimeDataPoint = value;
-                DataPointId = value?.PointId ?? string.Empty;
-                OnPropertyChanged(nameof(RuntimeDataPoint));
+                SetRuntimeDataPoint(value, updatePersistedDataPointId: true);
             }
         }
 
@@ -107,17 +89,7 @@ namespace MeasurementSoftware.Models
         /// </summary>
         public void HydrateRuntimeBindings(PlcDevice? device)
         {
-            runtimeDevice = device?.IsEnabled == true ? device : null;
-            AvailableDataPoints = runtimeDevice == null || !runtimeDevice.IsEnabled
-                ? []
-                : new ObservableCollection<DataPoint>(runtimeDevice.DataPoints
-                    .Where(dp => dp.IsEnabled)
-                    .OrderBy(dp => dp.PointName));
-
-            runtimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
-
-            OnPropertyChanged(nameof(RuntimeDevice));
-            OnPropertyChanged(nameof(RuntimeDataPoint));
+            SetRuntimeDevice(device, updatePersistedDeviceId: false, preservePersistedDataPointId: true);
         }
 
         /// <summary>
@@ -125,8 +97,7 @@ namespace MeasurementSoftware.Models
         /// </summary>
         public void SyncRuntimeDataPointReference()
         {
-            runtimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
-            OnPropertyChanged(nameof(RuntimeDataPoint));
+            SetRuntimeDataPoint(AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId), updatePersistedDataPointId: false);
         }
 
         [JsonIgnore]
@@ -151,7 +122,7 @@ namespace MeasurementSoftware.Models
         /// </summary>
         public void BindDevice(PlcDevice? device)
         {
-            RuntimeDevice = device?.IsEnabled == true ? device : null;
+            SetRuntimeDevice(device, updatePersistedDeviceId: true, preservePersistedDataPointId: false);
         }
 
         /// <summary>
@@ -159,7 +130,48 @@ namespace MeasurementSoftware.Models
         /// </summary>
         public void BindDataPoint(DataPoint? dataPoint)
         {
-            RuntimeDataPoint = dataPoint?.IsEnabled == true ? dataPoint : null;
+            SetRuntimeDataPoint(dataPoint, updatePersistedDataPointId: true);
+        }
+
+        /// <summary>
+        /// 绑定当前可选设备集合。
+        /// 模型内部直接监听设备集合变化，并按已保存的设备 ID 自动恢复运行时引用。
+        /// </summary>
+        public void AttachAvailableDevices(ObservableCollection<PlcDevice>? devices)
+        {
+            if (ReferenceEquals(availableDevices, devices))
+            {
+                SyncRuntimeDeviceFromAvailableDevices();
+                return;
+            }
+
+            if (availableDevices != null)
+            {
+                availableDevices.CollectionChanged -= AvailableDevices_CollectionChanged;
+            }
+
+            availableDevices = devices;
+
+            if (availableDevices != null)
+            {
+                availableDevices.CollectionChanged += AvailableDevices_CollectionChanged;
+            }
+
+            SyncRuntimeDeviceFromAvailableDevices();
+        }
+
+        /// <summary>
+        /// 解除可选设备集合监听。
+        /// </summary>
+        public void DetachAvailableDevices()
+        {
+            if (availableDevices != null)
+            {
+                availableDevices.CollectionChanged -= AvailableDevices_CollectionChanged;
+                availableDevices = null;
+            }
+
+            HydrateRuntimeBindings(null);
         }
 
         /// <summary>
@@ -168,13 +180,7 @@ namespace MeasurementSoftware.Models
         /// </summary>
         public void RefreshAvailableDataPoints()
         {
-            AvailableDataPoints = RuntimeDevice == null || !RuntimeDevice.IsEnabled
-                ? []
-                : new ObservableCollection<DataPoint>(RuntimeDevice.DataPoints
-                    .Where(dp => dp.IsEnabled)
-                    .OrderBy(dp => dp.PointName));
-
-            RuntimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
+            RefreshAvailableDataPointsCore(preservePersistedDataPointId: false);
         }
 
         /// <summary>
@@ -184,6 +190,179 @@ namespace MeasurementSoftware.Models
         {
             HasObservedValue = false;
             LastObservedValue = null;
+        }
+
+        private void AvailableDevices_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            SyncRuntimeDeviceFromAvailableDevices();
+        }
+
+        private void RuntimeDevice_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PlcDevice.IsEnabled) && runtimeDevice?.IsEnabled != true)
+            {
+                HydrateRuntimeBindings(null);
+                return;
+            }
+
+            if (e.PropertyName == nameof(PlcDevice.DeviceId) || e.PropertyName == nameof(PlcDevice.IsEnabled))
+            {
+                RefreshAvailableDataPointsCore(preservePersistedDataPointId: true);
+                OnPropertyChanged(nameof(RuntimeDevice));
+            }
+        }
+
+        private void RuntimeDeviceDataPoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (DataPoint dataPoint in e.OldItems)
+                {
+                    dataPoint.PropertyChanged -= RuntimeDataPointSource_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (DataPoint dataPoint in e.NewItems)
+                {
+                    dataPoint.PropertyChanged -= RuntimeDataPointSource_PropertyChanged;
+                    dataPoint.PropertyChanged += RuntimeDataPointSource_PropertyChanged;
+                }
+            }
+
+            RefreshAvailableDataPointsCore(preservePersistedDataPointId: true);
+        }
+
+        private void RuntimeDataPointSource_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not DataPoint dataPoint)
+            {
+                return;
+            }
+
+            if (ReferenceEquals(runtimeDataPoint, dataPoint) && e.PropertyName == nameof(DataPoint.PointId))
+            {
+                DataPointId = dataPoint.PointId;
+            }
+
+            if (e.PropertyName is nameof(DataPoint.IsEnabled) or nameof(DataPoint.PointId) or nameof(DataPoint.PointName))
+            {
+                RefreshAvailableDataPointsCore(preservePersistedDataPointId: true);
+            }
+        }
+
+        private void SyncRuntimeDeviceFromAvailableDevices()
+        {
+            if (availableDevices == null)
+            {
+                HydrateRuntimeBindings(null);
+                return;
+            }
+
+            if (runtimeDevice != null && availableDevices.Contains(runtimeDevice))
+            {
+                RefreshAvailableDataPointsCore(preservePersistedDataPointId: true);
+                return;
+            }
+
+            var device = PlcDeviceId == 0
+                ? null
+                : availableDevices.FirstOrDefault(d => d.DeviceId == PlcDeviceId);
+
+            HydrateRuntimeBindings(device);
+        }
+
+        private void SetRuntimeDevice(PlcDevice? device, bool updatePersistedDeviceId, bool preservePersistedDataPointId)
+        {
+            var normalizedDevice = device?.IsEnabled == true ? device : null;
+            var deviceChanged = !ReferenceEquals(runtimeDevice, normalizedDevice);
+
+            if (deviceChanged)
+            {
+                UnsubscribeRuntimeDevice();
+                runtimeDevice = normalizedDevice;
+                SubscribeRuntimeDevice();
+            }
+
+            if (updatePersistedDeviceId)
+            {
+                PlcDeviceId = normalizedDevice?.DeviceId ?? 0;
+            }
+
+            RefreshAvailableDataPointsCore(preservePersistedDataPointId);
+
+            if (deviceChanged)
+            {
+                OnPropertyChanged(nameof(RuntimeDevice));
+            }
+        }
+
+        private void SetRuntimeDataPoint(DataPoint? dataPoint, bool updatePersistedDataPointId)
+        {
+            var normalizedDataPoint = dataPoint != null && dataPoint.IsEnabled && AvailableDataPoints.Contains(dataPoint)
+                ? dataPoint
+                : null;
+
+            var dataPointChanged = !ReferenceEquals(runtimeDataPoint, normalizedDataPoint);
+            runtimeDataPoint = normalizedDataPoint;
+
+            if (updatePersistedDataPointId)
+            {
+                DataPointId = normalizedDataPoint?.PointId ?? string.Empty;
+            }
+
+            if (dataPointChanged)
+            {
+                OnPropertyChanged(nameof(RuntimeDataPoint));
+            }
+        }
+
+        private void RefreshAvailableDataPointsCore(bool preservePersistedDataPointId)
+        {
+            AvailableDataPoints = runtimeDevice == null || !runtimeDevice.IsEnabled
+                ? []
+                : new ObservableCollection<DataPoint>(runtimeDevice.DataPoints
+                    .Where(dp => dp.IsEnabled)
+                    .OrderBy(dp => dp.PointName));
+
+            var selectedDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
+            SetRuntimeDataPoint(selectedDataPoint, updatePersistedDataPointId: !preservePersistedDataPointId);
+        }
+
+        private void SubscribeRuntimeDevice()
+        {
+            if (runtimeDevice == null)
+            {
+                return;
+            }
+
+            runtimeDevice.PropertyChanged -= RuntimeDevice_PropertyChanged;
+            runtimeDevice.PropertyChanged += RuntimeDevice_PropertyChanged;
+            runtimeDevice.DataPoints.CollectionChanged -= RuntimeDeviceDataPoints_CollectionChanged;
+            runtimeDevice.DataPoints.CollectionChanged += RuntimeDeviceDataPoints_CollectionChanged;
+
+            foreach (var dataPoint in runtimeDevice.DataPoints)
+            {
+                dataPoint.PropertyChanged -= RuntimeDataPointSource_PropertyChanged;
+                dataPoint.PropertyChanged += RuntimeDataPointSource_PropertyChanged;
+            }
+        }
+
+        private void UnsubscribeRuntimeDevice()
+        {
+            if (runtimeDevice == null)
+            {
+                return;
+            }
+
+            runtimeDevice.PropertyChanged -= RuntimeDevice_PropertyChanged;
+            runtimeDevice.DataPoints.CollectionChanged -= RuntimeDeviceDataPoints_CollectionChanged;
+
+            foreach (var dataPoint in runtimeDevice.DataPoints)
+            {
+                dataPoint.PropertyChanged -= RuntimeDataPointSource_PropertyChanged;
+            }
         }
     }
 }

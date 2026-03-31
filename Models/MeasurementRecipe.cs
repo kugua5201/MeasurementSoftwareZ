@@ -14,37 +14,13 @@ namespace MeasurementSoftware.Models
         private RecipeBasicInfoConfig basicInfo = new();
         private RecipeOtherSettingsConfig otherSettings = new();
         private RecipeStatisticsConfig statistics = new();
-
-        //public MeasurementRecipe()
-        //{
-        //    SubscribeBasicInfo(basicInfo);
-        //    SubscribeOtherSettings(otherSettings);
-        //}
-
         /// <summary>
         /// 配方基本信息。
         /// </summary>
         public RecipeBasicInfoConfig BasicInfo
         {
             get => basicInfo;
-
             set => SetProperty(ref basicInfo, value);
-            //set
-            //{
-            //    if (ReferenceEquals(basicInfo, value))
-            //    {
-            //        return;
-            //    }
-
-            //    //if (basicInfo != null)
-            //    //{
-            //    //    basicInfo.PropertyChanged -= BasicInfo_PropertyChanged;
-            //    //}
-
-            //    basicInfo = value ?? new RecipeBasicInfoConfig();
-            //    //SubscribeBasicInfo(basicInfo);
-            //    OnPropertyChanged();
-            //}
         }
 
         /// <summary>
@@ -64,21 +40,6 @@ namespace MeasurementSoftware.Models
         {
             get => otherSettings;
             set => SetProperty(ref otherSettings, value);
-            //{
-            //    if (ReferenceEquals(otherSettings, value))
-            //    {
-            //        return;
-            //    }
-
-            //    //if (otherSettings != null)
-            //    //{
-            //    //    otherSettings.PropertyChanged -= OtherSettings_PropertyChanged;
-            //    //}
-
-            //    otherSettings = value ?? new RecipeOtherSettingsConfig();
-            //    //SubscribeOtherSettings(otherSettings);
-            //    OnPropertyChanged();
-            //}
         }
 
         /// <summary>
@@ -108,8 +69,12 @@ namespace MeasurementSoftware.Models
         /// <summary>
         /// PLC设备列表（跟随配方保存，切换配方时设备配置一起切换）
         /// </summary>
-        [ObservableProperty]
         private ObservableCollection<PlcDevice> devices = [];
+        public ObservableCollection<PlcDevice> Devices
+        {
+            get => devices;
+            set => SetProperty(ref devices, value);
+        }
 
         /// <summary>
         /// 二维码扫码配置（跟随配方保存）
@@ -117,44 +82,8 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private QrCodeConfig qrCodeConfig = new();
 
-        /// <summary>
-        /// 获取所有启用的通道
-        /// </summary>
-        public List<MeasurementChannel> GetEnabledChannels()
-        {
-            return [.. Channels.Where(c => c.IsEnabled)];
-        }
-
-        /// <summary>
-        /// 获取指定工步的通道
-        /// </summary>
-        public List<MeasurementChannel> GetChannelsByStep(int stepNumber)
-        {
-            return [.. Channels.Where(c => c.IsEnabled && c.StepNumber == stepNumber)];
-        }
 
 
 
-        //private void SubscribeBasicInfo(RecipeBasicInfoConfig config)
-        //{
-        //    config.PropertyChanged -= BasicInfo_PropertyChanged;
-        //    config.PropertyChanged += BasicInfo_PropertyChanged;
-        //}
-
-        //private void SubscribeOtherSettings(RecipeOtherSettingsConfig config)
-        //{
-        //    config.PropertyChanged -= OtherSettings_PropertyChanged;
-        //    config.PropertyChanged += OtherSettings_PropertyChanged;
-        //}
-
-        //private void BasicInfo_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        //{
-        //    OnPropertyChanged(e.PropertyName);
-        //}
-
-        //private void OtherSettings_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        //{
-        //    OnPropertyChanged(e.PropertyName);
-        //}
     }
 }

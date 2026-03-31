@@ -71,4 +71,9 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Services\Bindings\" />
+    <Folder Include="Services\Workspace\" />
+  </ItemGroup>
+
 </Project>

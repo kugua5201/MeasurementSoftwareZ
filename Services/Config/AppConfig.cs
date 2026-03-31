@@ -4,6 +4,7 @@ using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.ViewModels;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -24,7 +25,11 @@ namespace MeasurementSoftware.Services.Config
         {
             _log = log;
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
+
+
         }
+
+
 
 
 
@@ -39,7 +44,6 @@ namespace MeasurementSoftware.Services.Config
             get => _devices;
             private set => SetProperty(ref _devices, value);
         }
-
         /// <summary>
         /// 初始化当前设备列表中所有PLC的协议实例并连接
         /// 在OpenRecipe后调用，从配方中加载设备并建立连接
@@ -71,6 +75,8 @@ namespace MeasurementSoftware.Services.Config
                     _log.Error($"设备 [{device.DeviceName}] 初始化失败: {ex.Message}");
                 }
             }
+
+
         }
 
         public Task<List<PlcDevice>> GetAllDevicesAsync()
@@ -287,7 +293,7 @@ namespace MeasurementSoftware.Services.Config
         /// </summary>
         public async Task<bool> SaveCurrentRecipeAsync()
         {
-         
+
 
             // 路径为空时（新建配方尚未保存过），自动分配默认路径
             if (string.IsNullOrEmpty(CurrentRecipePath))
@@ -431,7 +437,7 @@ namespace MeasurementSoftware.Services.Config
             }
         }
 
-        ObservableCollection<PlcDevice> IDeviceConfigService.Devices => Devices;
+
 
         /// <summary>
         /// 设置当前采集状态。

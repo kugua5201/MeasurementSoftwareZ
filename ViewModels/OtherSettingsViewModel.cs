@@ -20,7 +20,7 @@ namespace MeasurementSoftware.ViewModels
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
-        private readonly ObservableCollection<PlcDevice> _enabledStepOperationDevices = [];
+
         private ObservableCollection<StepOperationBindingConfig>? _observedStepOperationBindings;
 
         [ObservableProperty]
@@ -33,6 +33,8 @@ namespace MeasurementSoftware.ViewModels
         public bool HasRecipe => CurrentRecipe != null;
         public ObservableCollection<AcquisitionCsvColumnDefinition> AvailableCsvColumns { get; } = [.. AcquisitionCsvColumnCatalog.All];
 
+
+        private readonly ObservableCollection<PlcDevice> _enabledStepOperationDevices = [];
         /// <summary>
         /// 工步操作可选设备。
         /// 仅显示已启用设备，并随设备启用状态实时联动。
@@ -99,7 +101,7 @@ namespace MeasurementSoftware.ViewModels
                 _observedStepOperationBindings.CollectionChanged -= StepOperationBindings_CollectionChanged;
                 foreach (var binding in _observedStepOperationBindings)
                 {
-                    binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
+                    binding.DetachAvailableDevices();
                 }
             }
 
@@ -113,9 +115,7 @@ namespace MeasurementSoftware.ViewModels
             _observedStepOperationBindings.CollectionChanged += StepOperationBindings_CollectionChanged;
             foreach (var binding in _observedStepOperationBindings)
             {
-                binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
-                binding.PropertyChanged += StepOperationBinding_PropertyChanged;
-                SyncStepOperationBindingRuntime(binding);
+                binding.AttachAvailableDevices(StepOperationDevices);
             }
         }
 
@@ -125,7 +125,7 @@ namespace MeasurementSoftware.ViewModels
             {
                 foreach (StepOperationBindingConfig binding in e.OldItems)
                 {
-                    binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
+                    binding.DetachAvailableDevices();
                 }
             }
 
@@ -133,47 +133,9 @@ namespace MeasurementSoftware.ViewModels
             {
                 foreach (StepOperationBindingConfig binding in e.NewItems)
                 {
-                    binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
-                    binding.PropertyChanged += StepOperationBinding_PropertyChanged;
-                    SyncStepOperationBindingRuntime(binding);
+                    binding.AttachAvailableDevices(StepOperationDevices);
                 }
             }
-        }
-
-        private void StepOperationBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (sender is not StepOperationBindingConfig binding)
-            {
-                return;
-            }
-
-            if (e.PropertyName == nameof(StepOperationBindingConfig.PlcDeviceId))
-            {
-                SyncStepOperationBindingRuntime(binding);
-            }
-            else if (e.PropertyName == nameof(StepOperationBindingConfig.DataPointId))
-            {
-                binding.SyncRuntimeDataPointReference();
-            }
-        }
-
-        private void SyncStepOperationBindingRuntime(StepOperationBindingConfig binding)
-        {
-            var device = StepOperationDevices.FirstOrDefault(d => d.DeviceId == binding.PlcDeviceId);
-            if (device == null)
-            {
-                binding.HydrateRuntimeBindings(null);
-                return;
-            }
-
-            if (!string.IsNullOrEmpty(binding.DataPointId)
-                && !device.DataPoints.Any(dp => dp.IsEnabled && dp.PointId == binding.DataPointId))
-            {
-                binding.DataPointId = string.Empty;
-                return;
-            }
-
-            binding.HydrateRuntimeBindings(device);
         }
 
         private void RebindDeviceCollectionNotifications()
@@ -200,11 +162,6 @@ namespace MeasurementSoftware.ViewModels
                     if (enabledDevice != null)
                     {
                         _enabledStepOperationDevices.Remove(enabledDevice);
-                    }
-
-                    foreach (var binding in StepOperationBindings.Where(binding => binding.PlcDeviceId == device.DeviceId))
-                    {
-                        binding.HydrateRuntimeBindings(null);
                     }
                 }
             }
@@ -247,22 +204,12 @@ namespace MeasurementSoftware.ViewModels
                 {
                     _enabledStepOperationDevices.Add(device);
                 }
-
-                foreach (var binding in StepOperationBindings.Where(binding => binding.PlcDeviceId == device.DeviceId))
-                {
-                    binding.HydrateRuntimeBindings(device);
-                }
             }
             else
             {
                 if (existingDevice != null)
                 {
                     _enabledStepOperationDevices.Remove(existingDevice);
-                }
-
-                foreach (var binding in StepOperationBindings.Where(binding => binding.PlcDeviceId == device.DeviceId))
-                {
-                    binding.HydrateRuntimeBindings(null);
                 }
             }
 

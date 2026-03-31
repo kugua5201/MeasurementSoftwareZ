@@ -393,7 +393,7 @@
 
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="启用：" VerticalAlignment="Center"/>
                                     <ToggleButton Grid.Row="3" Grid.Column="1" 
-												  IsChecked="{Binding IsEnabled}" 
+                                            IsChecked="{Binding DataContext.SelectedDeviceEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
 												  Style="{StaticResource ToggleButtonSwitch}" 
 												  HorizontalAlignment="Left"/>
                                 </Grid>

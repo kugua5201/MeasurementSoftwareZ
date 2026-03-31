@@ -310,16 +310,5 @@ namespace MeasurementSoftware.ViewModels
                 _log.Error($"另存为异常: {ex.Message}");
             }
         }
-
-
-        private bool CheckAcquiring()
-        {
-            if (_recipeConfigService.IsCollecting)
-            {
-                Growl.Warning("当前正在采集中，无法进行操作");
-                return false;
-            }
-            return true;
-        }
     }
 }
