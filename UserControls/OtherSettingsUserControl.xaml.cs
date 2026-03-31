@@ -51,6 +51,7 @@ namespace MeasurementSoftware.UserControls
             "Ok" => settings.OkBrush,
             "Ng" => settings.NgBrush,
             "Default" => settings.DefaultBrush,
+            "Acquiring" => settings.AcquiringBrush,
             "AnnotationText" => settings.AnnotationTextBrush,
             _ => null
         };
@@ -67,6 +68,9 @@ namespace MeasurementSoftware.UserControls
                     break;
                 case "Default":
                     settings.DefaultBrush = CloneBrush(brush);
+                    break;
+                case "Acquiring":
+                    settings.AcquiringBrush = CloneBrush(brush);
                     break;
                 case "AnnotationText":
                     settings.AnnotationTextBrush = CloneBrush(brush);

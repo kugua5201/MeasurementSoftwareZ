@@ -101,7 +101,7 @@ namespace MeasurementSoftware.Models
         private bool isCacheGenerated = false;
 
         /// <summary>
-        /// 缓存字段键（格式：CACHE:G{group}:{fieldName}），仅缓存生成的点位有值
+        /// 缓存字段键（格式：CACHE:{字段名}），仅缓存生成的点位有值。
         /// </summary>
         [ObservableProperty]
         private string cacheFieldKey = string.Empty;

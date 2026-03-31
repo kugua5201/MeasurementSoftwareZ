@@ -26,7 +26,7 @@ namespace MeasurementSoftware.Services.Config
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
         }
 
-        public string LastSaveErrorMessage { get; private set; } = string.Empty;
+
 
         #region 设备配置
 
@@ -111,12 +111,15 @@ namespace MeasurementSoftware.Services.Config
                     _log.Info("保存设备时未找到配方，已自动创建默认配方");
                 }
 
-                var devicesToSave = new ObservableCollection<PlcDevice>(devices);
-                SyncSiemensCacheConfigurations(devicesToSave);
+                SyncSiemensCacheConfigurations(devices);
 
-                if (!ReferenceEquals(Devices, devicesToSave))
+                if (!devices.SequenceEqual(Devices))
                 {
-                    Devices = devicesToSave;
+                    Devices.Clear();
+                    foreach (var device in devices)
+                    {
+                        Devices.Add(device);
+                    }
                 }
 
                 // 同步到配方并保存
@@ -217,6 +220,7 @@ namespace MeasurementSoftware.Services.Config
             recipe.Devices = Devices; // 确保双向引用一致
             EnsureRecipeStatistics(recipe);
             HydrateChannelRuntimeData(recipe);
+            recipe.OtherSettings?.HydrateStepOperationBindings(Devices);
 
             CurrentRecipe = recipe;
 
@@ -243,14 +247,7 @@ namespace MeasurementSoftware.Services.Config
                 }
 
                 var device = Devices.FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
-                if (device == null)
-                {
-                    channel.ClearRuntimeBindings();
-                    continue;
-                }
-
-                channel.BindDevice(device);
-                channel.BindDataPoint(device.DataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId));
+                channel.HydrateRuntimeBindings(device);
             }
         }
 
@@ -290,21 +287,7 @@ namespace MeasurementSoftware.Services.Config
         /// </summary>
         public async Task<bool> SaveCurrentRecipeAsync()
         {
-            LastSaveErrorMessage = string.Empty;
-
-            if (CurrentRecipe == null)
-            {
-                LastSaveErrorMessage = "没有打开的配方，无法保存";
-                _log.Warn("没有打开的配方，无法保存");
-                return false;
-            }
-
-            if (!CurrentRecipe.TryValidateStepConfiguration(out var validationError))
-            {
-                LastSaveErrorMessage = validationError;
-                _log.Warn($"保存配方前校验失败: {validationError}");
-                return false;
-            }
+         
 
             // 路径为空时（新建配方尚未保存过），自动分配默认路径
             if (string.IsNullOrEmpty(CurrentRecipePath))
@@ -330,7 +313,6 @@ namespace MeasurementSoftware.Services.Config
             }
             catch (Exception ex)
             {
-                LastSaveErrorMessage = ex.Message;
                 _log.Error($"保存配方失败: {ex.Message}");
                 return false;
             }
@@ -414,9 +396,9 @@ namespace MeasurementSoftware.Services.Config
             }
 
             EnsureRecipeStatistics(recipe);
-            recipe.Statistics.PassCount = 0;
-            recipe.Statistics.FailCount = 0;
-            recipe.Statistics.TotalCount = 0;
+            //recipe.Statistics.PassCount = 0;
+            //recipe.Statistics.FailCount = 0;
+            //recipe.Statistics.TotalCount = 0;
         }
 
 
@@ -426,7 +408,16 @@ namespace MeasurementSoftware.Services.Config
 
 
         #region 全局参数
-        public bool IsCollecting { get; private set; } = false;
+        private bool isCollecting;
+
+        /// <summary>
+        /// 当前是否正在采集中。
+        /// </summary>
+        public bool IsCollecting
+        {
+            get => isCollecting;
+            private set => SetProperty(ref isCollecting, value);
+        }
 
         public int AcquisitionDelayMs
         {
@@ -442,6 +433,9 @@ namespace MeasurementSoftware.Services.Config
 
         ObservableCollection<PlcDevice> IDeviceConfigService.Devices => Devices;
 
+        /// <summary>
+        /// 设置当前采集状态。
+        /// </summary>
         public void SetCollect(bool Collect)
         {
             IsCollecting = Collect;

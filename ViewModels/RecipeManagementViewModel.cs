@@ -240,7 +240,7 @@ namespace MeasurementSoftware.ViewModels
                     }
                     else
                     {
-                        Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方保存失败" : _recipeConfigService.LastSaveErrorMessage);
+                        Growl.Warning("配方保存失败");
                     }
                 }
                 else
@@ -300,7 +300,7 @@ namespace MeasurementSoftware.ViewModels
                     }
                     else
                     {
-                        Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方保存失败" : _recipeConfigService.LastSaveErrorMessage);
+                        Growl.Warning("配方保存失败");
                     }
                 }
             }

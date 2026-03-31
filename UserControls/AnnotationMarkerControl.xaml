@@ -15,7 +15,8 @@
                         <Binding Path="Recipe.OtherSettings.OkColor" ElementName="MarkerRoot"/>
                         <Binding Path="Recipe.OtherSettings.NgColor" ElementName="MarkerRoot"/>
                         <Binding Path="Recipe.OtherSettings.DefaultColor" ElementName="MarkerRoot"/>
-                        <Binding Path="Result"/>
+                        <Binding Path="Recipe.OtherSettings.AcquiringColor" ElementName="MarkerRoot"/>
+                        <Binding Path="DisplayState"/>
                         <Binding Path="ForceDefaultColor" ElementName="MarkerRoot"/>
                     </MultiBinding>
                 </Path.Fill>
@@ -31,6 +32,7 @@
                         <Binding Path="StepNumber"/>
                         <Binding Path="DisplayText"/>
                         <Binding Path="Recipe.OtherSettings.AnnotationDisplayFormat" ElementName="MarkerRoot"/>
+                        <Binding Path="Recipe.OtherSettings.ChannelDisplayPrefix" ElementName="MarkerRoot"/>
                     </MultiBinding>
                 </TextBlock.Text>
             </TextBlock>

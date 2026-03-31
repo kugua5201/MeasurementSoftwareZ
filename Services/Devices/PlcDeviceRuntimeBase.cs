@@ -1,7 +1,10 @@
 ﻿using MeasurementSoftware.Models;
+using MeasurementSoftware.Services.Config;
 using MultiProtocol.Model;
 using MultiProtocol.Services.IIndustrialProtocol;
 using MultiProtocol.Utils;
+using ScottPlot;
+using DataPoint = MeasurementSoftware.Models.DataPoint;
 using DriveType = MultiProtocol.Model.DriveType;
 
 namespace MeasurementSoftware.Services.Devices
@@ -13,6 +16,7 @@ namespace MeasurementSoftware.Services.Devices
     public abstract class PlcDeviceRuntimeBase : IPlcDeviceRuntime
     {
         private IIndustrialProtocol? _protocol;
+
 
         protected PlcDeviceRuntimeBase(PlcDevice device)
         {
@@ -134,8 +138,11 @@ namespace MeasurementSoftware.Services.Devices
             {
                 return;
             }
-
-            DeviceInfo deviceInfo = new(Device.DeviceId, Device.DeviceName);
+            //适配modbus站号
+            DeviceInfo deviceInfo = new(Device.DeviceId, Device.DeviceName)
+            {
+                ConnectText = Device.SlaveAddress.ToString()
+            };
             List<FieldInfo> fieldInfos = [];
             foreach (var dataPoint in Device.DataPoints)
             {
@@ -235,23 +242,26 @@ namespace MeasurementSoftware.Services.Devices
         {
             foreach (var fieldInfo in e.Data)
             {
-                var dataPoint = Device.DataPoints.FirstOrDefault(dp => dp.Address == fieldInfo.Address);
-                if (dataPoint == null)
+                var dataPoints = Device.DataPoints.Where(dp => dp.Address == fieldInfo.Address).ToList();
+                if (dataPoints.Count == 0)
                 {
                     continue;
                 }
 
-                dataPoint.IsSuccess = fieldInfo.IsSuccess;
-                dataPoint.LastUpdateTime = fieldInfo.Time == default ? DateTime.Now : fieldInfo.Time;
+                foreach (var dataPoint in dataPoints)
+                {
+                    dataPoint.IsSuccess = fieldInfo.IsSuccess;
+                    dataPoint.LastUpdateTime = fieldInfo.Time == default ? DateTime.Now : fieldInfo.Time;
 
-                if (fieldInfo.IsSuccess)
-                {
-                    dataPoint.CurrentValue = fieldInfo.Value;
-                    dataPoint.ErrorMessage = null;
-                }
-                else
-                {
-                    dataPoint.ErrorMessage = fieldInfo.Message;
+                    if (fieldInfo.IsSuccess)
+                    {
+                        dataPoint.CurrentValue = fieldInfo.Value;
+                        dataPoint.ErrorMessage = null;
+                    }
+                    else
+                    {
+                        dataPoint.ErrorMessage = fieldInfo.Message;
+                    }
                 }
             }
         }

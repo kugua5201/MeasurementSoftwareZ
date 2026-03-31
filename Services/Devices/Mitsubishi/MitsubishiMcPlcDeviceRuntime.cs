@@ -1,6 +1,7 @@
 ﻿using MeasurementSoftware.Models;
 using MultiProtocol.Model;
 using MultiProtocol.Services.IIndustrialProtocol;
+using MultiProtocol.Services.Mitsubishi;
 using DriveType = MultiProtocol.Model.DriveType;
 
 namespace MeasurementSoftware.Services.Devices.Mitsubishi
@@ -17,7 +18,7 @@ namespace MeasurementSoftware.Services.Devices.Mitsubishi
 
         protected override IIndustrialProtocol? CreateProtocol(ConnectionArgs args)
         {
-            return null;
+            return new MitsubishiMcBinaryPLC(args);
         }
 
         protected override DriveType GetDriveType()

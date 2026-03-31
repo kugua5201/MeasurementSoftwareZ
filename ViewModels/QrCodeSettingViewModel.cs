@@ -44,7 +44,7 @@ namespace MeasurementSoftware.ViewModels
         };
 
         // PLC设备列表
-        public ObservableCollection<PlcDevice> PlcDevices => _deviceConfigService.Devices;
+        public ObservableCollection<PlcDevice> PlcDevices => new(_deviceConfigService.Devices.Where(c => c.IsEnabled));
 
         /// <summary>
         /// 可用串口列表
@@ -65,10 +65,13 @@ namespace MeasurementSoftware.ViewModels
                     if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
                     {
                         Config = _qrCodeConfigService.QrCodeConfig;
+                        OnPropertyChanged(nameof(PlcDevices));
                     }
                     else if (e.PropertyName == nameof(IDeviceConfigService.Devices))
                     {
+                        RestoreSelectedDeviceAndPoint();
                         OnPropertyChanged(nameof(PlcDevices));
+                        OnPropertyChanged(nameof(AvailablePoints));
                     }
                 };
             }

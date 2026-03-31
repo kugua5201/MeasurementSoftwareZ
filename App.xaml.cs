@@ -8,6 +8,7 @@ using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Events;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.StepOperations;
 using MeasurementSoftware.Services.UserSetting;
 using MeasurementSoftware.UserControls;
 using MeasurementSoftware.ViewModels;
@@ -41,6 +42,7 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<IDataRecordService, DataRecordService>();
             builder.RegisterSingleton<ICalibrationService, CalibrationService>();
             builder.RegisterSingleton<ISpcService, SpcService>();
+            builder.RegisterSingleton<IStepOperationMonitorService, StepOperationMonitorService>();
             builder.RegisterSingleton<IPlcDeviceRuntimeFactory, PlcDeviceRuntimeFactory>();
             builder.RegisterSingleton<IPlcDeviceRuntimeService, PlcDeviceRuntimeService>();
 

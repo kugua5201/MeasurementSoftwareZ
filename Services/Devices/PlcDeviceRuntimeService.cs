@@ -122,6 +122,15 @@ namespace MeasurementSoftware.Services.Devices
         }
 
 
+        public IReadOnlyList<double> TakeCacheFieldValues(PlcDevice device, string cacheFieldId)
+        {
+            ArgumentNullException.ThrowIfNull(device);
+            return GetRuntime(device) is ICachePlcDeviceRuntime cacheRuntime
+                ? cacheRuntime.TakeCacheFieldValues(cacheFieldId)
+                : [];
+        }
+
+
         public async Task<object?> ReadDataPointValueAsync(PlcDevice device, DataPoint dataPoint)
         {
             ArgumentNullException.ThrowIfNull(device);

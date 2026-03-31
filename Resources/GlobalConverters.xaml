@@ -19,8 +19,10 @@
     <converters:RelativeToPixelConverter       x:Key="RelativeToPixelConverter"/>
     <converters:ResultToBrushConverter         x:Key="ResultToBrushConverter"/>
     <converters:AnnotationBrushConverter       x:Key="AnnotationBrushConverter"/>
+    <converters:ChannelResultBrushConverter    x:Key="ChannelResultBrushConverter"/>
     <converters:AnnotationShapeToGeometryConverter x:Key="AnnotationShapeToGeometryConverter"/>
     <converters:AnnotationDisplayTextConverter  x:Key="AnnotationDisplayTextConverter"/>
+    <converters:ChannelDisplayTextConverter    x:Key="ChannelDisplayTextConverter"/>
     <converters:SizeToOffsetMarginConverter    x:Key="SizeToOffsetMarginConverter"/>
 </ResourceDictionary>
 

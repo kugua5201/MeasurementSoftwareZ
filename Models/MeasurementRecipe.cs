@@ -133,58 +133,7 @@ namespace MeasurementSoftware.Models
             return [.. Channels.Where(c => c.IsEnabled && c.StepNumber == stepNumber)];
         }
 
-        /// <summary>
-        /// 保存前校验工步配置。
-        /// </summary>
-        public bool TryValidateStepConfiguration(out string errorMessage)
-        {
-            errorMessage = string.Empty;
 
-            if (OtherSettings?.EnableStepMode != true)
-            {
-                return true;
-            }
-
-            if (OtherSettings.TotalSteps <= 0)
-            {
-                errorMessage = "启用工步配置后，总工步数必须大于 0。";
-                return false;
-            }
-
-            var enabledChannels = Channels?.Where(c => c.IsEnabled).ToList() ?? [];
-            if (enabledChannels.Count == 0)
-            {
-                errorMessage = "启用工步配置后，至少需要启用一个测量通道。";
-                return false;
-            }
-
-            var configuredSteps = enabledChannels
-                .Select(c => c.StepNumber)
-                .Distinct()
-                .OrderBy(step => step)
-                .ToList();
-
-            if (configuredSteps.Any(step => step <= 0))
-            {
-                errorMessage = "启用工步配置后，通道工步编号必须大于 0。";
-                return false;
-            }
-
-            if (configuredSteps.Count != OtherSettings.TotalSteps)
-            {
-                errorMessage = $"启用工步配置后，已启用通道配置了 {configuredSteps.Count} 个工步，配方总工步数为 {OtherSettings.TotalSteps}。";
-                return false;
-            }
-
-            var expectedSteps = Enumerable.Range(1, OtherSettings.TotalSteps).ToList();
-            if (!configuredSteps.SequenceEqual(expectedSteps))
-            {
-                errorMessage = $"启用工步配置后，通道工步编号必须从 1 开始连续。当前已配置工步：{string.Join("、", configuredSteps)}。";
-                return false;
-            }
-
-            return true;
-        }
 
         //private void SubscribeBasicInfo(RecipeBasicInfoConfig config)
         //{

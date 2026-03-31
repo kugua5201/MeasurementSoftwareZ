@@ -78,6 +78,14 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private byte slaveAddress = 1;
 
+
+        /// <summary>
+        /// 是否从0开始
+        /// </summary>
+        [ObservableProperty]
+        private bool addressStartWithZero = false;
+
+
         #endregion
 
         #region 串口参数
@@ -176,11 +184,7 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private int maxConnections = 10;
 
-        /// <summary>
-        /// 地址从0开始
-        /// </summary>
-        [ObservableProperty]
-        private bool addressStartWithZero = false;
+
 
         /// <summary>
         /// 编码格式

@@ -16,7 +16,7 @@ namespace MeasurementSoftware.ViewModels
     public partial class MainWindowViewModel : ObservableViewModel
     {
         [ObservableProperty]
-        private string title = "测量软件";
+        private string title = "SF-GAMS";
 
         [ObservableProperty]
         private TabItemModel? _selectedTab;

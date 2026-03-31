@@ -6,7 +6,7 @@ namespace MeasurementSoftware.Converters
 {
     /// <summary>
     /// 标注显示文本转换器
-    /// 参数: [0] ChannelNumber, [1] ChannelName, [2] StepNumber, [3] DisplayText(自定义), [4] AnnotationDisplayFormat
+    /// 参数: [0] ChannelNumber, [1] ChannelName, [2] StepNumber, [3] DisplayText(自定义), [4] AnnotationDisplayFormat, [5] ChannelDisplayPrefix
     /// </summary>
     public class AnnotationDisplayTextConverter : IMultiValueConverter
     {
@@ -19,12 +19,13 @@ namespace MeasurementSoftware.Converters
             int channelNumber = values.Length >= 1 && values[0] is int cn ? cn : 0;
             string channelName = values.Length >= 2 ? values[1] as string ?? "" : "";
             int stepNumber = values.Length >= 3 && values[2] is int sn ? sn : 0;
+            string channelPrefix = values.Length >= 6 ? values[5] as string ?? string.Empty : string.Empty;
 
             return format switch
             {
                 AnnotationDisplayFormat.通道名称 => channelName,
                 AnnotationDisplayFormat.工步编号 => $"S{stepNumber}",
-                _ => channelNumber.ToString(),
+                _ => string.IsNullOrWhiteSpace(channelPrefix) ? channelNumber.ToString(culture) : $"{channelPrefix}{channelNumber}",
             };
         }
 

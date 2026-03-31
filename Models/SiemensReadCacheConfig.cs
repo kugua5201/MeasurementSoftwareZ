@@ -38,7 +38,8 @@ namespace MeasurementSoftware.Models
         private string structureDefinitionText = "时间戳:Double:DCBA\n测量值1:Float:DCBA\n测量值2:Float:DCBA";
 
         /// <summary>
-        /// 数据组数（一个缓存块中包含多少组重复结构）
+        /// 兼容旧配方保留的组数配置。
+        /// 当前逻辑已不再使用该值生成多组结构，实际有效数据条数由长度地址决定。
         /// </summary>
         [ObservableProperty]
         private int groupCount = 1;
@@ -48,6 +49,21 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private int groupSize;
+
+        /// <summary>
+        /// 单个缓存字段允许累计的最大历史值数量。
+        /// 超过后会自动丢弃最旧数据，防止一次缓存过大导致内存压力过高。
+        /// </summary>
+        private int maxCacheCount = 20000;
+
+        /// <summary>
+        /// 单个缓存字段允许累计的最大历史值数量。
+        /// </summary>
+        public int MaxCacheCount
+        {
+            get => maxCacheCount;
+            set => SetProperty(ref maxCacheCount, Math.Clamp(value, 1, 9999999));
+        }
 
         /// <summary>
         /// 结构是否已验证通过
@@ -189,16 +205,21 @@ namespace MeasurementSoftware.Models
                 return (false, StructureValidationMessage);
             }
 
-            // 单组大小 = 所有字段占用的最大结束偏移
+            // 单条结构总字节数 = 最后一个字段结束偏移。
+            // 例如 3 个 Float：4 + 4 + 4 = 12 字节。
             GroupSize = currentOffset;
 
-            if (GroupCount < 1) GroupCount = 1;
+            if (GroupCount < 1)
+            {
+                GroupCount = 1;
+            }
 
-            int totalRequired = GroupSize * GroupCount;
-
-            // 自动设置单个缓存块读取长度（每个缓存块都包含 GroupCount 组数据）
-            Cache1.Length = (ushort)totalRequired;
-            Cache2.Length = (ushort)totalRequired;
+            // 这里的 Length 保存的是“单条结构长度”，不是历史总长度，也不是缓存块最大容量。
+            // 后续运行时会先从 LengthAddress 读取本次实际长度，再按该长度去读 DB 块。
+            // 所以 3 个 Float 时，这里就应该是 12。
+            ushort requiredLength = (ushort)Math.Max(GroupSize, 1);
+            Cache1.Length = requiredLength;
+            Cache2.Length = requiredLength;
 
             FieldDefinitions.Clear();
             foreach (var field in newFields)
@@ -206,33 +227,23 @@ namespace MeasurementSoftware.Models
                 FieldDefinitions.Add(field);
             }
 
-            // 构建展开后的列表（缓存区 × 组数 × 字段数）
+            // 当前只保留一组结构模板，实际条数在运行时由长度地址决定。
             ExpandedFieldDefinitions.Clear();
-            for (int cacheIndex = 1; cacheIndex <= 2; cacheIndex++)
+            foreach (var field in newFields)
             {
-                for (int g = 0; g < GroupCount; g++)
+                ExpandedFieldDefinitions.Add(new CacheFieldDefinition
                 {
-                    foreach (var field in newFields)
-                    {
-                        string cacheSuffix = $"_C{cacheIndex}";
-                        string groupSuffix = GroupCount > 1 ? $"_G{g + 1}" : "";
-                        ExpandedFieldDefinitions.Add(new CacheFieldDefinition
-                        {
-                            FieldName = field.FieldName,
-                            Offset = field.Offset,
-                            DataType = field.DataType,
-                            ByteOrder = field.ByteOrder,
-                            CacheIndex = cacheIndex,
-                            GroupIndex = g,
-                            DisplayName = $"{field.FieldName}{cacheSuffix}{groupSuffix}",
-                            CacheFieldKey = $"CACHE:C{cacheIndex}:G{g}:{field.FieldName}"
-                        });
-                    }
-                }
+                    FieldName = field.FieldName,
+                    Offset = field.Offset,
+                    DataType = field.DataType,
+                    ByteOrder = field.ByteOrder,
+                    DisplayName = field.FieldName,
+                    CacheFieldKey = $"CACHE:{field.FieldName}"
+                });
             }
 
             IsStructureValid = true;
-            StructureValidationMessage = $"✅ 验证通过，{newFields.Count} 个字段 × {GroupCount} 组，单组 {GroupSize} 字节，总计 {totalRequired} 字节";
+            StructureValidationMessage = $"✅ 验证通过，{newFields.Count} 个字段，单条结构 {GroupSize} 字节，实际条数由长度地址决定";
             OnPropertyChanged(nameof(FieldDefinitions));
             OnPropertyChanged(nameof(ExpandedFieldDefinitions));
             return (true, StructureValidationMessage);
@@ -275,6 +286,14 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private ushort length = 256;
+
+        /// <summary>
+        /// 长度地址。
+        /// 从该地址读取当前缓存区实际有效长度，再按该长度读取缓存块。
+        /// 例如：MW56。
+        /// </summary>
+        [ObservableProperty]
+        private string lengthAddress = string.Empty;
 
         /// <summary>
         /// 可读标志地址（Bool 类型 PLC 地址）

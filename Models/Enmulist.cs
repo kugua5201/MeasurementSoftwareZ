@@ -77,21 +77,32 @@ namespace MeasurementSoftware.Models
     /// </summary>
     public enum MeasurementResult
     {
-        [Description("未测量")]
         /// <summary>
         /// 未测量
         /// </summary>
+        [Description("未测量")]
         NotMeasured,
-
-        [Description("OK")]
+        /// <summary>
+        /// 等待测量。
+        /// 主要用于界面显示状态。
+        /// </summary>
+        [Description("等待")]
+        Waiting,
+        /// <summary>
+        /// 正在采集中。
+        /// 主要用于界面显示状态。
+        /// </summary>
+        [Description("采集中")]
+        Acquiring,
         /// <summary>
         /// 合格
         /// </summary>
-        Pass,
-        [Description("NG")]
+        [Description("OK")]
         /// <summary>
         /// 不合格
         /// </summary>
+        Pass,
+        [Description("NG")]
         Fail
     }
 
@@ -124,6 +135,47 @@ namespace MeasurementSoftware.Models
         通道编号,
         通道名称,
         工步编号
+    }
+
+    /// <summary>
+    /// 工步操作类型。
+    /// </summary>
+    public enum StepOperationType
+    {
+        [Description("开始测量")]
+        StartAcquisition,
+
+        [Description("完成测量")]
+        StopAcquisition,
+
+        [Description("终止测量")]
+        TerminateMeasurement,
+
+        [Description("上一步")]
+        PreviousStep,
+
+        [Description("下一步")]
+        NextStep,
+
+       
+    }
+
+    /// <summary>
+    /// 工步操作触发方式。
+    /// </summary>
+    public enum StepOperationTriggerMode
+    {
+        [Description("值等于")]
+        ValueEquals,
+
+        [Description("上升沿")]
+        RisingEdge,
+
+        [Description("下降沿")]
+        FallingEdge,
+
+        [Description("值变化")]
+        AnyChange
     }
 
 

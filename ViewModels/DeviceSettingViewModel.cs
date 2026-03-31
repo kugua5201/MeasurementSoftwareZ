@@ -556,14 +556,14 @@ namespace MeasurementSoftware.ViewModels
             int newPointId = SelectedDevice.DataPoints.Count > 0
                 ? SelectedDevice.DataPoints.Max(p => int.TryParse(p.PointId, out int id) ? id : 0) + 1
                 : 1;
-
+            
             var newPoint = new DataPoint
             {
                 PointId = newPointId.ToString(),
                 PointName = $"点位{newPointId}",
                 Address = GetDefaultAddress(SelectedDevice.DeviceType),
                 DataType = FieldType.Float,
-                ByteOrder = ByteOrder.DCBA,
+                ByteOrder = GetDefaultByteOrder(SelectedDevice.DeviceType),
                 IsEnabled = true
             };
 
@@ -653,16 +653,16 @@ namespace MeasurementSoftware.ViewModels
                     CheckAllAddresses();
                     _plcDeviceRuntimeService.ResetDevicePoints(SelectedDevice);
 
-                    var success = await _recipeConfigService.SaveCurrentRecipeAsync();
-                    if (!success)
-                    {
-                        Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "点位配置保存到配方失败" : _recipeConfigService.LastSaveErrorMessage);
-                        return;
-                    }
+                    //var success = await _recipeConfigService.SaveCurrentRecipeAsync();
+                    //if (!success)
+                    //{
+                    //    Growl.Warning("点位配置保存到配方失败");
+                    //    return;
+                    //}
 
-                    var cacheReadingStarted = await TryStartCacheReadingAsync(SelectedDevice);
-                    RefreshSelectedDeviceCacheFieldDescriptions();
-                    Growl.Success(cacheReadingStarted ? "点位配置已保存，缓存读取已启动" : "点位配置已保存");
+                    //var cacheReadingStarted = await TryStartCacheReadingAsync(SelectedDevice);
+                    //RefreshSelectedDeviceCacheFieldDescriptions();
+                    //Growl.Success(cacheReadingStarted ? "点位配置已保存，缓存读取已启动" : "点位配置已保存");
                     IsPointSettingOpen = false;
                 }
                 catch (Exception ex)
@@ -768,6 +768,18 @@ namespace MeasurementSoftware.ViewModels
                 _ => "DB1.DBD0"
             };
         }
+        private ByteOrder GetDefaultByteOrder(PlcDeviceType deviceType)
+        {
+            return deviceType switch
+            {
+                PlcDeviceType.SiemensS7_1200 => ByteOrder.DCBA,
+                PlcDeviceType.SiemensS7_1500 => ByteOrder.DCBA,
+                PlcDeviceType.MitsubishiMC => ByteOrder.DCBA,
+                PlcDeviceType.ModbusTCP => ByteOrder.CDAB,
+                PlcDeviceType.ModbusRTU => ByteOrder.CDAB,
+                _ => ByteOrder.CDAB,
+            };
+        }
 
         /// <summary>
         /// 重新编号
@@ -853,39 +865,28 @@ namespace MeasurementSoftware.ViewModels
             foreach (var dp in oldCachePoints)
                 SelectedDevice.DataPoints.Remove(dp);
 
-            // 生成真实地址的 DataPoint（缓存1/缓存2分开生成）
+            // 仅按单组结构模板生成一套对应点位，实际历史条数由长度地址决定。
             int nextId = SelectedDevice.DataPoints.Count > 0
                 ? SelectedDevice.DataPoints.Max(p => int.TryParse(p.PointId, out int id) ? id : 0) + 1
                 : 1;
 
-            for (int cacheIndex = 1; cacheIndex <= 2; cacheIndex++)
+            foreach (var field in cache.FieldDefinitions)
             {
-                string dbBlock = cacheIndex == 1 ? cache.Cache1.DbBlock : cache.Cache2.DbBlock;
-                for (int g = 0; g < cache.GroupCount; g++)
-                {
-                    int groupBaseOffset = g * cache.GroupSize;
-                    foreach (var field in cache.FieldDefinitions)
-                    {
-                        int actualOffset = groupBaseOffset + field.Offset;
-                        string cacheSuffix = $"_C{cacheIndex}";
-                        string groupSuffix = cache.GroupCount > 1 ? $"_G{g + 1}" : "";
-                        string address = GetSiemensDbAddress(dbBlock, actualOffset, field.DataType);
+                string address = GetSiemensDbAddress(cache.Cache1.DbBlock, field.Offset, field.DataType);
 
-                        var dp = new DataPoint
-                        {
-                            PointId = nextId.ToString(),
-                            PointName = $"{field.FieldName}{cacheSuffix}{groupSuffix}",
-                            Address = address,
-                            DataType = field.DataType,
-                            ByteOrder = field.ByteOrder,
-                            IsEnabled = true,
-                            IsCacheGenerated = true,
-                            CacheFieldKey = $"CACHE:C{cacheIndex}:G{g}:{field.FieldName}"
-                        };
-                        SelectedDevice.DataPoints.Add(dp);
-                        nextId++;
-                    }
-                }
+                var dp = new DataPoint
+                {
+                    PointId = nextId.ToString(),
+                    PointName = field.FieldName,
+                    Address = address,
+                    DataType = field.DataType,
+                    ByteOrder = field.ByteOrder,
+                    IsEnabled = true,
+                    IsCacheGenerated = true,
+                    CacheFieldKey = $"CACHE:{field.FieldName}"
+                };
+                SelectedDevice.DataPoints.Add(dp);
+                nextId++;
             }
             CheckAllAddresses();
             // 打开点位设置，定位到第一个生成的点位
@@ -898,11 +899,11 @@ namespace MeasurementSoftware.ViewModels
 
             var cacheReadingStarted = await TryStartCacheReadingAsync(SelectedDevice);
             RefreshSelectedDeviceCacheFieldDescriptions();
-            int totalPoints = cache.FieldDefinitions.Count * cache.GroupCount * 2;
+            int totalPoints = cache.FieldDefinitions.Count;
             Growl.Success(cacheReadingStarted
-                ? $"{msg}，已生成 {totalPoints} 个点位并开始缓存读取"
-                : $"{msg}，已生成 {totalPoints} 个点位（可在点位设置中编辑地址）");
-            _log.Info($"设备 [{SelectedDevice.DeviceName}] 缓存结构验证通过，生成 {totalPoints} 个点位");
+                ? $"{msg}，已生成 {totalPoints} 个结构点位并开始缓存读取"
+                : $"{msg}，已生成 {totalPoints} 个结构点位（可在点位设置中编辑地址）");
+            _log.Info($"设备 [{SelectedDevice.DeviceName}] 缓存结构验证通过，生成 {totalPoints} 个结构点位");
         }
 
         private void RefreshSelectedDeviceCacheFieldDescriptions()
@@ -1025,9 +1026,7 @@ namespace MeasurementSoftware.ViewModels
             if (SelectedDevice == null) return null;
 
             var cache = SelectedDevice.SiemensReadCache;
-            string dbBlock = field.CacheIndex == 1 ? cache.Cache1.DbBlock : cache.Cache2.DbBlock;
-            int actualOffset = field.GroupIndex * cache.GroupSize + field.Offset;
-            string address = GetSiemensDbAddress(dbBlock, actualOffset, field.DataType);
+            string address = GetSiemensDbAddress(cache.Cache1.DbBlock, field.Offset, field.DataType);
 
             int nextId = SelectedDevice.DataPoints.Count > 0
                 ? SelectedDevice.DataPoints.Max(p => int.TryParse(p.PointId, out int id) ? id : 0) + 1

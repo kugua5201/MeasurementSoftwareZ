@@ -136,6 +136,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="DB 块：" VerticalAlignment="Center" Margin="0,0,0,8"/>
@@ -145,8 +146,15 @@
                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
                                          hc:InfoElement.Placeholder="例如：DB10"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="可读标志地址：" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="长度地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding SiemensReadCache.Cache1.LengthAddress, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                         hc:InfoElement.Placeholder="例如：MW56"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="可读标志地址：" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
                                          Style="{StaticResource TextBoxExtend}"
                                          Text="{Binding SiemensReadCache.Cache1.ReadableFlagAddress, UpdateSourceTrigger=PropertyChanged}"
                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"
@@ -168,6 +176,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="DB 块：" VerticalAlignment="Center" Margin="0,0,0,8"/>
@@ -177,8 +186,15 @@
                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
                                          hc:InfoElement.Placeholder="例如：DB11"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="可读标志地址：" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="长度地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding SiemensReadCache.Cache2.LengthAddress, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                         hc:InfoElement.Placeholder="例如：MW58"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="可读标志地址：" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
                                          Style="{StaticResource TextBoxExtend}"
                                          Text="{Binding SiemensReadCache.Cache2.ReadableFlagAddress, UpdateSourceTrigger=PropertyChanged}"
                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"
@@ -209,19 +225,17 @@
                                     <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="数据组数：" VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <hc:NumericUpDown Value="{Binding SiemensReadCache.GroupCount}" Minimum="1" Maximum="100"
-                                                      Width="120" HorizontalAlignment="Left"/>
-                                    <TextBlock Text="（一个缓存块中重复结构的组数）" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" 
-                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                </StackPanel>
+                                <TextBlock Grid.Column="0" Text="最大缓存数量：" VerticalAlignment="Center"/>
+                                <hc:NumericUpDown Grid.Column="1"
+                                                  Value="{Binding SiemensReadCache.MaxCacheCount, UpdateSourceTrigger=PropertyChanged}"
+                                                  Minimum="1" Maximum="9999999"
+                                                  Width="180" HorizontalAlignment="Left"/>
                             </Grid>
 
                             <!-- 操作按钮 -->
                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                 <Button Command="{Binding DataContext.ApplyCachePointsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        Content="验证并应用" Style="{StaticResource ButtonPrimary}"
+                                        Content="验证并生成" Style="{StaticResource ButtonPrimary}"
                                         Padding="12,4" Margin="0,0,8,0"/>
                             </StackPanel>
                             <!--<TextBlock Text="{Binding SiemensReadCache.StructureValidationMessage}" FontSize="12" Margin="0,4,0,0"/>-->
@@ -261,7 +275,6 @@
                                     <DataGridTextColumn Header="字段名" Binding="{Binding DisplayName}" Width="150"/>
                                     <DataGridTextColumn Header="类型" Binding="{Binding DataType}" Width="100"/>
                                     <DataGridTextColumn Header="字节序" Binding="{Binding ByteOrder}" Width="100"/>
-                                    <DataGridTextColumn Header="缓存值" Binding="{Binding ParsedValue}" Width="120"/>
                                     <DataGridTextColumn Header="说明" Binding="{Binding Description}" Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
@@ -345,6 +358,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="DB 块：" VerticalAlignment="Center" Margin="0,0,0,8"/>
@@ -354,8 +368,15 @@
                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
                                          hc:InfoElement.Placeholder="例如：DB10"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="可读标志地址：" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="长度地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding SiemensReadCache.Cache1.LengthAddress, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                         hc:InfoElement.Placeholder="例如：MW56"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="可读标志地址：" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
                                          Style="{StaticResource TextBoxExtend}"
                                          Text="{Binding SiemensReadCache.Cache1.ReadableFlagAddress, UpdateSourceTrigger=PropertyChanged}"
                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"
@@ -377,6 +398,7 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="DB 块：" VerticalAlignment="Center" Margin="0,0,0,8"/>
@@ -386,8 +408,15 @@
                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
                                          hc:InfoElement.Placeholder="例如：DB11"/>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="可读标志地址：" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="长度地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                 <TextBox Grid.Row="1" Grid.Column="1"
+                                         Style="{StaticResource TextBoxExtend}"
+                                         Text="{Binding SiemensReadCache.Cache2.LengthAddress, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
+                                         hc:InfoElement.Placeholder="例如：MW58"/>
+
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="可读标志地址：" VerticalAlignment="Center"/>
+                                <TextBox Grid.Row="2" Grid.Column="1"
                                          Style="{StaticResource TextBoxExtend}"
                                          Text="{Binding SiemensReadCache.Cache2.ReadableFlagAddress, UpdateSourceTrigger=PropertyChanged}"
                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"
@@ -413,24 +442,10 @@
                                      FontFamily="Consolas" FontSize="12"
                                      hc:InfoElement.Placeholder="时间戳:Double:DCBA&#x0a;测量值1:Float:DCBA&#x0a;测量值2:Float:DCBA"/>
 
-                            <Grid Margin="0,8,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="数据组数：" VerticalAlignment="Center"/>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                    <hc:NumericUpDown Value="{Binding SiemensReadCache.GroupCount}" Minimum="1" Maximum="100"
-                                                      Width="120" HorizontalAlignment="Left"/>
-                                    <TextBlock Text="（一个缓存块中重复结构的组数）" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" 
-                                               VerticalAlignment="Center" Margin="8,0,0,0"/>
-                                </StackPanel>
-                            </Grid>
-
                             <!-- 操作按钮 -->
                             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                 <Button Command="{Binding DataContext.ApplyCachePointsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        Content="验证并应用" Style="{StaticResource ButtonPrimary}"
+                                        Content="验证并生成" Style="{StaticResource ButtonPrimary}"
                                         Padding="12,4" Margin="0,0,8,0"/>
                             </StackPanel>
                             <!--<TextBlock Text="{Binding SiemensReadCache.StructureValidationMessage}" FontSize="12" Margin="0,4,0,0"/>
@@ -448,6 +463,17 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>-->
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="最大缓存数量：" VerticalAlignment="Center"/>
+                                <hc:NumericUpDown Grid.Column="1"
+                                                  Value="{Binding SiemensReadCache.MaxCacheCount, UpdateSourceTrigger=PropertyChanged}"
+                          Minimum="1" Maximum="9999999"
+                          Width="180" HorizontalAlignment="Left"/>
+                            </Grid>
 
                             <!-- 已验证字段预览（实时显示缓存值和说明） -->
                             <DataGrid x:Name="CacheFieldGrid1500"
@@ -470,7 +496,6 @@
                                     <DataGridTextColumn Header="字段名" Binding="{Binding DisplayName}" Width="150"/>
                                     <DataGridTextColumn Header="类型" Binding="{Binding DataType}" Width="100"/>
                                     <DataGridTextColumn Header="字节序" Binding="{Binding ByteOrder}" Width="100"/>
-                                    <DataGridTextColumn Header="缓存值" Binding="{Binding ParsedValue}" Width="120"/>
                                     <DataGridTextColumn Header="说明" Binding="{Binding Description}" Width="*"/>
                                 </DataGrid.Columns>
                             </DataGrid>
@@ -525,6 +550,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="IP 地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
@@ -539,10 +565,17 @@
                                           Value="{Binding Port}" Minimum="1" Maximum="65535"
                                           Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="从站地址：" VerticalAlignment="Center"/>
-                        <hc:NumericUpDown Grid.Row="2" Grid.Column="1"
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="从站地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,0,0,8"
                                           Value="{Binding SlaveAddress}" Minimum="1" Maximum="247"
                                           Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"/>
+
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="首地址从0开始：" VerticalAlignment="Center"/>
+                        <ToggleButton Grid.Row="3" Grid.Column="1"
+                     IsChecked="{Binding AddressStartWithZero}"
+                     Style="{StaticResource ToggleButtonSwitch}"
+                     HorizontalAlignment="Left"/>
                     </Grid>
                 </StackPanel>
             </DataTemplate>
@@ -559,6 +592,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
@@ -631,10 +665,17 @@
                                   Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
 
                         <!-- 从站地址 -->
-                        <TextBlock Grid.Row="5" Grid.Column="0" Text="从站地址：" VerticalAlignment="Center"/>
-                        <hc:NumericUpDown Grid.Row="5" Grid.Column="1"
+                        <TextBlock Grid.Row="5" Grid.Column="0" Text="从站地址：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                        <hc:NumericUpDown Grid.Row="5" Grid.Column="1" 
                                           Value="{Binding SlaveAddress}" Minimum="1" Maximum="247"
-                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left"/>
+                                          Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+
+
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="首地址从0开始：" VerticalAlignment="Center" />
+                        <ToggleButton Grid.Row="6" Grid.Column="1"
+ IsChecked="{Binding AddressStartWithZero}"
+ Style="{StaticResource ToggleButtonSwitch}"
+ HorizontalAlignment="Left"/>
                     </Grid>
                 </StackPanel>
             </DataTemplate>

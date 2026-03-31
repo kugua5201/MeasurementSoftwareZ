@@ -14,7 +14,7 @@ namespace MeasurementSoftware.Services
     public class DataRecordService : IDataRecordService
     {
         private readonly ILog _log;
-        private readonly List<MeasurementRecord> _records = new();
+        private readonly List<MeasurementRecord> _records = [];
 
         public DataRecordService(ILog log)
         {
@@ -29,7 +29,7 @@ namespace MeasurementSoftware.Services
 
         public async Task<bool> SaveRecordAsync(MeasurementRecord record)
         {
-            _records.Add(record);
+            //_records.Add(record);
             _log.Info($"测量记录已保存（内存）: {record.RecordId}");
             return await Task.FromResult(true);
         }

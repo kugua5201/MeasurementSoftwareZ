@@ -10,7 +10,7 @@
 			 d:DesignHeight="700" d:DesignWidth="1200"
 			 x:Name="HomeControl">
 
-    <UserControl.Resources>
+    <!--<UserControl.Resources>
         <Style x:Key="ColoredHeaderStyle" TargetType="DataGridColumnHeader">
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Template">
@@ -49,7 +49,7 @@
             </Style.Triggers>
         </Style>
 
-    </UserControl.Resources>
+    </UserControl.Resources>-->
     <Grid Style="{StaticResource PageRootGrid}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -60,11 +60,14 @@
         <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
             <Grid>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
-                    <Button Content="开始采集" Command="{Binding StartAcquisitionCommand}"
+                    <Button Content="启动测量" Command="{Binding StartAcquisitionCommand}"
 							Style="{StaticResource ButtonSuccess}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
-                    <Button Content="停止采集" Command="{Binding StopAcquisitionCommand}"
+                    <Button Content="完成测量" Command="{Binding CompleteMeasurementCommand}"
 							Style="{StaticResource ButtonDanger}"
+							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
+                    <Button Content="终止测量" Command="{Binding TerminateMeasurementCommand}"
+							Style="{StaticResource ButtonSuccess}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
                     <Button Content="上一工步" Command="{Binding PreviousStepCommand}"
 							Style="{StaticResource ButtonPrimary}"
@@ -133,7 +136,6 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemContainerStyle>
                                 <Style TargetType="ContentPresenter">
-                                    <Setter Property="Visibility" Value="{Binding IsActiveInCurrentStep, Converter={StaticResource Boolean2VisibilityConverter}}"/>
                                     <Setter Property="Canvas.Left">
                                         <Setter.Value>
                                             <MultiBinding Converter="{StaticResource RelativeToPixelConverter}">
@@ -231,15 +233,26 @@
                             </TextBlock>
                         </Border>
 
+                        <!-- 二维码位置 -->
+
+                            <StackPanel >
+                            <TextBlock Text="二维码：" FontSize="12" 
+                                           Foreground="{StaticResource PlaceholderTextBrush}" VerticalAlignment="Center" Margin="0,0,0,3"/>
+                            <TextBlock Text="1234567890" FontSize="15" Foreground="{StaticResource StatusSuccessBrush}"
+                                                   HorizontalAlignment="Left" />
+                            </StackPanel>
+                        <Separator Margin="0,5"/>
+
                         <!-- 当前状态 -->
-                        <TextBlock Text="当前状态：" FontSize="12" Margin="0,10,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
-                        <TextBlock Text="{Binding MeasurementStatus}" FontSize="13" FontWeight="Bold"
-										 Margin="0,0,0,10" Foreground="{StaticResource StatusInfoBrush}"/>
+                        
+                        <TextBlock Text="当前状态：" FontSize="12" Margin="0,0,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
+                        <TextBlock Text="{Binding MeasurementStatus}" FontSize="15" FontWeight="Bold"
+										 Foreground="{StaticResource StatusInfoBrush}"/>
 
                         <Separator Margin="0,5"/>
 
                         <!-- 统计 -->
-                        <Grid Margin="0,10,0,0">
+                        <Grid Margin="0,0,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
@@ -259,7 +272,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <Separator Margin="0,10,0,5"/>
+                        <Separator Margin="0,0,0,5"/>
 
                         <!-- 测量步骤 -->
                         <TextBlock Text="1. 放置产品" FontSize="12" Margin="0,5,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
@@ -301,12 +314,25 @@
                         AlternationCount="2"
 						RowHeight="35"
 						FontSize="12"
-						Background="White"
+						Background="{DynamicResource BackgroundColor}"
                         BorderThickness="0"
                         RowStyle="{StaticResource MeasurementDataGridRowStyle}"
                         ColumnHeaderStyle="{StaticResource ColoredHeaderStyle}">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="导出当前通道数据" Command="{Binding ExportChannelDataCsvCommand}" CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Header="导出全部通道数据" Command="{Binding ExportAllChannelDataCsvCommand}"/>
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="通道" Binding="{Binding ChannelNumber}" Width="60" />
+                            <DataGridTextColumn Header="通道" Width="70">
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource ChannelDisplayTextConverter}">
+                                        <Binding ElementName="HomeControl" Path="DataContext.CurrentRecipe.OtherSettings.ChannelDisplayPrefix"/>
+                                        <Binding Path="ChannelNumber"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Header="名称" Binding="{Binding ChannelName}" Width="120" />
                             <DataGridTextColumn Header="工步" Binding="{Binding StepNumber}" Width="50" />
                             <DataGridTextColumn Header="测量类型" Binding="{Binding MeasurementType}" Width="120" />
@@ -314,37 +340,30 @@
                             <DataGridTextColumn Header="标准值" Binding="{Binding StandardValue}" Width="80" />
                             <DataGridTextColumn Header="上公差" Binding="{Binding UpperTolerance}" Width="70" />
                             <DataGridTextColumn Header="下公差" Binding="{Binding LowerTolerance}" Width="70" />
-                            <DataGridTextColumn Header="实时值" Binding="{Binding MeasuredValue}" Width="90" />
-                            <DataGridTextColumn Header="结果值" Binding="{Binding ReusltValue}" Width="90" />
+                            <DataGridTextColumn Header="实时值" Binding="{Binding DisplayMeasuredValue}" Width="90" />
+                            <DataGridTextColumn Header="结果值" Binding="{Binding DisplayResultValue}" Width="90" />
                             <DataGridTemplateColumn Header="结果" Width="70">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border CornerRadius="3" Padding="5,2">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding Result}" Value="Pass">
-                                                            <Setter Property="Background" Value="{StaticResource StatusSuccessBrush}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Result}" Value="Fail">
-                                                            <Setter Property="Background" Value="{StaticResource StatusErrorBrush}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding Result}" Value="NotMeasured">
-                                                            <Setter Property="Background" Value="{StaticResource DisabledIconBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <TextBlock HorizontalAlignment="Center" Foreground="White" FontWeight="Bold">
+                                            <Border.Background>
+                                                <MultiBinding Converter="{StaticResource ChannelResultBrushConverter}">
+                                                    <Binding ElementName="HomeControl" Path="DataContext.CurrentRecipe.OtherSettings.OkColor"/>
+                                                    <Binding ElementName="HomeControl" Path="DataContext.CurrentRecipe.OtherSettings.NgColor"/>
+                                                    <Binding ElementName="HomeControl" Path="DataContext.CurrentRecipe.OtherSettings.AcquiringColor"/>
+                                                    <Binding Path="DisplayState"/>
+                                                </MultiBinding>
+                                            </Border.Background>
+                                            <TextBlock HorizontalAlignment="Center" FontWeight="Bold" Text="{Binding DisplayResultText}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="-"/>
+                                                        <Setter Property="Foreground" Value="White"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Result}" Value="Pass">
-                                                                <Setter Property="Text" Value="OK"/>
+                                                            <DataTrigger Binding="{Binding DisplayState}" Value="Waiting">
+                                                                <Setter Property="Foreground" Value="#FF666666"/>
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding Result}" Value="Fail">
-                                                                <Setter Property="Text" Value="NG"/>
+                                                            <DataTrigger Binding="{Binding DisplayState}" Value="Acquiring">
+                                                                <Setter Property="Foreground" Value="White"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>

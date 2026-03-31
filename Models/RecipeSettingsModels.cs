@@ -1,4 +1,6 @@
 ﻿using MeasurementSoftware.ViewModels;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Text.Json.Serialization;
 using System.Windows.Media;
 
@@ -89,6 +91,7 @@ namespace MeasurementSoftware.Models
     public class RecipeOtherSettingsConfig : ObservableViewModel
     {
         private bool enableStepMode;
+        private bool enableStepOperationBinding;
         private int totalSteps = 10;
         private int acquisitionDelayMs = 500;
         private double annotationSize = 28;
@@ -96,10 +99,18 @@ namespace MeasurementSoftware.Models
         private string okColor = "#4CAF50";
         private string ngColor = "#F44336";
         private string defaultColor = "#2196F3";
+        private string acquiringColor = "#FF9800";
+        private string channelDisplayPrefix = "M";
         private AnnotationDisplayFormat annotationDisplayFormat = AnnotationDisplayFormat.通道编号;
         private double annotationFontSize = 10;
         private string annotationTextColor = "#FFFFFF";
         private AcquisitionStorageConfig acquisitionStorage = new();
+        private ObservableCollection<StepOperationBindingConfig> stepOperationBindings = CreateDefaultStepOperationBindings();
+
+        public RecipeOtherSettingsConfig()
+        {
+            EnsureStepOperationBindings();
+        }
 
         /// <summary>
         /// 是否启用分步测量模式。
@@ -108,6 +119,16 @@ namespace MeasurementSoftware.Models
         {
             get => enableStepMode;
             set => SetProperty(ref enableStepMode, value);
+        }
+
+        /// <summary>
+        /// 是否启用点位绑定监听。
+        /// 关闭时仅允许手动点击开始/停止/上下工步按钮，不监听点位触发。
+        /// </summary>
+        public bool EnableStepOperationBinding
+        {
+            get => enableStepOperationBinding;
+            set => SetProperty(ref enableStepOperationBinding, value);
         }
 
         /// <summary>
@@ -174,6 +195,24 @@ namespace MeasurementSoftware.Models
         }
 
         /// <summary>
+        /// 采集中颜色。
+        /// </summary>
+        public string AcquiringColor
+        {
+            get => acquiringColor;
+            set => SetProperty(ref acquiringColor, NormalizeColorString(value, "#FF9800"), () => OnPropertyChanged(nameof(AcquiringBrush)));
+        }
+
+        /// <summary>
+        /// 通道编号显示前缀。
+        /// </summary>
+        public string ChannelDisplayPrefix
+        {
+            get => channelDisplayPrefix;
+            set => SetProperty(ref channelDisplayPrefix, string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim());
+        }
+
+        /// <summary>
         /// 标注显示内容格式。
         /// </summary>
         public AnnotationDisplayFormat AnnotationDisplayFormat
@@ -207,6 +246,15 @@ namespace MeasurementSoftware.Models
         {
             get => acquisitionStorage;
             set => SetProperty(ref acquisitionStorage, value ?? new AcquisitionStorageConfig());
+        }
+
+        /// <summary>
+        /// 工步操作绑定配置。
+        /// </summary>
+        public ObservableCollection<StepOperationBindingConfig> StepOperationBindings
+        {
+            get => stepOperationBindings;
+            set => SetProperty(ref stepOperationBindings, value ?? [], EnsureStepOperationBindings);
         }
 
         /// <summary>
@@ -255,6 +303,21 @@ namespace MeasurementSoftware.Models
         }
 
         /// <summary>
+        /// 采集中颜色画刷。
+        /// 仅用于界面绑定，不参与序列化。
+        /// </summary>
+        [JsonIgnore]
+        public SolidColorBrush? AcquiringBrush
+        {
+            get => TryParseBrush(AcquiringColor);
+            set
+            {
+                AcquiringColor = ToHexColorString(value?.Color, "#FF9800");
+                OnPropertyChanged();
+            }
+        }
+
+        /// <summary>
         /// 标注文字颜色画刷。
         /// 仅用于界面绑定，不参与序列化。
         /// </summary>
@@ -267,6 +330,55 @@ namespace MeasurementSoftware.Models
                 AnnotationTextColor = ToHexColorString(value?.Color, "#FFFFFF");
                 OnPropertyChanged();
             }
+        }
+
+        public void HydrateStepOperationBindings(IEnumerable<PlcDevice> devices)
+        {
+            EnsureStepOperationBindings();
+
+            foreach (var binding in StepOperationBindings)
+            {
+                var device = devices.FirstOrDefault(d => d.DeviceId == binding.PlcDeviceId);
+                binding.HydrateRuntimeBindings(device);
+            }
+        }
+
+        private void EnsureStepOperationBindings()
+        {
+            var normalizedBindings = StepOperationBindings
+                .GroupBy(binding => binding.OperationType)
+                .Select(group => group.First())
+                .ToDictionary(binding => binding.OperationType);
+
+            var orderedBindings = new ObservableCollection<StepOperationBindingConfig>();
+            foreach (var operationType in Enum.GetValues<StepOperationType>())
+            {
+                if (!normalizedBindings.TryGetValue(operationType, out var binding))
+                {
+                    binding = new StepOperationBindingConfig
+                    {
+                        OperationType = operationType,
+                        TriggerMode = StepOperationTriggerMode.RisingEdge,
+                        TriggerValue = "true"
+                    };
+                }
+
+                orderedBindings.Add(binding);
+            }
+
+            stepOperationBindings = orderedBindings;
+            OnPropertyChanged(nameof(StepOperationBindings));
+        }
+
+        private static ObservableCollection<StepOperationBindingConfig> CreateDefaultStepOperationBindings()
+        {
+            return [
+                new StepOperationBindingConfig { OperationType = StepOperationType.StartAcquisition, TriggerMode = StepOperationTriggerMode.RisingEdge, TriggerValue = "true" },
+                new StepOperationBindingConfig { OperationType = StepOperationType.StopAcquisition, TriggerMode = StepOperationTriggerMode.RisingEdge, TriggerValue = "true" },
+                new StepOperationBindingConfig { OperationType = StepOperationType.PreviousStep, TriggerMode = StepOperationTriggerMode.RisingEdge, TriggerValue = "true" },
+                new StepOperationBindingConfig { OperationType = StepOperationType.NextStep, TriggerMode = StepOperationTriggerMode.RisingEdge, TriggerValue = "true" },
+                new StepOperationBindingConfig { OperationType = StepOperationType.TerminateMeasurement, TriggerMode = StepOperationTriggerMode.RisingEdge, TriggerValue = "true" }
+            ];
         }
 
         private static string NormalizeColorString(string? colorStr, string fallback)

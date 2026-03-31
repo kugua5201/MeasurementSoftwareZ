@@ -21,6 +21,7 @@
         <ResourceDictionary Source="GlobalEnumSources.xaml"/>
         <ResourceDictionary Source="PlcConfigTemplates.xaml"/>
         <ResourceDictionary Source="PageToolbarStyles.xaml"/>
+        <ResourceDictionary Source="GlobalDataGrid.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
 </ResourceDictionary>

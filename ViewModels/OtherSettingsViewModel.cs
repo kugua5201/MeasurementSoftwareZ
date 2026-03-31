@@ -3,7 +3,9 @@ using CommunityToolkit.Mvvm.Input;
 using HandyControl.Controls;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
+using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -17,6 +19,9 @@ namespace MeasurementSoftware.ViewModels
     {
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
+        private readonly IDeviceConfigService _deviceConfigService;
+        private readonly ObservableCollection<PlcDevice> _enabledStepOperationDevices = [];
+        private ObservableCollection<StepOperationBindingConfig>? _observedStepOperationBindings;
 
         [ObservableProperty]
         private AcquisitionCsvColumnDefinition? selectedAvailableCsvColumn;
@@ -28,10 +33,27 @@ namespace MeasurementSoftware.ViewModels
         public bool HasRecipe => CurrentRecipe != null;
         public ObservableCollection<AcquisitionCsvColumnDefinition> AvailableCsvColumns { get; } = [.. AcquisitionCsvColumnCatalog.All];
 
-        public OtherSettingsViewModel(ILog log, IRecipeConfigService recipeConfigService)
+        /// <summary>
+        /// 工步操作可选设备。
+        /// 仅显示已启用设备，并随设备启用状态实时联动。
+        /// </summary>
+        public ObservableCollection<PlcDevice> StepOperationDevices => _enabledStepOperationDevices;
+
+        /// <summary>
+        /// 当前配方的工步操作绑定集合。
+        /// </summary>
+        public ObservableCollection<StepOperationBindingConfig> StepOperationBindings => CurrentRecipe?.OtherSettings.StepOperationBindings ?? [];
+
+        /// <summary>
+        /// 工步触发方式枚举。
+        /// </summary>
+        public Array StepOperationTriggerModes => Enum.GetValues<StepOperationTriggerMode>();
+
+        public OtherSettingsViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
+            _deviceConfigService = deviceConfigService;
 
             if (_recipeConfigService is INotifyPropertyChanged npc)
             {
@@ -39,12 +61,177 @@ namespace MeasurementSoftware.ViewModels
                 {
                     if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
                     {
+                        RefreshStepOperationDeviceState();
+                        CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(StepOperationDevices);
+                        RebindStepOperationBindingNotifications();
                         OnPropertyChanged(nameof(CurrentRecipe));
                         OnPropertyChanged(nameof(HasRecipe));
                         OnPropertyChanged(nameof(ConfiguredCsvColumns));
+                        OnPropertyChanged(nameof(StepOperationBindings));
                     }
                 };
             }
+
+            if (_deviceConfigService is INotifyPropertyChanged deviceNpc)
+            {
+                deviceNpc.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(IDeviceConfigService.Devices))
+                    {
+                        RebindDeviceCollectionNotifications();
+                        RefreshStepOperationDeviceState();
+                        CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(StepOperationDevices);
+                        OnPropertyChanged(nameof(StepOperationDevices));
+                    }
+                };
+            }
+
+            RebindDeviceCollectionNotifications();
+            RefreshStepOperationDeviceState();
+            CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(StepOperationDevices);
+            RebindStepOperationBindingNotifications();
+        }
+
+        private void RebindStepOperationBindingNotifications()
+        {
+            if (_observedStepOperationBindings != null)
+            {
+                _observedStepOperationBindings.CollectionChanged -= StepOperationBindings_CollectionChanged;
+                foreach (var binding in _observedStepOperationBindings)
+                {
+                    binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
+                }
+            }
+
+            _observedStepOperationBindings = CurrentRecipe?.OtherSettings.StepOperationBindings;
+            if (_observedStepOperationBindings == null)
+            {
+                return;
+            }
+
+            _observedStepOperationBindings.CollectionChanged -= StepOperationBindings_CollectionChanged;
+            _observedStepOperationBindings.CollectionChanged += StepOperationBindings_CollectionChanged;
+            foreach (var binding in _observedStepOperationBindings)
+            {
+                binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
+                binding.PropertyChanged += StepOperationBinding_PropertyChanged;
+                SyncStepOperationBindingRuntime(binding);
+            }
+        }
+
+        private void StepOperationBindings_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (StepOperationBindingConfig binding in e.OldItems)
+                {
+                    binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (StepOperationBindingConfig binding in e.NewItems)
+                {
+                    binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
+                    binding.PropertyChanged += StepOperationBinding_PropertyChanged;
+                    SyncStepOperationBindingRuntime(binding);
+                }
+            }
+        }
+
+        private void StepOperationBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not StepOperationBindingConfig binding)
+            {
+                return;
+            }
+
+            if (e.PropertyName == nameof(StepOperationBindingConfig.PlcDeviceId))
+            {
+                SyncStepOperationBindingRuntime(binding);
+            }
+            else if (e.PropertyName == nameof(StepOperationBindingConfig.DataPointId))
+            {
+                binding.SyncRuntimeDataPointReference();
+            }
+        }
+
+        private void SyncStepOperationBindingRuntime(StepOperationBindingConfig binding)
+        {
+            var device = StepOperationDevices.FirstOrDefault(d => d.DeviceId == binding.PlcDeviceId);
+            if (device == null)
+            {
+                binding.HydrateRuntimeBindings(null);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(binding.DataPointId)
+                && !device.DataPoints.Any(dp => dp.IsEnabled && dp.PointId == binding.DataPointId))
+            {
+                binding.DataPointId = string.Empty;
+                return;
+            }
+
+            binding.HydrateRuntimeBindings(device);
+        }
+
+        private void RebindDeviceCollectionNotifications()
+        {
+            _deviceConfigService.Devices.CollectionChanged -= Devices_CollectionChanged;
+            _deviceConfigService.Devices.CollectionChanged += Devices_CollectionChanged;
+
+            foreach (var device in _deviceConfigService.Devices)
+            {
+                device.PropertyChanged -= Device_PropertyChanged;
+                device.PropertyChanged += Device_PropertyChanged;
+            }
+        }
+
+        private void Devices_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (PlcDevice device in e.OldItems)
+                {
+                    device.PropertyChanged -= Device_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (PlcDevice device in e.NewItems)
+                {
+                    device.PropertyChanged -= Device_PropertyChanged;
+                    device.PropertyChanged += Device_PropertyChanged;
+                }
+            }
+
+            RefreshStepOperationDeviceState();
+        }
+
+        private void Device_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(PlcDevice.IsEnabled))
+            {
+                return;
+            }
+
+            RefreshStepOperationDeviceState();
+        }
+
+        private void RefreshStepOperationDeviceState()
+        {
+            var enabledDevices = _deviceConfigService.Devices.Where(device => device.IsEnabled).ToList();
+
+            _enabledStepOperationDevices.Clear();
+            foreach (var device in enabledDevices)
+            {
+                _enabledStepOperationDevices.Add(device);
+            }
+
+            CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledStepOperationDevices);
+            OnPropertyChanged(nameof(StepOperationDevices));
         }
 
         public ObservableCollection<AcquisitionCsvColumnConfig> ConfiguredCsvColumns => CurrentRecipe?.OtherSettings.AcquisitionStorage.CsvColumns ?? [];
@@ -63,7 +250,7 @@ namespace MeasurementSoftware.ViewModels
             if (success)
                 Growl.Success("配方保存成功");
             else
-                Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方保存失败" : _recipeConfigService.LastSaveErrorMessage);
+                Growl.Warning("配方保存失败");
         }
 
         [RelayCommand]

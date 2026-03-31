@@ -57,6 +57,12 @@ namespace MeasurementSoftware.Services.Devices
         double? GetCacheFieldValue(PlcDevice device, string cacheFieldId);
 
         /// <summary>
+        /// 取出并清空设备缓存字段的待处理历史值。
+        /// 仅对支持缓存能力的运行时生效。
+        /// </summary>
+        IReadOnlyList<double> TakeCacheFieldValues(PlcDevice device, string cacheFieldId);
+
+        /// <summary>
         /// 主动读取指定设备点位的值。
         /// </summary>
         Task<object?> ReadDataPointValueAsync(PlcDevice device, DataPoint dataPoint);

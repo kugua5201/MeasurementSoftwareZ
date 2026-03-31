@@ -118,7 +118,7 @@ namespace MeasurementSoftware.ViewModels
 
             BindChannels();
             CurrentRecipeName = _recipeConfigService.CurrentRecipe?.BasicInfo.RecipeName ?? "未加载配方";
-            
+
         }
 
         private void BindChannels()
@@ -539,7 +539,7 @@ namespace MeasurementSoftware.ViewModels
                 }
                 else
                 {
-                    Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方文件保存失败" : _recipeConfigService.LastSaveErrorMessage);
+                    Growl.Warning("配方文件保存失败");
                     _log.Warn("配方文件失败");
                 }
             }

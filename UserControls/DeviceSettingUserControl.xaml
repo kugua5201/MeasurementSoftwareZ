@@ -369,12 +369,12 @@
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="设备ID：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <!--<TextBlock Grid.Row="0" Grid.Column="0" Text="设备ID：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                     <TextBox Grid.Row="0" Grid.Column="1" 
 											 Style="{StaticResource TextBoxExtend}"
 											 Text="{Binding DeviceId}" 
 											 IsReadOnly="True" 
-											 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+											 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>-->
 
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="设备名称：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                     <TextBox Grid.Row="1" Grid.Column="1" 

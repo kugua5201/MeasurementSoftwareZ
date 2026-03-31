@@ -9,7 +9,6 @@ namespace MeasurementSoftware.Services.Config
     {
         MeasurementRecipe? CurrentRecipe { get; }
         string CurrentRecipePath { get; }
-        string LastSaveErrorMessage { get; }
         void OpenRecipe(MeasurementRecipe recipe, string path);
         void CloseRecipe();
         void UpdateRecipePath(string path);
@@ -21,10 +20,7 @@ namespace MeasurementSoftware.Services.Config
         /// </summary>
         bool IsCollecting { get; }
 
-        /// <summary>
-        /// 采集轮询延迟(ms)
-        /// </summary>
-        int AcquisitionDelayMs { get; set; }
+   
 
         /// <summary>
         /// 确保配方统计信息已初始化。

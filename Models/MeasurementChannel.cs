@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.ViewModels;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace MeasurementSoftware.Models
@@ -58,16 +59,21 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private double lowerTolerance;
 
-        /// <summary>
-        /// 测量值
-        /// </summary>
+
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayMeasuredValue))]
         private double measuredValue;
+
+        partial void OnMeasuredValueChanging(double value)
+        {
+            measuredValue = Math.Round(value, DecimalPlaces);
+        }
 
         /// <summary>
         /// 测量结果（合格/不合格）
         /// </summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayResultText))]
         private MeasurementResult result;
 
         /// <summary>
@@ -102,6 +108,7 @@ namespace MeasurementSoftware.Models
         /// 仅在程序运行期使用，不参与配方持久化。
         /// </summary>
         private PlcDevice? runtimeDevice;
+        private PropertyChangedEventHandler? runtimeDevicePropertyChangedHandler;
 
         [JsonIgnore]
         public PlcDevice? RuntimeDevice
@@ -113,6 +120,11 @@ namespace MeasurementSoftware.Models
                 if (ReferenceEquals(runtimeDevice, value))
                 {
                     return;
+                }
+
+                if (oldDevice != null && runtimeDevicePropertyChangedHandler != null)
+                {
+                    oldDevice.PropertyChanged -= runtimeDevicePropertyChangedHandler;
                 }
 
                 runtimeDevice = value;
@@ -131,6 +143,12 @@ namespace MeasurementSoftware.Models
                     RuntimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
                 }
 
+                if (runtimeDevice != null)
+                {
+                    runtimeDevicePropertyChangedHandler = RuntimeDevice_PropertyChanged;
+                    runtimeDevice.PropertyChanged += runtimeDevicePropertyChangedHandler;
+                }
+
                 OnPropertyChanged(nameof(RuntimeDevice));
                 OnPropertyChanged(nameof(PlcDeviceName));
                 OnPropertyChanged(nameof(DataPointName));
@@ -142,6 +160,7 @@ namespace MeasurementSoftware.Models
         /// 仅在程序运行期使用，不参与配方持久化。
         /// </summary>
         private DataPoint? runtimeDataPoint;
+        private PropertyChangedEventHandler? runtimeDataPointPropertyChangedHandler;
 
         [JsonIgnore]
         public DataPoint? RuntimeDataPoint
@@ -154,12 +173,69 @@ namespace MeasurementSoftware.Models
                     return;
                 }
 
+                if (runtimeDataPoint != null && runtimeDataPointPropertyChangedHandler != null)
+                {
+                    runtimeDataPoint.PropertyChanged -= runtimeDataPointPropertyChangedHandler;
+                }
+
                 runtimeDataPoint = value;
                 DataPointId = value?.PointId ?? string.Empty;
                 DataSourceAddress = value?.Address ?? string.Empty;
+
+                if (runtimeDataPoint != null)
+                {
+                    runtimeDataPointPropertyChangedHandler = RuntimeDataPoint_PropertyChanged;
+                    runtimeDataPoint.PropertyChanged += runtimeDataPointPropertyChangedHandler;
+                }
+
                 OnPropertyChanged(nameof(RuntimeDataPoint));
                 OnPropertyChanged(nameof(DataPointName));
             }
+        }
+
+        /// <summary>
+        /// 按已保存的设备/点位标识回填运行时绑定。
+        /// 仅刷新运行时引用，不修改持久化的设备、点位与地址字段。
+        /// </summary>
+        public void HydrateRuntimeBindings(PlcDevice? device)
+        {
+            if (runtimeDevice != null && runtimeDevicePropertyChangedHandler != null)
+            {
+                runtimeDevice.PropertyChanged -= runtimeDevicePropertyChangedHandler;
+            }
+
+            if (runtimeDataPoint != null && runtimeDataPointPropertyChangedHandler != null)
+            {
+                runtimeDataPoint.PropertyChanged -= runtimeDataPointPropertyChangedHandler;
+            }
+
+            runtimeDevice = device;
+
+            AvailableDataPoints = runtimeDevice == null
+                ? []
+                : new ObservableCollection<DataPoint>(runtimeDevice.DataPoints
+                    .Where(dp => dp.IsEnabled)
+                    .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
+
+            runtimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
+
+            if (runtimeDevice != null)
+            {
+                runtimeDevicePropertyChangedHandler = RuntimeDevice_PropertyChanged;
+                runtimeDevice.PropertyChanged += runtimeDevicePropertyChangedHandler;
+            }
+
+            if (runtimeDataPoint != null)
+            {
+                runtimeDataPointPropertyChangedHandler = RuntimeDataPoint_PropertyChanged;
+                runtimeDataPoint.PropertyChanged += runtimeDataPointPropertyChangedHandler;
+                DataSourceAddress = runtimeDataPoint.Address;
+            }
+
+            OnPropertyChanged(nameof(RuntimeDevice));
+            OnPropertyChanged(nameof(RuntimeDataPoint));
+            OnPropertyChanged(nameof(PlcDeviceName));
+            OnPropertyChanged(nameof(DataPointName));
         }
 
         /// <summary>
@@ -211,6 +287,8 @@ namespace MeasurementSoftware.Models
         /// 小数位数
         /// </summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayMeasuredValue))]
+        [NotifyPropertyChangedFor(nameof(DisplayResultValue))]
         private int decimalPlaces = 3;
 
         /// <summary>
@@ -299,6 +377,13 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private int sampleCount = 100;
 
+        /// <summary>
+        /// 实时值是否有效。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayMeasuredValue))]
+        private bool isMeasuredValueAvailable;
+
         [JsonIgnore]
         /// <summary>
         /// 历史数据（用于计算最大值、最小值等）
@@ -337,14 +422,34 @@ namespace MeasurementSoftware.Models
             OnPropertyChanged(nameof(DataPointName));
         }
 
+        private void RuntimeDevice_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PlcDevice.DeviceName))
+            {
+                OnPropertyChanged(nameof(PlcDeviceName));
+            }
+        }
+
+        private void RuntimeDataPoint_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(DataPoint.PointId) or nameof(DataPoint.PointName) or nameof(DataPoint.Address))
+            {
+                if (sender is DataPoint point)
+                {
+                    DataPointId = point.PointId;
+                    DataSourceAddress = point.Address;
+                }
+
+                OnPropertyChanged(nameof(DataPointName));
+            }
+        }
+
         /// <summary>
         /// 根据当前绑定设备刷新可用点位列表，并回填运行时点位引用。
         /// </summary>
         public void RefreshAvailableDataPoints()
         {
-            AvailableDataPoints = RuntimeDevice == null
-                ? []
-                : new ObservableCollection<DataPoint>(RuntimeDevice.DataPoints
+            AvailableDataPoints = RuntimeDevice == null ? [] : new ObservableCollection<DataPoint>(RuntimeDevice.DataPoints
                     .Where(dp => dp.IsEnabled)
                     .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
 
@@ -364,8 +469,9 @@ namespace MeasurementSoftware.Models
         {
             var upperLimit = StandardValue + UpperTolerance;
             var lowerLimit = StandardValue - LowerTolerance;
+            var valueToCheck = IsResultValueAvailable ? ReusltValue : MeasuredValue;
 
-            if (MeasuredValue >= lowerLimit && MeasuredValue <= upperLimit)
+            if (valueToCheck >= lowerLimit && valueToCheck <= upperLimit)
             {
                 Result = MeasurementResult.Pass;
             }
@@ -375,7 +481,7 @@ namespace MeasurementSoftware.Models
             }
         }
 
-        private readonly object _dataLock = new object();
+        private readonly Lock _dataLock = new();
 
         /// <summary>
         /// 根据通道类型处理并更新测量值
@@ -385,30 +491,92 @@ namespace MeasurementSoftware.Models
         {
             lock (_dataLock)
             {
-                //保留对应小数
-                MeasuredValue =Math.Round (rawValue, DecimalPlaces);
-                // 保持缓存大小
-                if (HistoricalData.Count > SampleCount)
-                {
-                    while (HistoricalData.Count > SampleCount)
-                    {
-                        HistoricalData.RemoveAt(0);
-                    }
-                }
-                HistoricalData.Add(MeasuredValue);
+                IsMeasuredValueAvailable = true;
+                MeasuredValue = rawValue;
+                var checkValue = RoundMeasuredValue(rawValue);
+                TrimHistoricalDataForIncoming(SampleCount, 1);
+                HistoricalData.Add(checkValue);
+
             }
         }
 
         /// <summary>
-        /// 应用校准（线性匹配）
+        /// 硬件缓存时加入硬件缓存值，并且刷新实时值
         /// </summary>
-        public double ApplyCalibration(double rawValue)
+        /// <param name="rawValues"></param>
+        /// <param name="rawValue"></param>
+        public void AppendMeasuredValues(IEnumerable<double> rawValues, double rawValue)
+        {
+            lock (_dataLock)
+            {
+                IsMeasuredValueAvailable = true;
+                MeasuredValue = rawValue;
+                if (rawValues is IReadOnlyList<double> rawValueList)
+                {
+                    int startIndex = Math.Max(0, rawValueList.Count - SampleCount);
+                    int incomingCount = rawValueList.Count - startIndex;
+                    TrimHistoricalDataForIncoming(SampleCount, incomingCount);
+                    int requiredCapacity = HistoricalData.Count + incomingCount;
+                    if (HistoricalData.Capacity < requiredCapacity)
+                    {
+                        HistoricalData.Capacity = requiredCapacity;
+                    }
+                    for (int i = startIndex; i < rawValueList.Count; i++)
+                    {
+                        double lastMeasuredValue = RoundMeasuredValue(rawValueList[i]);
+                        HistoricalData.Add(lastMeasuredValue);
+                    }
+                }
+
+            }
+        }
+
+        /// <summary>
+        /// 去掉历史数据
+        /// </summary>
+        private void TrimHistoricalData()
+        {
+            int maxSamples = Math.Max(1, SampleCount);
+            if (HistoricalData.Count > maxSamples)
+            {
+                HistoricalData.RemoveRange(0, HistoricalData.Count - maxSamples);
+            }
+        }
+
+        /// <summary>
+        /// 去掉历史数据中超出容量限制的旧数据，以便为即将追加的新数据腾出空间。
+        /// </summary>
+        /// <param name="maxSamples">历史数据的最大容量</param>
+        /// <param name="incomingCount">即将追加的新数据数量</param>
+        private void TrimHistoricalDataForIncoming(int maxSamples, int incomingCount)
+        {
+            if (incomingCount >= maxSamples)
+            {
+                HistoricalData.Clear();
+                return;
+            }
+
+            int overflow = HistoricalData.Count + incomingCount - maxSamples;
+            if (overflow > 0)
+            {
+                HistoricalData.RemoveRange(0, overflow);
+            }
+        }
+
+        /// <summary>
+        /// 通过校准并且转换保留对应的值
+        /// </summary>
+        /// <param name="rawValue">原始测量值</param>
+        /// <param name="applyCalibration">是否应用校准</param>
+        /// <returns>经过校准和小数位处理后的测量值</returns>
+        private double RoundMeasuredValue(double rawValue)
         {
             if (RequiresCalibration)
             {
-                return CalibrationCoefficientA * rawValue + CalibrationCoefficientB;
+                rawValue = CalibrationCoefficientA * rawValue + CalibrationCoefficientB;
             }
-            return rawValue;
+
+            return Math.Round(rawValue, DecimalPlaces);
         }
 
 
@@ -416,7 +584,35 @@ namespace MeasurementSoftware.Models
         /// 最终结果
         /// </summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayResultValue))]
         private double reusltValue;
+
+        /// <summary>
+        /// 结果值是否有效。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayResultValue))]
+        private bool isResultValueAvailable;
+
+        /// <summary>
+        /// 通道显示状态。
+        /// </summary>
+        [ObservableProperty]
+        private MeasurementResult displayState = MeasurementResult.Waiting;
+
+        [JsonIgnore]
+        public string DisplayMeasuredValue => IsMeasuredValueAvailable ? MeasuredValue.ToString($"F{Math.Max(0, DecimalPlaces)}") : "----";
+
+        [JsonIgnore]
+        public string DisplayResultValue => IsResultValueAvailable ? ReusltValue.ToString($"F{Math.Max(0, DecimalPlaces)}") : "----";
+
+        [JsonIgnore]
+        public string DisplayResultText => Result switch
+        {
+            MeasurementResult.Pass => "OK",
+            MeasurementResult.Fail => "NG",
+            _ => "--"
+        };
 
 
         /// <summary>
@@ -427,6 +623,7 @@ namespace MeasurementSoftware.Models
             if (HistoricalData == null || HistoricalData.Count == 0)
             {
                 ReusltValue = 0;
+                IsResultValueAvailable = false;
                 ChannelDescription = "没有采集到数据";
                 Result = MeasurementResult.Fail;
                 return;
@@ -452,7 +649,30 @@ namespace MeasurementSoftware.Models
             }
 
             ReusltValue = Math.Round(ReusltValue, DecimalPlaces);
+            IsResultValueAvailable = true;
             CheckResult();
+        }
+
+        public void ResetMeasurementState()
+        {
+            MeasuredValue = 0;
+            ReusltValue = 0;
+            Result = MeasurementResult.NotMeasured;
+            DisplayState = MeasurementResult.Waiting;
+            IsMeasuredValueAvailable = false;
+            IsResultValueAvailable = false;
+            ChannelDescription = string.Empty;
+            HistoricalData.Clear();
+        }
+
+        public void SetDisplayStateFromResult()
+        {
+            DisplayState = Result switch
+            {
+                MeasurementResult.Pass => MeasurementResult.Pass,
+                MeasurementResult.Fail => MeasurementResult.Fail,
+                _ => MeasurementResult.Waiting
+            };
         }
 
     }

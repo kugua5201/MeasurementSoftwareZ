@@ -58,10 +58,22 @@ namespace MeasurementSoftware.UserControls
         {
             if (sender is FrameworkElement fe && fe.DataContext is ChannelAnnotation annotation)
             {
+                SelectAnnotation(annotation);
                 _isDragging = true;
                 _draggingAnnotation = annotation;
                 fe.CaptureMouse();
                 e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// 右键选中标注，便于直接弹出菜单删除。
+        /// </summary>
+        private void Annotation_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is ChannelAnnotation annotation)
+            {
+                SelectAnnotation(annotation);
             }
         }
 
@@ -88,6 +100,37 @@ namespace MeasurementSoftware.UserControls
                 _draggingAnnotation = null;
                 fe.ReleaseMouseCapture();
                 e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// 删除当前右键选中的标注。
+        /// </summary>
+        private void DeleteAnnotationMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem menuItem || DataContext is not ChannelSettingViewModel viewModel)
+            {
+                return;
+            }
+
+            var annotation = (menuItem.Parent as ContextMenu)?.PlacementTarget is FrameworkElement placementTarget
+                ? placementTarget.DataContext as ChannelAnnotation
+                : null;
+
+            if (annotation != null)
+            {
+                viewModel.DeleteAnnotationCommand.Execute(annotation);
+            }
+        }
+
+        /// <summary>
+        /// 同步选中标注到视图模型。
+        /// </summary>
+        private void SelectAnnotation(ChannelAnnotation annotation)
+        {
+            if (DataContext is ChannelSettingViewModel viewModel)
+            {
+                viewModel.SelectAnnotationCommand.Execute(annotation);
             }
         }
 
@@ -231,5 +274,7 @@ namespace MeasurementSoftware.UserControls
         }
 
         #endregion
+
+       
     }
 }

@@ -110,7 +110,7 @@ namespace MeasurementSoftware
 
             _trayIcon = LoadTrayIcon();
             _notifyIcon.Icon = _trayIcon ?? System.Drawing.SystemIcons.Application;
-            _notifyIcon.Text = "测量软件";
+            _notifyIcon.Text = "SF-GAMS通用自动测量系统";
             _notifyIcon.Visible = true;
             _notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
 
@@ -145,7 +145,7 @@ namespace MeasurementSoftware
         {
             try
             {
-                _notifyIcon.ShowBalloonTip(3000, "测量软件", "应用已最小化到系统托盘，点击托盘图标恢复。", Forms.ToolTipIcon.Info);
+                _notifyIcon.ShowBalloonTip(3000, "SF-GAMS通用自动测量系统", "应用已最小化到系统托盘，点击托盘图标恢复。", Forms.ToolTipIcon.Info);
             }
             catch
             {

@@ -144,7 +144,7 @@ namespace MeasurementSoftware.ViewModels
             if (success)
                 Growl.Success("配方保存成功");
             else
-                Growl.Warning(string.IsNullOrWhiteSpace(_recipeConfigService.LastSaveErrorMessage) ? "配方保存失败" : _recipeConfigService.LastSaveErrorMessage);
+                Growl.Warning("配方保存失败");
         }
 
         private void Channel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -169,23 +169,36 @@ namespace MeasurementSoftware.ViewModels
         {
             var device = channel.RuntimeDevice;
 
-            if (device == null && channel.PlcDeviceId != 0)
+            if (channel.PlcDeviceId == 0)
+            {
+                device = null;
+            }
+            else if (device == null || device.DeviceId != channel.PlcDeviceId)
             {
                 device = _deviceConfigService.Devices.FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
             }
 
             if (!ReferenceEquals(channel.RuntimeDevice, device))
             {
-                channel.BindDevice(device);
+                if (channel.PlcDeviceId == 0)
+                {
+                    channel.ClearRuntimeBindings();
+                }
+                else
+                {
+                    channel.HydrateRuntimeBindings(device);
+                }
             }
 
             if (device == null)
             {
-                channel.BindDataPoint(null);
                 return;
             }
 
-            channel.BindDataPoint(device.DataPoints.FirstOrDefault(dp => dp.PointId == channel.DataPointId));
+            if (channel.RuntimeDataPoint == null || channel.RuntimeDataPoint.PointId != channel.DataPointId)
+            {
+                channel.HydrateRuntimeBindings(device);
+            }
         }
 
         private void SyncChannelBindingState(MeasurementChannel channel)
@@ -439,8 +452,8 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.PlcDeviceId = EditingChannel.PlcDeviceId;
                     originalChannel.DataPointId = EditingChannel.DataPointId;
                     originalChannel.DataSourceAddress = EditingChannel.DataSourceAddress;
-                    originalChannel.UseCacheValue = EditingChannel.UseCacheValue;
                     originalChannel.SampleCount = EditingChannel.SampleCount;
+                  
                     if (EditingChannel.PlcDeviceId == 0)
                     {
                         originalChannel.ClearRuntimeBindings();
@@ -448,6 +461,7 @@ namespace MeasurementSoftware.ViewModels
                     else
                     {
                         LoadDataPointsForChannel(originalChannel);
+                        originalChannel.UseCacheValue = EditingChannel.UseCacheValue;
                     }
 
                     // 重新订阅属性变化事件（如果之前没订阅）
@@ -612,27 +626,67 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 删除选中通道的标注点
+        /// 选中指定标注，并同步选中其所属通道。
         /// </summary>
         [RelayCommand]
-        private void DeleteAnnotation()
+        private void SelectAnnotation(ChannelAnnotation? annotation)
         {
-            if (CurrentRecipe == null || SelectedChannel == null)
+            SelectedAnnotation = annotation;
+
+            if (annotation == null || CurrentRecipe == null)
             {
-                Growl.Warning("请先选中一个通道");
                 return;
             }
 
-            if (SelectedChannel.Annotation != null)
+            var channel = CurrentRecipe.Channels.FirstOrDefault(c => ReferenceEquals(c.Annotation, annotation));
+            if (channel != null)
             {
-                SelectedChannel.Annotation = null;
-                OnPropertyChanged(nameof(Annotations));
-                Growl.Info($"已删除通道 {SelectedChannel.ChannelName} 的标注");
+                SelectedChannel = channel;
             }
-            else
+        }
+
+        /// <summary>
+        /// 删除标注点。
+        /// 优先删除传入标注；如果未传入，则删除当前选中的标注。
+        /// </summary>
+        [RelayCommand]
+        private void DeleteAnnotation(ChannelAnnotation? annotation)
+        {
+            if (CurrentRecipe == null)
             {
-                Growl.Warning("该通道没有标注点");
+                Growl.Warning("请先选择一个配方");
+                return;
             }
+
+            annotation ??= SelectedAnnotation;
+            if (annotation == null)
+            {
+                Growl.Warning("请先选中要删除的标注");
+                return;
+            }
+
+            var channel = CurrentRecipe.Channels.FirstOrDefault(c => ReferenceEquals(c.Annotation, annotation));
+            if (channel == null)
+            {
+                Growl.Warning("未找到该标注对应的通道");
+                return;
+            }
+
+            var res = MessageBox.Show($"确定要删除通道 {channel.ChannelName} 的标注吗？", "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (res != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            channel.Annotation = null;
+            if (ReferenceEquals(SelectedAnnotation, annotation))
+            {
+                SelectedAnnotation = null;
+            }
+
+            SelectedChannel = channel;
+            OnPropertyChanged(nameof(Annotations));
+            Growl.Info($"已删除通道 {channel.ChannelName} 的标注");
         }
     }
 }

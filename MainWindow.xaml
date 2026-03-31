@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MeasurementSoftware"
         xmlns:hc="https://handyorg.github.io/handycontrol"
         mc:Ignorable="d"
-        Title="{Binding Title}" Height="600" Width="1000"
+        Title="SF-GAMS通用自动测量系统" Height="600" Width="1000"
         xmlns:ctls="clr-namespace:MeasurementSoftware.Extensions"
         xmlns:core="clr-namespace:MeasurementSoftware.Models"
         WindowStartupLocation="CenterScreen">
@@ -191,12 +191,12 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
-                    <TextBlock Text="&#xE74C;"
-                               FontFamily="Segoe MDL2 Assets" 
-                               FontSize="24" 
-                               Foreground="{DynamicResource PrimaryTextBrush}" 
-                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0" HorizontalAlignment="Center">
+                    <TextBlock VerticalAlignment="Center" Margin="0,0,12,0">
+                <InlineUIContainer>
+                    <Image Source="/Images/ico.ico"  Width="24" Height="24"/>
+                </InlineUIContainer>
+                    </TextBlock>
                     <TextBlock Text="{Binding Title}" 
                                FontSize="18"   
                                Foreground="{DynamicResource PrimaryTextBrush}" 

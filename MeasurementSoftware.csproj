@@ -7,10 +7,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>测量软件</AssemblyName>
-    <Product>测量软件</Product>
-    <Title>测量软件</Title>
-    <Description>测量软件</Description>
+    <AssemblyName>SF-GAMS通用自动测量系统</AssemblyName>
+    <Product>SF-GAMS通用自动测量系统</Product>
+    <Title>SF-GAMS通用自动测量系统</Title>
+    <Description>SF-GAMS通用自动测量系统</Description>
     <ApplicationIcon>Images\ico.ico</ApplicationIcon>
   </PropertyGroup>
 

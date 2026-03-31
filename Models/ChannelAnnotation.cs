@@ -53,6 +53,13 @@ namespace MeasurementSoftware.Models
         private MeasurementResult result = MeasurementResult.NotMeasured;
 
         /// <summary>
+        /// 标注显示状态。
+        /// 复用测量结果枚举，支持等待、采集中、OK、NG。
+        /// </summary>
+        [ObservableProperty]
+        private MeasurementResult displayState = MeasurementResult.Waiting;
+
+        /// <summary>
         /// 自定义显示文本（留空则显示通道编号）
         /// </summary>
         [ObservableProperty]
