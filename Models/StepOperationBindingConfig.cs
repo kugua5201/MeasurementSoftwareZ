@@ -70,7 +70,7 @@ namespace MeasurementSoftware.Models
 
                 runtimeDevice = value;
                 PlcDeviceId = value?.DeviceId ?? 0;
-                RefreshAvailableDataPoints();
+                //RefreshAvailableDataPoints();
 
                 if (runtimeDataPoint == null || !AvailableDataPoints.Contains(runtimeDataPoint))
                 {

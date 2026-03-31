@@ -195,6 +195,17 @@ namespace MeasurementSoftware.ViewModels
                 foreach (PlcDevice device in e.OldItems)
                 {
                     device.PropertyChanged -= Device_PropertyChanged;
+
+                    var enabledDevice = _enabledStepOperationDevices.FirstOrDefault(d => d.DeviceId == device.DeviceId);
+                    if (enabledDevice != null)
+                    {
+                        _enabledStepOperationDevices.Remove(enabledDevice);
+                    }
+
+                    foreach (var binding in StepOperationBindings.Where(binding => binding.PlcDeviceId == device.DeviceId))
+                    {
+                        binding.HydrateRuntimeBindings(null);
+                    }
                 }
             }
 
@@ -204,30 +215,79 @@ namespace MeasurementSoftware.ViewModels
                 {
                     device.PropertyChanged -= Device_PropertyChanged;
                     device.PropertyChanged += Device_PropertyChanged;
+
+                    if (device.IsEnabled && !_enabledStepOperationDevices.Any(d => d.DeviceId == device.DeviceId))
+                    {
+                        _enabledStepOperationDevices.Add(device);
+                    }
                 }
             }
 
-            RefreshStepOperationDeviceState();
+            if (e.Action is NotifyCollectionChangedAction.Reset or NotifyCollectionChangedAction.Replace or NotifyCollectionChangedAction.Move)
+            {
+                RefreshStepOperationDeviceState();
+                return;
+            }
+
+            OnPropertyChanged(nameof(StepOperationDevices));
         }
 
         private void Device_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName != nameof(PlcDevice.IsEnabled))
+            if (e.PropertyName != nameof(PlcDevice.IsEnabled) || sender is not PlcDevice device)
             {
                 return;
             }
 
-            RefreshStepOperationDeviceState();
+            var existingDevice = _enabledStepOperationDevices.FirstOrDefault(d => d.DeviceId == device.DeviceId);
+
+            if (device.IsEnabled)
+            {
+                if (existingDevice == null)
+                {
+                    _enabledStepOperationDevices.Add(device);
+                }
+
+                foreach (var binding in StepOperationBindings.Where(binding => binding.PlcDeviceId == device.DeviceId))
+                {
+                    binding.HydrateRuntimeBindings(device);
+                }
+            }
+            else
+            {
+                if (existingDevice != null)
+                {
+                    _enabledStepOperationDevices.Remove(existingDevice);
+                }
+
+                foreach (var binding in StepOperationBindings.Where(binding => binding.PlcDeviceId == device.DeviceId))
+                {
+                    binding.HydrateRuntimeBindings(null);
+                }
+            }
+
+            OnPropertyChanged(nameof(StepOperationDevices));
         }
 
         private void RefreshStepOperationDeviceState()
         {
             var enabledDevices = _deviceConfigService.Devices.Where(device => device.IsEnabled).ToList();
 
-            _enabledStepOperationDevices.Clear();
+            var removedDevices = _enabledStepOperationDevices
+                .Where(existing => enabledDevices.All(device => device.DeviceId != existing.DeviceId))
+                .ToList();
+
+            foreach (var removedDevice in removedDevices)
+            {
+                _enabledStepOperationDevices.Remove(removedDevice);
+            }
+
             foreach (var device in enabledDevices)
             {
-                _enabledStepOperationDevices.Add(device);
+                if (!_enabledStepOperationDevices.Any(existing => existing.DeviceId == device.DeviceId))
+                {
+                    _enabledStepOperationDevices.Add(device);
+                }
             }
 
             CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledStepOperationDevices);

@@ -1,6 +1,8 @@
 ﻿using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Logs;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 
@@ -17,7 +19,10 @@ namespace MeasurementSoftware.Services.StepOperations
 
         private MeasurementRecipe? _recipe;
         private RecipeOtherSettingsConfig? _observedSettings;
+        private ObservableCollection<StepOperationBindingConfig>? _observedBindings;
+        private ObservableCollection<PlcDevice>? _observedDevices;
         private CancellationTokenSource? _monitorCts;
+        private bool _isRefreshingBindings;
 
         private int _delayTime => _recipe?.OtherSettings.AcquisitionDelayMs ?? 100;
 
@@ -55,6 +60,7 @@ namespace MeasurementSoftware.Services.StepOperations
             }
 
             SubscribeOtherSettings(_recipe?.OtherSettings);
+            SubscribeDevices(_recipe?.Devices);
         }
 
         private void UnsubscribeRecipe()
@@ -65,18 +71,28 @@ namespace MeasurementSoftware.Services.StepOperations
             }
 
             UnsubscribeOtherSettings();
+            UnsubscribeDevices();
         }
 
         private void Recipe_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName != nameof(MeasurementRecipe.OtherSettings) || _recipe == null)
+            if (_recipe == null)
             {
                 return;
             }
 
-            UnsubscribeOtherSettings();
-            SubscribeOtherSettings(_recipe.OtherSettings);
-            ApplyMonitorState();
+            if (e.PropertyName == nameof(MeasurementRecipe.OtherSettings))
+            {
+                UnsubscribeOtherSettings();
+                SubscribeOtherSettings(_recipe.OtherSettings);
+                ApplyMonitorState();
+            }
+            else if (e.PropertyName == nameof(MeasurementRecipe.Devices))
+            {
+                UnsubscribeDevices();
+                SubscribeDevices(_recipe.Devices);
+                InitializeConfiguredStepOperations();
+            }
         }
 
         private void SubscribeOtherSettings(RecipeOtherSettingsConfig? settings)
@@ -85,6 +101,7 @@ namespace MeasurementSoftware.Services.StepOperations
             if (_observedSettings != null)
             {
                 _observedSettings.PropertyChanged += OtherSettings_PropertyChanged;
+                SubscribeStepOperationBindings(_observedSettings.StepOperationBindings);
             }
         }
 
@@ -96,6 +113,7 @@ namespace MeasurementSoftware.Services.StepOperations
             }
 
             _observedSettings.PropertyChanged -= OtherSettings_PropertyChanged;
+            UnsubscribeStepOperationBindings();
             _observedSettings = null;
         }
 
@@ -105,12 +123,190 @@ namespace MeasurementSoftware.Services.StepOperations
             {
                 ApplyMonitorState();
             }
+            else if (e.PropertyName == nameof(RecipeOtherSettingsConfig.StepOperationBindings) && _observedSettings != null)
+            {
+                UnsubscribeStepOperationBindings();
+                SubscribeStepOperationBindings(_observedSettings.StepOperationBindings);
+                InitializeConfiguredStepOperations();
+            }
+        }
+
+        private void SubscribeStepOperationBindings(ObservableCollection<StepOperationBindingConfig>? bindings)
+        {
+            _observedBindings = bindings;
+            if (_observedBindings == null)
+            {
+                return;
+            }
+
+            _observedBindings.CollectionChanged += StepOperationBindings_CollectionChanged;
+            foreach (var binding in _observedBindings)
+            {
+                binding.PropertyChanged += StepOperationBinding_PropertyChanged;
+            }
+        }
+
+        private void UnsubscribeStepOperationBindings()
+        {
+            if (_observedBindings == null)
+            {
+                return;
+            }
+
+            _observedBindings.CollectionChanged -= StepOperationBindings_CollectionChanged;
+            foreach (var binding in _observedBindings)
+            {
+                binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
+            }
+
+            _observedBindings = null;
+        }
+
+        private void StepOperationBindings_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (StepOperationBindingConfig binding in e.OldItems)
+                {
+                    binding.PropertyChanged -= StepOperationBinding_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (StepOperationBindingConfig binding in e.NewItems)
+                {
+                    binding.PropertyChanged += StepOperationBinding_PropertyChanged;
+                }
+            }
+
+            InitializeConfiguredStepOperations();
+        }
+
+        private void StepOperationBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(StepOperationBindingConfig.PlcDeviceId) or nameof(StepOperationBindingConfig.DataPointId))
+            {
+                InitializeConfiguredStepOperations();
+            }
+        }
+
+        private void SubscribeDevices(ObservableCollection<PlcDevice>? devices)
+        {
+            _observedDevices = devices;
+            if (_observedDevices == null)
+            {
+                return;
+            }
+
+            _observedDevices.CollectionChanged += Devices_CollectionChanged;
+            foreach (var device in _observedDevices)
+            {
+                SubscribeDevice(device);
+            }
+        }
+
+        private void UnsubscribeDevices()
+        {
+            if (_observedDevices == null)
+            {
+                return;
+            }
+
+            _observedDevices.CollectionChanged -= Devices_CollectionChanged;
+            foreach (var device in _observedDevices)
+            {
+                UnsubscribeDevice(device);
+            }
+
+            _observedDevices = null;
+        }
+
+        private void Devices_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (PlcDevice device in e.OldItems)
+                {
+                    UnsubscribeDevice(device);
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (PlcDevice device in e.NewItems)
+                {
+                    SubscribeDevice(device);
+                }
+            }
+
+            InitializeConfiguredStepOperations();
+        }
+
+        private void SubscribeDevice(PlcDevice device)
+        {
+            device.PropertyChanged += Device_PropertyChanged;
+            device.DataPoints.CollectionChanged += DataPoints_CollectionChanged;
+
+            foreach (var dataPoint in device.DataPoints)
+            {
+                dataPoint.PropertyChanged += DataPoint_PropertyChanged;
+            }
+        }
+
+        private void UnsubscribeDevice(PlcDevice device)
+        {
+            device.PropertyChanged -= Device_PropertyChanged;
+            device.DataPoints.CollectionChanged -= DataPoints_CollectionChanged;
+
+            foreach (var dataPoint in device.DataPoints)
+            {
+                dataPoint.PropertyChanged -= DataPoint_PropertyChanged;
+            }
+        }
+
+        private void Device_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(PlcDevice.IsEnabled) or nameof(PlcDevice.DeviceId))
+            {
+                InitializeConfiguredStepOperations();
+            }
+        }
+
+        private void DataPoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (DataPoint dataPoint in e.OldItems)
+                {
+                    dataPoint.PropertyChanged -= DataPoint_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (DataPoint dataPoint in e.NewItems)
+                {
+                    dataPoint.PropertyChanged += DataPoint_PropertyChanged;
+                }
+            }
+
+            InitializeConfiguredStepOperations();
+        }
+
+        private void DataPoint_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(DataPoint.IsEnabled) or nameof(DataPoint.PointId))
+            {
+                InitializeConfiguredStepOperations();
+            }
         }
 
         private void ApplyMonitorState()
         {
             if (_recipe?.OtherSettings.EnableStepOperationBinding == true)
             {
+                InitializeConfiguredStepOperations();
                 StartMonitor();
             }
             else
@@ -182,8 +378,6 @@ namespace MeasurementSoftware.Services.StepOperations
                 return;
             }
 
-            recipe.OtherSettings.HydrateStepOperationBindings(recipe.Devices);
-
             foreach (var binding in recipe.OtherSettings.StepOperationBindings
                 .Where(b => b.IsEnabled)
                 .OrderBy(GetStepOperationPriority))
@@ -202,6 +396,34 @@ namespace MeasurementSoftware.Services.StepOperations
                 _log.Info($"点位触发工步操作：{binding.OperationType.GetDescription()}");
                 OperationTriggered?.Invoke(this, new StepOperationTriggeredEventArgs(binding.OperationType));
                 break;
+            }
+        }
+
+        /// <summary>
+        /// 监听启动前按当前配方初始化一次工步绑定运行时引用。
+        /// 轮询阶段只读点位值，不再反复刷新绑定源，避免界面编辑时闪烁。
+        /// </summary>
+        private void InitializeConfiguredStepOperations()
+        {
+            if (_isRefreshingBindings)
+            {
+                return;
+            }
+
+            var recipe = _recipe;
+            if (recipe?.OtherSettings == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _isRefreshingBindings = true;
+                recipe.OtherSettings.HydrateStepOperationBindings(recipe.Devices);
+            }
+            finally
+            {
+                _isRefreshingBindings = false;
             }
         }
 

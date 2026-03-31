@@ -191,7 +191,7 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0" HorizontalAlignment="Center">
+                <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center"  HorizontalAlignment="Left" Margin="30">
                     <TextBlock VerticalAlignment="Center" Margin="0,0,12,0">
                 <InlineUIContainer>
                     <Image Source="/Images/ico.ico"  Width="24" Height="24"/>
@@ -670,7 +670,7 @@ BorderBrush="{DynamicResource BorderBrush}"
         <Border Grid.ColumnSpan="3"
                 Background="#66000000"
                 Panel.ZIndex="999"
-                Visibility="{Binding IsAppLoading, Converter={StaticResource Boolean2VisibilityConverter}}">
+                Visibility="{Binding IsAppLoading, Converter={StaticResource Boolean2VisibilityConverter}}" d:Visibility="Collapsed">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <Border Background="{DynamicResource RegionBrush}" CornerRadius="12" Padding="28,24">
                     <StackPanel HorizontalAlignment="Center">

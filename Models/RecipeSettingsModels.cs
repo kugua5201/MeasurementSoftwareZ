@@ -345,12 +345,14 @@ namespace MeasurementSoftware.Models
 
         private void EnsureStepOperationBindings()
         {
+            stepOperationBindings ??= [];
+
             var normalizedBindings = StepOperationBindings
                 .GroupBy(binding => binding.OperationType)
                 .Select(group => group.First())
                 .ToDictionary(binding => binding.OperationType);
 
-            var orderedBindings = new ObservableCollection<StepOperationBindingConfig>();
+            var orderedBindings = new List<StepOperationBindingConfig>();
             foreach (var operationType in Enum.GetValues<StepOperationType>())
             {
                 if (!normalizedBindings.TryGetValue(operationType, out var binding))
@@ -366,8 +368,31 @@ namespace MeasurementSoftware.Models
                 orderedBindings.Add(binding);
             }
 
-            stepOperationBindings = orderedBindings;
-            OnPropertyChanged(nameof(StepOperationBindings));
+            var staleBindings = stepOperationBindings
+                .Where(binding => !orderedBindings.Contains(binding))
+                .ToList();
+
+            foreach (var binding in staleBindings)
+            {
+                stepOperationBindings.Remove(binding);
+            }
+
+            for (int index = 0; index < orderedBindings.Count; index++)
+            {
+                var binding = orderedBindings[index];
+                var currentIndex = stepOperationBindings.IndexOf(binding);
+
+                if (currentIndex < 0)
+                {
+                    stepOperationBindings.Insert(index, binding);
+                    continue;
+                }
+
+                if (currentIndex != index)
+                {
+                    stepOperationBindings.Move(currentIndex, index);
+                }
+            }
         }
 
         private static ObservableCollection<StepOperationBindingConfig> CreateDefaultStepOperationBindings()
