@@ -146,11 +146,30 @@ namespace MeasurementSoftware.Services.Devices
             List<FieldInfo> fieldInfos = [];
             foreach (var dataPoint in Device.DataPoints)
             {
+                dataPoint.ValidationStatus = "✅ 通过";
+                dataPoint.ValidationError = null;
+                dataPoint.IsValidated = true;
+                dataPoint.ErrorMessage = null;
                 fieldInfos.Add(new FieldInfo(dataPoint.Address, dataPoint.DataType, dataPoint.ByteOrder));
             }
 
             var checkedFields = DataFieldsHelper.CheckFileds(GetDriveType(), fieldInfos);
-            _protocol.SetDevice(deviceInfo, checkedFields);
+            var resultFields = _protocol.SetDevice(deviceInfo, checkedFields);
+            var errorFields = resultFields.Where(c => !c.IsSuccess).ToList();
+            foreach (var error in errorFields)
+            {
+                // 查找对应的 DataPoint
+                var dataPoints = Device.DataPoints.Where(dp => dp.Address == error.Address);
+
+                foreach (var dataPoint in dataPoints)
+                {
+                    dataPoint.ValidationStatus = $"{error?.Message}";
+                    dataPoint.ValidationError = error?.Message;
+                    dataPoint.IsValidated = false;
+                    dataPoint.ErrorMessage = error?.Message;
+                }
+
+            }
         }
 
         /// <inheritdoc />

@@ -469,7 +469,7 @@
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="PLC设备：" VerticalAlignment="Center" Margin="0,0,0,8"/>
                                     <hc:ComboBox Grid.Row="0" Grid.Column="1"
                                           Style="{StaticResource ComboBoxExtend}"
-                                          ItemsSource="{Binding AvailablePlcDevices}"
+                                           ItemsSource="{Binding EnabledPlcDevices}"
                                            SelectedItem="{Binding EditingChannel.RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           DisplayMemberPath="DeviceName"
                                           Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"

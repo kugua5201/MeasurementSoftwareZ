@@ -658,19 +658,23 @@ namespace MeasurementSoftware.ViewModels
             {
                 try
                 {
-                    CheckAllAddresses();
+                    //CheckAllAddresses();
                     _plcDeviceRuntimeService.ResetDevicePoints(SelectedDevice);
+                    (int successCount, int failCount) = (
+                        SelectedDevice.DataPoints.Count(c => c.IsValidated),
+                        SelectedDevice.DataPoints.Count(c => !c.IsValidated)
+                    );
+                    if (failCount == 0)
+                    {
+                        Growl.Success($"所有 {successCount} 个点位地址验证通过");
+                    }
+                    else
+                    {
+                        Growl.Warning($"验证完成: {successCount} 个通过，{failCount} 个失败，请检查失败项");
+                    }
 
-                    //var success = await _recipeConfigService.SaveCurrentRecipeAsync();
-                    //if (!success)
-                    //{
-                    //    Growl.Warning("点位配置保存到配方失败");
-                    //    return;
-                    //}
-
-                    //var cacheReadingStarted = await TryStartCacheReadingAsync(SelectedDevice);
-                    //RefreshSelectedDeviceCacheFieldDescriptions();
-                    //Growl.Success(cacheReadingStarted ? "点位配置已保存，缓存读取已启动" : "点位配置已保存");
+                    // 记录日志
+                    _log.Info($"设备 {SelectedDevice.DeviceName} 设置点位完成: 成功{successCount}, 失败{failCount}");
                     IsPointSettingOpen = false;
                 }
                 catch (Exception ex)

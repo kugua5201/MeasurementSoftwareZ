@@ -58,11 +58,13 @@ namespace MeasurementSoftware.Models
         private ObservableCollection<DataPoint> availableDataPoints = [];
 
         private ObservableCollection<PlcDevice>? availableDevices;
-
         private PlcDevice? runtimeDevice;
-
         private DataPoint? runtimeDataPoint;
 
+        /// <summary>
+        /// 当前绑定的运行时设备实例。
+        /// 仅运行时使用，不参与序列化。
+        /// </summary>
         [JsonIgnore]
         public PlcDevice? RuntimeDevice
         {
@@ -73,6 +75,10 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        /// <summary>
+        /// 当前绑定的运行时点位实例。
+        /// 仅运行时使用，不参与序列化。
+        /// </summary>
         [JsonIgnore]
         public DataPoint? RuntimeDataPoint
         {
@@ -145,10 +151,7 @@ namespace MeasurementSoftware.Models
                 return;
             }
 
-            if (availableDevices != null)
-            {
-                availableDevices.CollectionChanged -= AvailableDevices_CollectionChanged;
-            }
+            availableDevices?.CollectionChanged -= AvailableDevices_CollectionChanged;
 
             availableDevices = devices;
 
@@ -192,11 +195,17 @@ namespace MeasurementSoftware.Models
             LastObservedValue = null;
         }
 
+        /// <summary>
+        /// 可选设备集合变化时，按当前持久化设备 ID 重新同步运行时设备引用。
+        /// </summary>
         private void AvailableDevices_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             SyncRuntimeDeviceFromAvailableDevices();
         }
 
+        /// <summary>
+        /// 监听当前运行时设备的关键属性变化，联动刷新点位集合与运行时引用。
+        /// </summary>
         private void RuntimeDevice_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(PlcDevice.IsEnabled) && runtimeDevice?.IsEnabled != true)
@@ -212,6 +221,9 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        /// <summary>
+        /// 监听当前运行时设备点位集合的增删变化。
+        /// </summary>
         private void RuntimeDeviceDataPoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             if (e.OldItems != null)
@@ -234,6 +246,9 @@ namespace MeasurementSoftware.Models
             RefreshAvailableDataPointsCore(preservePersistedDataPointId: true);
         }
 
+        /// <summary>
+        /// 监听当前运行时点位源对象的关键属性变化。
+        /// </summary>
         private void RuntimeDataPointSource_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (sender is not DataPoint dataPoint)
@@ -252,6 +267,9 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        /// <summary>
+        /// 根据当前可选设备集合和已保存设备 ID，同步运行时设备引用。
+        /// </summary>
         private void SyncRuntimeDeviceFromAvailableDevices()
         {
             if (availableDevices == null)
@@ -273,6 +291,9 @@ namespace MeasurementSoftware.Models
             HydrateRuntimeBindings(device);
         }
 
+        /// <summary>
+        /// 设置运行时设备，并按需同步持久化设备 ID 与点位状态。
+        /// </summary>
         private void SetRuntimeDevice(PlcDevice? device, bool updatePersistedDeviceId, bool preservePersistedDataPointId)
         {
             var normalizedDevice = device?.IsEnabled == true ? device : null;
@@ -298,6 +319,9 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        /// <summary>
+        /// 设置运行时点位，并按需同步持久化点位 ID。
+        /// </summary>
         private void SetRuntimeDataPoint(DataPoint? dataPoint, bool updatePersistedDataPointId)
         {
             var normalizedDataPoint = dataPoint != null && dataPoint.IsEnabled && AvailableDataPoints.Contains(dataPoint)
@@ -318,6 +342,9 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        /// <summary>
+        /// 按当前运行时设备刷新可选点位集合，并自动恢复或回退到首个可用点位。
+        /// </summary>
         private void RefreshAvailableDataPointsCore(bool preservePersistedDataPointId)
         {
             AvailableDataPoints = runtimeDevice == null || !runtimeDevice.IsEnabled
@@ -326,10 +353,14 @@ namespace MeasurementSoftware.Models
                     .Where(dp => dp.IsEnabled)
                     .OrderBy(dp => dp.PointName));
 
-            var selectedDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
+            var selectedDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId)
+                ?? AvailableDataPoints.FirstOrDefault();
             SetRuntimeDataPoint(selectedDataPoint, updatePersistedDataPointId: !preservePersistedDataPointId);
         }
 
+        /// <summary>
+        /// 为当前运行时设备及其点位集合挂接监听。
+        /// </summary>
         private void SubscribeRuntimeDevice()
         {
             if (runtimeDevice == null)
@@ -349,6 +380,9 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        /// <summary>
+        /// 移除当前运行时设备及其点位集合上的监听。
+        /// </summary>
         private void UnsubscribeRuntimeDevice()
         {
             if (runtimeDevice == null)

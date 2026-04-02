@@ -706,18 +706,15 @@
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="{StaticResource PlaceholderTextBrush}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding ValidationStatus}" Value="✅ 通过">
-                                                            <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding ValidationStatus}" Value="❌ 失败">
-                                                            <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding ValidationStatus}" Value="⚠️ 异常">
-                                                            <Setter Property="Foreground" Value="{StaticResource StatusWarningBrush}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsValidated}" Value="True">
+                                                                <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding IsValidated}" Value="False">
+                                                                <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
                                     </DataTemplate>

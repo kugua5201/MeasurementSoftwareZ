@@ -4,10 +4,11 @@ using HandyControl.Controls;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.QrCodes;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO.Ports;
+using System.Threading;
 
 namespace MeasurementSoftware.ViewModels
 {
@@ -16,7 +17,13 @@ namespace MeasurementSoftware.ViewModels
         private readonly ILog _log;
         private readonly IQrCodeConfigService _qrCodeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
+        private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
+        private readonly IQrCodeScanService _qrCodeScanService;
+        private CancellationTokenSource? _listenValidationCancellationTokenSource;
 
+        /// <summary>
+        /// 当前二维码配置。
+        /// </summary>
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(IsKeyboardInputVisible))]
         [NotifyPropertyChangedFor(nameof(IsSerialPortVisible))]
@@ -25,6 +32,9 @@ namespace MeasurementSoftware.ViewModels
         [NotifyPropertyChangedFor(nameof(IsBatchModeVisible))]
         private QrCodeConfig config;
 
+        private bool _isListeningValidation;
+        private string _listenValidationStatus = string.Empty;
+
         // 数据源可见性
         public bool IsKeyboardInputVisible => Config?.IsEnabled == true && Config?.SourceType == QrCodeSourceType.KeyboardInput;
         public bool IsSerialPortVisible => Config?.IsEnabled == true && Config?.SourceType == QrCodeSourceType.SerialPort;
@@ -32,11 +42,43 @@ namespace MeasurementSoftware.ViewModels
         public bool IsPlcRegisterVisible => Config?.IsEnabled == true && Config?.SourceType == QrCodeSourceType.PlcRegister;
         public bool IsBatchModeVisible => Config?.IsEnabled == false;
         private readonly IRecipeConfigService _recipeConfigService;
+
+        /// <summary>
+        /// 当前打开的配方。
+        /// </summary>
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
 
-        // 以太网协议选项
+        public bool IsListeningValidation
+        {
+            get => _isListeningValidation;
+            set
+            {
+                if (SetProperty(ref _isListeningValidation, value))
+                {
+                    OnPropertyChanged(nameof(CanStartListenValidation));
+                    OnPropertyChanged(nameof(CanStopListenValidation));
+                }
+            }
+        }
+
+        public string ListenValidationStatus
+        {
+            get => _listenValidationStatus;
+            set => SetProperty(ref _listenValidationStatus, value);
+        }
+
+        public bool CanStartListenValidation => Config?.IsEnabled == true && !IsListeningValidation;
+
+        public bool CanStopListenValidation => IsListeningValidation;
+
+        /// <summary>
+        /// 以太网协议选项。
+        /// </summary>
         public Array ProtocolList => Enum.GetValues<NetworkProtocol>();
-        // 数据源类型选项
+
+        /// <summary>
+        /// 二维码数据源类型选项。
+        /// </summary>
         public ObservableCollection<QrCodeSourceType> SourceTypes { get; } = new()
         {
             QrCodeSourceType.KeyboardInput,
@@ -50,20 +92,23 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         public ObservableCollection<string> AvailableComPorts { get; } = [];
 
-
-        private readonly ObservableCollection<PlcDevice> _enabledStepOperationDevices = [];
         /// <summary>
-        /// 工步操作可选设备。
+        /// 可选 PLC 设备。
         /// 仅显示已启用设备，并随设备启用状态实时联动。
         /// </summary>
-        public ObservableCollection<PlcDevice> PlcDevices => _enabledStepOperationDevices;
+        public ReadOnlyObservableCollection<PlcDevice> PlcDevices => _enabledDevicesObserver.EnabledDevicesView;
 
-        public QrCodeSettingViewModel(ILog log, IQrCodeConfigService qrCodeConfigService, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService)
+        /// <summary>
+        /// 创建二维码设置页面的视图模型。
+        /// </summary>
+        public QrCodeSettingViewModel(ILog log, IQrCodeConfigService qrCodeConfigService, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService, IQrCodeScanService qrCodeScanService)
         {
             _log = log;
             _qrCodeConfigService = qrCodeConfigService;
             _deviceConfigService = deviceConfigService;
             _recipeConfigService = recipeConfigService;
+            _qrCodeScanService = qrCodeScanService;
+            _enabledDevicesObserver = new EnabledPlcDevicesObserver(_deviceConfigService);
 
             // 监听配方变化
             if (_recipeConfigService is INotifyPropertyChanged recipeNpc)
@@ -73,82 +118,28 @@ namespace MeasurementSoftware.ViewModels
                     if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
                     {
                         Config = _qrCodeConfigService.QrCodeConfig;
-                        RebindDeviceCollectionNotifications();
-                        RefreshStepOperationDeviceState();
-                        OnPropertyChanged(nameof(PlcDevices));
+                        _enabledDevicesObserver.Rebind();
+                        RestoreSelectedDeviceAndPoint();
                         OnPropertyChanged(nameof(AvailablePoints));
                     }
                 };
             }
 
-            // 监听设备集合变化
-            if (_deviceConfigService is INotifyPropertyChanged deviceNpc)
+            _enabledDevicesObserver.Changed += (_, _) =>
             {
-                deviceNpc.PropertyChanged += (_, e) =>
-                {
-                    if (e.PropertyName == nameof(IDeviceConfigService.Devices))
-                    {
-                        RebindDeviceCollectionNotifications();
-                        RefreshStepOperationDeviceState();
-                        RestoreSelectedDeviceAndPoint();
-                        OnPropertyChanged(nameof(PlcDevices));
-                        OnPropertyChanged(nameof(AvailablePoints));
-                    }
-                };
-            }
+                RestoreSelectedDeviceAndPoint();
+                OnPropertyChanged(nameof(AvailablePoints));
+            };
 
             Config = _qrCodeConfigService.QrCodeConfig;
             RefreshComPorts();
-            RebindDeviceCollectionNotifications();
-            RefreshStepOperationDeviceState();
+            _enabledDevicesObserver.Rebind();
+            UpdateListenValidationStatus();
 
         }
-        private void RefreshStepOperationDeviceState()
-        {
-            _enabledStepOperationDevices.Clear();
-            foreach (var device in _deviceConfigService.Devices.Where(device => device.IsEnabled))
-            {
-                _enabledStepOperationDevices.Add(device);
-            }
-        }
-        private void RebindDeviceCollectionNotifications()
-        {
-            if (PlcDevices is not null)
-            {
-                foreach (var device in _deviceConfigService.Devices)
-                {
-                    device.PropertyChanged -= Device_PropertyChanged;
-                }
 
-                _deviceConfigService.Devices.CollectionChanged -= Devices_CollectionChanged;
-            }
-
-            _deviceConfigService.Devices.CollectionChanged += Devices_CollectionChanged;
-
-            foreach (var device in _deviceConfigService.Devices)
-            {
-                device.PropertyChanged -= Device_PropertyChanged;
-                device.PropertyChanged += Device_PropertyChanged;
-            }
-        }
-        private void Devices_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        {
-            RefreshStepOperationDeviceState();
-            OnPropertyChanged(nameof(PlcDevices));
-            OnPropertyChanged(nameof(AvailablePoints));
-        }
-
-        private void Device_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName != nameof(PlcDevice.IsEnabled))
-            {
-                return;
-            }
-            RefreshStepOperationDeviceState();
-            OnPropertyChanged(nameof(PlcDevices));
-        }
         /// <summary>
-        /// 刷新可用串口列表
+        /// 刷新可用串口列表。
         /// </summary>
         [RelayCommand]
         private void RefreshComPorts()
@@ -165,7 +156,7 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 获取当前选中设备的点位列表
+        /// 获取当前选中设备的启用点位列表。
         /// </summary>
         public ObservableCollection<DataPoint> AvailablePoints
         {
@@ -184,7 +175,10 @@ namespace MeasurementSoftware.ViewModels
             }
         }
 
-
+        /// <summary>
+        /// 上一次绑定点位集合监听的设备。
+        /// 设备切换时用于移除旧监听。
+        /// </summary>
         private PlcDevice? _lastDevice;
 
         partial void OnConfigChanged(QrCodeConfig? oldValue, QrCodeConfig newValue)
@@ -200,7 +194,6 @@ namespace MeasurementSoftware.ViewModels
 
             if (newValue != null)
             {
-                // 恢复选中的设备和点位
                 RestoreSelectedDeviceAndPoint();
 
                 newValue.PropertyChanged += Config_PropertyChanged;
@@ -211,19 +204,22 @@ namespace MeasurementSoftware.ViewModels
                     _lastDevice.DataPoints.CollectionChanged += DataPoints_CollectionChanged;
                 }
 
-                // 触发依赖属性刷新
                 OnPropertyChanged(nameof(IsKeyboardInputVisible));
                 OnPropertyChanged(nameof(IsSerialPortVisible));
                 OnPropertyChanged(nameof(IsEthernetVisible));
                 OnPropertyChanged(nameof(IsPlcRegisterVisible));
                 OnPropertyChanged(nameof(IsBatchModeVisible));
                 OnPropertyChanged(nameof(AvailablePoints));
+                UpdateListenValidationStatus();
             }
         }
 
         private void Config_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            if (Config == null) return;
+            if (Config == null)
+            {
+                return;
+            }
 
             if (e.PropertyName == nameof(Config.IsEnabled))
             {
@@ -240,6 +236,7 @@ namespace MeasurementSoftware.ViewModels
                 OnPropertyChanged(nameof(IsEthernetVisible));
                 OnPropertyChanged(nameof(IsPlcRegisterVisible));
                 OnPropertyChanged(nameof(IsBatchModeVisible));
+                OnPropertyChanged(nameof(CanStartListenValidation));
             }
             else if (e.PropertyName == nameof(Config.SourceType))
             {
@@ -248,20 +245,18 @@ namespace MeasurementSoftware.ViewModels
                 OnPropertyChanged(nameof(IsEthernetVisible));
                 OnPropertyChanged(nameof(IsPlcRegisterVisible));
                 OnPropertyChanged(nameof(IsBatchModeVisible));
-                if (Config.SourceType == QrCodeSourceType.PlcRegister)
+                OnPropertyChanged(nameof(CanStartListenValidation));
+
+                if (Config.SourceType == QrCodeSourceType.PlcRegister && PlcDevices.Count > 0)
                 {
-                    if (PlcDevices.Count > 0)
+                    Config.SelectedPlcDevice = PlcDevices[0];
+                    if (Config.SelectedPlcDevice.DataPoints?.Count > 0)
                     {
-                        Config.SelectedPlcDevice = PlcDevices[0];
-                        // 安全地选择第一个点位（如果存在）
-                        if (Config.SelectedPlcDevice.DataPoints?.Count > 0)
-                        {
-                            Config.SelectedPoint = Config.SelectedPlcDevice.DataPoints[0];
-                        }
-                        else
-                        {
-                            Config.SelectedPoint = null;
-                        }
+                        Config.SelectedPoint = Config.SelectedPlcDevice.DataPoints[0];
+                    }
+                    else
+                    {
+                        Config.SelectedPoint = null;
                     }
                 }
             }
@@ -278,15 +273,114 @@ namespace MeasurementSoftware.ViewModels
                     _lastDevice.DataPoints.CollectionChanged += DataPoints_CollectionChanged;
                 }
 
+                EnsureSelectedPoint();
                 OnPropertyChanged(nameof(AvailablePoints));
+            }
+
+            if (!IsListeningValidation
+                && e.PropertyName != nameof(Config.TestRawData)
+                && e.PropertyName != nameof(Config.TestExtractedQrCode)
+                && e.PropertyName != nameof(Config.TestValidationResult)
+                && e.PropertyName != nameof(Config.RuntimeDisplayText)
+                && e.PropertyName != nameof(Config.RuntimeValidationMessage)
+                && e.PropertyName != nameof(Config.RuntimeValidationPassed))
+            {
+                UpdateListenValidationStatus();
             }
         }
 
-        private void DataPoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        [RelayCommand]
+        private async Task StartListenValidation()
         {
-            // 通知界面刷新点位下拉框
+            try
+            {
+                if (IsListeningValidation)
+                {
+                    return;
+                }
+
+                if (!Config.IsEnabled)
+                {
+                    ListenValidationStatus = "当前为批次流水号模式，不能接收二维码";
+                    Growl.Warning(ListenValidationStatus);
+                    return;
+                }
+
+                if (!_qrCodeScanService.ValidateScanConfig(Config, out var error))
+                {
+                    Config.TestExtractedQrCode = string.Empty;
+                    Config.TestValidationResult = error;
+                    Config.RuntimeValidationPassed = false;
+                    Config.RuntimeDisplayText = error;
+                    Config.RuntimeValidationMessage = error;
+                    ListenValidationStatus = $"当前配置不可接收二维码：{error}";
+                    Growl.Warning(error);
+                    return;
+                }
+
+                _listenValidationCancellationTokenSource?.Cancel();
+                _listenValidationCancellationTokenSource?.Dispose();
+                _listenValidationCancellationTokenSource = new CancellationTokenSource();
+
+                IsListeningValidation = true;
+                Config.TestExtractedQrCode = string.Empty;
+                Config.TestValidationResult = "正在等待扫码数据...";
+                ListenValidationStatus = $"监听已启动，{GetListeningStatusText()}。请手动点击“停止监听”结束。";
+
+                while (!_listenValidationCancellationTokenSource.IsCancellationRequested)
+                {
+                    var result = await _qrCodeScanService.ReceiveAndValidateOnceAsync(Config, _listenValidationCancellationTokenSource.Token);
+                    Config.TestRawData = result.RawData;
+                    Config.TestExtractedQrCode = result.ExtractedQrCode;
+                    Config.TestValidationResult = result.Message;
+                    ListenValidationStatus = result.Success
+                        ? "监听中：最近一次已接收到有效二维码，继续等待下一条数据。"
+                        : "监听中：最近一次已接收到数据，但未通过当前配置校验，继续等待下一条数据。";
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Config.TestValidationResult = "已停止监听验证";
+                ListenValidationStatus = "已停止监听验证";
+            }
+            catch (Exception ex)
+            {
+                Config.TestExtractedQrCode = string.Empty;
+                Config.TestValidationResult = $"❌ 监听异常：{ex.Message}";
+                Config.RuntimeValidationPassed = false;
+                Config.RuntimeDisplayText = ex.Message;
+                Config.RuntimeValidationMessage = ex.Message;
+                ListenValidationStatus = $"监听异常：{ex.Message}";
+                Growl.Error($"监听验证失败: {ex.Message}");
+                _log.Error($"监听验证异常: {ex.Message}");
+            }
+            finally
+            {
+                _listenValidationCancellationTokenSource?.Dispose();
+                _listenValidationCancellationTokenSource = null;
+                IsListeningValidation = false;
+                if (Config.TestValidationResult != "已停止监听验证")
+                {
+                    ListenValidationStatus = "监听已结束";
+                }
+            }
+        }
+
+        [RelayCommand]
+        private void StopListenValidation()
+        {
+            _listenValidationCancellationTokenSource?.Cancel();
+        }
+
+        private void DataPoints_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
             OnPropertyChanged(nameof(AvailablePoints));
-            if (Config.SelectedPoint != null && Config.SelectedPlcDevice != null)
+            if (Config?.SelectedPlcDevice == null)
+            {
+                return;
+            }
+
+            if (Config.SelectedPoint != null)
             {
                 var exists = Config.SelectedPlcDevice.DataPoints.Any(p => p.PointId == Config.SelectedPoint.PointId);
                 if (!exists)
@@ -294,6 +388,8 @@ namespace MeasurementSoftware.ViewModels
                     Config.SelectedPoint = null;
                 }
             }
+
+            EnsureSelectedPoint();
         }
 
         [RelayCommand]
@@ -344,71 +440,16 @@ namespace MeasurementSoftware.ViewModels
                     return;
                 }
 
-                var rawData = Config.TestRawData;
-                var validationResult = new System.Text.StringBuilder();
-
-                // 1. 校验起始符
-                if (Config.EnableStartSymbol && !string.IsNullOrEmpty(Config.StartSymbol))
+                if (!_qrCodeScanService.TryExtractQrCode(Config, Config.TestRawData, out var extractedCode, out var validationResult))
                 {
-                    if (!rawData.StartsWith(Config.StartSymbol))
-                    {
-                        validationResult.AppendLine($"❌ 起始符校验失败：期望'{Config.StartSymbol}'");
-                        Config.TestValidationResult = validationResult.ToString();
-                        Config.TestExtractedQrCode = string.Empty;
-                        return;
-                    }
-                    validationResult.AppendLine($"✅ 起始符校验通过：'{Config.StartSymbol}'");
-                }
-
-                // 2. 校验结束符
-                if (Config.EnableEndSymbol && !string.IsNullOrEmpty(Config.EndSymbol))
-                {
-                    if (!rawData.EndsWith(Config.EndSymbol))
-                    {
-                        validationResult.AppendLine($"❌ 结束符校验失败：期望'{Config.EndSymbol}'");
-                        Config.TestValidationResult = validationResult.ToString();
-                        Config.TestExtractedQrCode = string.Empty;
-                        return;
-                    }
-                    validationResult.AppendLine($"✅ 结束符校验通过：'{Config.EndSymbol}'");
-                }
-
-                // 3. 校验长度
-                if (Config.EnableLengthCheck)
-                {
-                    if (rawData.Length != Config.ExpectedLength)
-                    {
-                        validationResult.AppendLine($"❌ 长度校验失败：期望{Config.ExpectedLength}，实际{rawData.Length}");
-                        Config.TestValidationResult = validationResult.ToString();
-                        Config.TestExtractedQrCode = string.Empty;
-                        return;
-                    }
-                    validationResult.AppendLine($"✅ 长度校验通过：{rawData.Length}");
-                }
-
-                // 4. 提取二维码
-                if (Config.QrCodeStartIndex < 0 || Config.QrCodeStartIndex >= rawData.Length)
-                {
-                    validationResult.AppendLine($"❌ 起始索引超出范围：{Config.QrCodeStartIndex}");
-                    Config.TestValidationResult = validationResult.ToString();
+                    Config.TestValidationResult = validationResult;
                     Config.TestExtractedQrCode = string.Empty;
+                    Growl.Warning("测试提取失败");
                     return;
                 }
 
-                var endIndex = Config.QrCodeStartIndex + Config.QrCodeLength;
-                if (endIndex > rawData.Length)
-                {
-                    validationResult.AppendLine($"❌ 提取长度超出范围：起始{Config.QrCodeStartIndex}，长度{Config.QrCodeLength}");
-                    Config.TestValidationResult = validationResult.ToString();
-                    Config.TestExtractedQrCode = string.Empty;
-                    return;
-                }
-
-                var extractedCode = rawData.Substring(Config.QrCodeStartIndex, Config.QrCodeLength);
                 Config.TestExtractedQrCode = extractedCode;
-                validationResult.AppendLine($"✅ 成功提取二维码：{extractedCode}");
-
-                Config.TestValidationResult = validationResult.ToString();
+                Config.TestValidationResult = validationResult;
                 Growl.Success("测试提取成功");
                 _log.Info($"测试提取成功：{extractedCode}");
             }
@@ -428,21 +469,9 @@ namespace MeasurementSoftware.ViewModels
             {
                 if (!Config.IsEnabled)
                 {
-                    var currentDate = DateTime.Now.ToString(Config.BatchDateFormat);
-
-                    // 如果日期变了，重置流水号
-                    if (Config.LastBatchDate != currentDate)
-                    {
-                        Config.LastBatchDate = currentDate;
-                        Config.CurrentBatchSerial = 1;
-                    }
-
-                    var serialNumber = Config.CurrentBatchSerial.ToString($"D{Config.BatchSerialDigits}");
-                    var batchNumber = $"{Config.BatchPrefix}{currentDate}{serialNumber}";
-
+                    var batchNumber = _qrCodeScanService.GenerateBatchNumber(Config);
                     Config.TestExtractedQrCode = batchNumber;
                     Config.TestValidationResult = $"✅ 生成批次流水号：{batchNumber}";
-                    Config.CurrentBatchSerial++;
 
                     Growl.Success($"生成批次流水号：{batchNumber}");
                     _log.Info($"生成批次流水号：{batchNumber}");
@@ -474,54 +503,8 @@ namespace MeasurementSoftware.ViewModels
 
             if (Config.IsEnabled)
             {
-                // 二维码模式验证
-                switch (Config.SourceType)
+                if (!_qrCodeScanService.ValidateScanConfig(Config, out error))
                 {
-                    case QrCodeSourceType.SerialPort:
-                        if (string.IsNullOrEmpty(Config.SerialPortName))
-                        {
-                            error = "请选择串口";
-                            return false;
-                        }
-                        break;
-
-                    case QrCodeSourceType.Ethernet:
-                        if (string.IsNullOrEmpty(Config.EthernetIp))
-                        {
-                            error = "请输入以太网IP地址";
-                            return false;
-                        }
-                        if (Config.EthernetPort <= 0 || Config.EthernetPort > 65535)
-                        {
-                            error = "以太网端口范围：1-65535";
-                            return false;
-                        }
-                        break;
-
-                    case QrCodeSourceType.PlcRegister:
-                        if (Config.PlcDeviceId <= 0)
-                        {
-                            error = "请选择PLC设备";
-                            return false;
-                        }
-                        if (string.IsNullOrEmpty(Config.Address))
-                        {
-                            error = "请选择点位地址";
-                            return false;
-                        }
-                        break;
-                }
-
-                // 提取参数验证
-                if (Config.QrCodeStartIndex < 0)
-                {
-                    error = "起始索引不能为负数";
-                    return false;
-                }
-
-                if (Config.QrCodeLength <= 0)
-                {
-                    error = "提取长度必须大于0";
                     return false;
                 }
             }
@@ -550,6 +533,41 @@ namespace MeasurementSoftware.ViewModels
             return true;
         }
 
+        private void UpdateListenValidationStatus()
+        {
+            if (Config == null)
+            {
+                ListenValidationStatus = "当前未加载二维码配置";
+                return;
+            }
+
+            if (!Config.IsEnabled)
+            {
+                ListenValidationStatus = "当前为批次流水号模式，不接收二维码";
+                return;
+            }
+
+            if (!_qrCodeScanService.ValidateScanConfig(Config, out var error))
+            {
+                ListenValidationStatus = $"当前配置不可接收二维码：{error}";
+                return;
+            }
+
+            ListenValidationStatus = $"当前配置可接收二维码，{GetListeningStatusText()}";
+        }
+
+        private string GetListeningStatusText()
+        {
+            return Config.SourceType switch
+            {
+                QrCodeSourceType.KeyboardInput => "等待键盘/扫码枪输入",
+                QrCodeSourceType.SerialPort => $"正在等待串口 {Config.SerialPortName} 数据",
+                QrCodeSourceType.Ethernet => $"正在等待 {Config.EthernetProtocol} {Config.EthernetIp}:{Config.EthernetPort} 数据",
+                QrCodeSourceType.PlcRegister => $"正在等待 PLC 点位 {Config.Address} 的新值",
+                _ => "正在等待二维码数据"
+            };
+        }
+
         /// <summary>
         /// 根据保存的ID恢复选中的设备和点位对象
         /// </summary>
@@ -568,6 +586,34 @@ namespace MeasurementSoftware.ViewModels
             {
                 var points = _deviceConfigService.GetDataPointsByDeviceId(Config.SelectedPlcDevice.DeviceId);
                 Config.SelectedPoint = points.FirstOrDefault(p => p.PointId == Config.Address);
+            }
+
+            EnsureSelectedPoint();
+        }
+
+        /// <summary>
+        /// 确保当前选中设备存在有效点位时，自动选中一个可用点位。
+        /// </summary>
+        private void EnsureSelectedPoint()
+        {
+            if (Config?.SelectedPlcDevice == null)
+            {
+                return;
+            }
+
+            var points = _deviceConfigService.GetDataPointsByDeviceId(Config.SelectedPlcDevice.DeviceId)
+                .Where(p => p.IsEnabled)
+                .ToList();
+
+            if (points.Count == 0)
+            {
+                Config.SelectedPoint = null;
+                return;
+            }
+
+            if (Config.SelectedPoint == null || points.All(p => p.PointId != Config.SelectedPoint.PointId))
+            {
+                Config.SelectedPoint = points[0];
             }
         }
     }

@@ -331,7 +331,10 @@ namespace MeasurementSoftware.Models
                 OnPropertyChanged();
             }
         }
-
+        /// <summary>
+        /// 工步的点位绑定配置反序列化后需要根据当前设备列表进行一次绑定关系的重新建立，以确保配方配置与当前系统状态的一致性。
+        /// </summary>
+        /// <param name="devices">当前系统中的设备列表。</param>
         public void HydrateStepOperationBindings(IEnumerable<PlcDevice> devices)
         {
             EnsureStepOperationBindings();
@@ -347,7 +350,9 @@ namespace MeasurementSoftware.Models
                 binding.HydrateRuntimeBindings(device);
             }
         }
-
+        /// <summary>
+        /// 用于确保工步操作绑定配置的完整性和正确性。
+        /// </summary>
         private void EnsureStepOperationBindings()
         {
             stepOperationBindings ??= [];

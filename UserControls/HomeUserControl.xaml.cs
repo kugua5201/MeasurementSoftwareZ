@@ -1,5 +1,7 @@
 ﻿using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.UserSetting;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -12,6 +14,7 @@ namespace MeasurementSoftware.UserControls
     {
         private bool _isAlternateLayout;
         private bool _isGuidePanelVisible = true;
+        private readonly StringBuilder _keyboardScanBuffer = new();
 
         public HomeUserControl()
         {
@@ -298,6 +301,58 @@ namespace MeasurementSoftware.UserControls
             }
 
             ApplyCurrentLayout();
+        }
+
+        /// <summary>
+        /// 页面加载后主动获取焦点，便于键盘扫码枪直接把输入送到首页。
+        /// </summary>
+        private void UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() => Focus()));
+        }
+
+        /// <summary>
+        /// 收集扫码枪以键盘方式发送的字符数据。
+        /// </summary>
+        private void UserControl_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            if (string.IsNullOrEmpty(e.Text))
+            {
+                return;
+            }
+
+            _keyboardScanBuffer.Append(e.Text);
+        }
+
+        /// <summary>
+        /// 以回车或 Tab 作为一次扫码输入结束标记，并提交给扫码输入缓冲服务。
+        /// </summary>
+        private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Back)
+            {
+                if (_keyboardScanBuffer.Length > 0)
+                {
+                    _keyboardScanBuffer.Remove(_keyboardScanBuffer.Length - 1, 1);
+                }
+
+                return;
+            }
+
+            if (e.Key != Key.Enter && e.Key != Key.Return && e.Key != Key.Tab)
+            {
+                return;
+            }
+
+            var rawData = _keyboardScanBuffer.ToString().Trim();
+            _keyboardScanBuffer.Clear();
+            if (string.IsNullOrWhiteSpace(rawData))
+            {
+                return;
+            }
+
+            ContainerBuilderExtensions.GetService<IKeyboardQrCodeInputService>()?.Submit(rawData);
+            e.Handled = true;
         }
 
         #endregion

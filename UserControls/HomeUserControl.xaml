@@ -7,8 +7,12 @@
 			 xmlns:hc="https://handyorg.github.io/handycontrol"
 			 xmlns:scottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
 			 mc:Ignorable="d"
-			 d:DesignHeight="700" d:DesignWidth="1200"
-			 x:Name="HomeControl">
+             d:DesignHeight="700" d:DesignWidth="1200"
+             x:Name="HomeControl"
+             Focusable="True"
+             Loaded="UserControl_Loaded"
+             PreviewTextInput="UserControl_PreviewTextInput"
+             PreviewKeyDown="UserControl_PreviewKeyDown">
 
     <!--<UserControl.Resources>
         <Style x:Key="ColoredHeaderStyle" TargetType="DataGridColumnHeader">
@@ -64,10 +68,10 @@
 							Style="{StaticResource ButtonSuccess}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
                     <Button Content="完成测量" Command="{Binding CompleteMeasurementCommand}"
-							Style="{StaticResource ButtonDanger}"
+							Style="{StaticResource  ButtonSuccess}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
                     <Button Content="终止测量" Command="{Binding TerminateMeasurementCommand}"
-							Style="{StaticResource ButtonSuccess}"
+							Style="{StaticResource ButtonDanger}"
 							Width="{StaticResource FormLabelWidth}" Margin="0,0,5,0"/>
                     <Button Content="上一工步" Command="{Binding PreviousStepCommand}"
 							Style="{StaticResource ButtonPrimary}"
@@ -235,16 +239,56 @@
 
                         <!-- 二维码位置 -->
 
-                            <StackPanel >
+                        <StackPanel >
                             <TextBlock Text="二维码：" FontSize="12" 
                                            Foreground="{StaticResource PlaceholderTextBrush}" VerticalAlignment="Center" Margin="0,0,0,3"/>
-                            <TextBlock Text="1234567890" FontSize="15" Foreground="{StaticResource StatusSuccessBrush}"
-                                                   HorizontalAlignment="Left" />
-                            </StackPanel>
+                            <TextBlock Text="{Binding CurrentBarcode}" FontSize="15"
+                                       HorizontalAlignment="Left" TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CurrentBarcodeValidationPassed}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding CurrentBarcodeValidationPassed}" Value="False">
+                                                <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+
+                            <TextBlock Text="{Binding CurrentBarcodeValidationMessage}" FontSize="12"
+                                       Margin="0,6,0,0" TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{StaticResource PlaceholderTextBrush}"/>
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CurrentBarcodeValidationMessage}" Value="">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding CurrentBarcodeValidationMessage}" Value="{x:Null}">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding CurrentBarcodeValidationPassed}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding CurrentBarcodeValidationPassed}" Value="False">
+                                                <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
                         <Separator Margin="0,5"/>
 
                         <!-- 当前状态 -->
-                        
+
                         <TextBlock Text="当前状态：" FontSize="12" Margin="0,0,0,3" Foreground="{StaticResource PlaceholderTextBrush}"/>
                         <TextBlock Text="{Binding MeasurementStatus}" FontSize="15" FontWeight="Bold"
 										 Foreground="{StaticResource StatusInfoBrush}"/>

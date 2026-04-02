@@ -80,13 +80,13 @@ namespace MeasurementSoftware.Models
         /// 验证状态（用于UI显示）
         /// </summary>
         [ObservableProperty]
-        private string validationStatus = "未检查";
+        private string? validationStatus = "未检查";
 
         /// <summary>
         /// 验证错误消息
         /// </summary>
         [ObservableProperty]
-        private string validationError = string.Empty;
+        private string? validationError = string.Empty;
 
         /// <summary>
         /// 验证是否通过

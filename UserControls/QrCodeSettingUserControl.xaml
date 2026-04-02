@@ -45,6 +45,15 @@
                         <ToggleButton IsChecked="{Binding Config.IsEnabled,Mode=TwoWay}" Style="{StaticResource ToggleButtonSwitch}"/>
                     </StackPanel>
 
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8"
+                                Visibility="{Binding Config.IsEnabled, Converter={StaticResource Boolean2VisibilityConverter}}">
+                        <TextBlock Text="必须扫码：" Width="{StaticResource FormLabelWidth}" VerticalAlignment="Center"/>
+                        <ToggleButton IsChecked="{Binding Config.RequireQrCodeBeforeMeasurement, Mode=TwoWay}" Style="{StaticResource ToggleButtonSwitch}"/>
+                        <TextBlock Text="启用后启动测量先清空数据并等待扫码，收到有效二维码后才开始通道采集"
+                                   FontSize="11" Margin="10,0,0,0"
+                                   Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                    </StackPanel>
+
                     <!-- 数据源类型 -->
                     <StackPanel Orientation="Horizontal" Visibility="{Binding Config.IsEnabled, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <TextBlock Text="数据源类型：" Width="{StaticResource FormLabelWidth}" VerticalAlignment="Center"/>
@@ -283,7 +292,7 @@
                                  Text="{Binding Config.StartSymbol, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding Config.EnableStartSymbol}"
                                  Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
-                                 hc:InfoElement.Placeholder="例如：0x02 或 STX"/>
+                                  hc:InfoElement.Placeholder="例如：\r"/>
 
                         <!-- 结束符 -->
                         <CheckBox Grid.Row="1" Grid.Column="0" Content="启用结束符校验"
@@ -294,7 +303,7 @@
                                  Text="{Binding Config.EndSymbol, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding Config.EnableEndSymbol}"
                                  Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
-                                 hc:InfoElement.Placeholder="例如：0x03 或 ETX"/>
+                                  hc:InfoElement.Placeholder="例如：\n"/>
 
                         <!-- 长度校验 -->
                         <CheckBox Grid.Row="2" Grid.Column="0" Content="启用长度校验"
@@ -419,6 +428,12 @@
                 </hc:Card.Header>
                 <StackPanel Orientation="Vertical" Margin="15">
 
+                    <Border Background="{DynamicResource SecondaryRegionBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="4" Padding="10" Margin="0,0,0,10">
+                        <TextBlock Text="{Binding ListenValidationStatus}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource StatusInfoBrush}"/>
+                    </Border>
+
                     <!-- 测试数据输入 -->
                     <TextBox Text="{Binding Config.TestRawData, UpdateSourceTrigger=PropertyChanged}" 
                              Height="60" TextWrapping="Wrap" AcceptsReturn="True"
@@ -428,6 +443,14 @@
 
                     <!-- 操作与结果显示 -->
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button Content="监听验证" Command="{Binding StartListenValidationCommand}"
+                                IsEnabled="{Binding CanStartListenValidation}"
+                                Style="{StaticResource ButtonPrimary}"
+                                Padding="15,6" Margin="0,0,8,0"/>
+                        <Button Content="停止监听" Command="{Binding StopListenValidationCommand}"
+                                IsEnabled="{Binding CanStopListenValidation}"
+                                Style="{StaticResource ButtonDanger}"
+                                Padding="15,6" Margin="0,0,8,0"/>
                         <Button Content="测试提取" Command="{Binding TestExtractionCommand}" 
                                 IsEnabled="{Binding Config.IsEnabled}"
                                 Style="{StaticResource ButtonSuccess}" 
@@ -447,10 +470,23 @@
                                            Foreground="{DynamicResource SuccessBrush}" FontWeight="Bold" 
                                            FontSize="15" Margin="5,0,15,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding Config.TestValidationResult}" 
-                                           Foreground="{DynamicResource ThirdlyTextBrush}" 
                                            FontSize="12" VerticalAlignment="Center"
                                            TextTrimming="CharacterEllipsis" MaxWidth="400"
-                                           ToolTip="{Binding Config.TestValidationResult}"/>
+                                            ToolTip="{Binding Config.TestValidationResult}">
+                                     <TextBlock.Style>
+                                         <Style TargetType="TextBlock">
+                                             <Setter Property="Foreground" Value="{DynamicResource ThirdlyTextBrush}"/>
+                                             <Style.Triggers>
+                                                 <DataTrigger Binding="{Binding Config.RuntimeValidationPassed}" Value="True">
+                                                     <Setter Property="Foreground" Value="{DynamicResource StatusSuccessBrush}"/>
+                                                 </DataTrigger>
+                                                 <DataTrigger Binding="{Binding Config.RuntimeValidationPassed}" Value="False">
+                                                     <Setter Property="Foreground" Value="{DynamicResource StatusErrorBrush}"/>
+                                                 </DataTrigger>
+                                             </Style.Triggers>
+                                         </Style>
+                                     </TextBlock.Style>
+                                 </TextBlock>
                             </StackPanel>
                         </Border>
                     </StackPanel>

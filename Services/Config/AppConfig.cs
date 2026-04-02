@@ -34,16 +34,11 @@ namespace MeasurementSoftware.Services.Config
 
 
         #region 设备配置
-
-        private ObservableCollection<PlcDevice> _devices = [];
         /// <summary>
-        /// 系统中所有的 PLC 设备（来自当前配方）
+        /// 系统中所有的 PLC 设备。
+        /// 直接使用当前配方中的设备集合，避免 AppConfig 与配方各自持有一份而产生交叉状态。
         /// </summary>
-        public ObservableCollection<PlcDevice> Devices
-        {
-            get => _devices;
-            private set => SetProperty(ref _devices, value);
-        }
+        public ObservableCollection<PlcDevice> Devices => CurrentRecipe?.Devices ?? [];
         /// <summary>
         /// 初始化当前设备列表中所有PLC的协议实例并连接
         /// 在OpenRecipe后调用，从配方中加载设备并建立连接
@@ -119,17 +114,15 @@ namespace MeasurementSoftware.Services.Config
 
                 SyncSiemensCacheConfigurations(devices);
 
-                if (!devices.SequenceEqual(Devices))
+                if (!devices.SequenceEqual(CurrentRecipe!.Devices))
                 {
-                    Devices.Clear();
+                    CurrentRecipe.Devices.Clear();
                     foreach (var device in devices)
                     {
-                        Devices.Add(device);
+                        CurrentRecipe.Devices.Add(device);
                     }
                 }
 
-                // 同步到配方并保存
-                CurrentRecipe!.Devices = Devices;
                 var result = await SaveCurrentRecipeAsync();
                 if (result)
                 {
@@ -213,22 +206,20 @@ namespace MeasurementSoftware.Services.Config
 
             CurrentRecipePath = path;
 
-            // 从配方中同步设备列表到运行时，保持 Devices 的引用不变
-            Devices.Clear();
+            recipe.Devices ??= [];
             if (recipe.Devices != null)
             {
                 foreach (var device in recipe.Devices)
                 {
                     device.SiemensReadCache?.ValidateAndApplyStructure();
-                    Devices.Add(device);
                 }
             }
-            recipe.Devices = Devices; // 确保双向引用一致
             EnsureRecipeStatistics(recipe);
-            HydrateChannelRuntimeData(recipe);
-            recipe.OtherSettings?.HydrateStepOperationBindings(Devices);
 
             CurrentRecipe = recipe;
+            HydrateChannelRuntimeData(recipe);
+            HydrateQrCodeRuntimeData(recipe);
+            recipe.OtherSettings?.HydrateStepOperationBindings(Devices);
 
             // 通知所有监听者：设备列表和二维码配置已随配方更新
             OnPropertyChanged(nameof(Devices));
@@ -257,6 +248,17 @@ namespace MeasurementSoftware.Services.Config
             }
         }
 
+        private void HydrateQrCodeRuntimeData(MeasurementRecipe recipe)
+        {
+            if (recipe.QrCodeConfig == null)
+            {
+                return;
+            }
+
+            recipe.QrCodeConfig.SelectedPlcDevice = Devices.FirstOrDefault(d => d.DeviceId == recipe.QrCodeConfig.PlcDeviceId);
+            recipe.QrCodeConfig.SelectedPoint = recipe.QrCodeConfig.SelectedPlcDevice?.DataPoints.FirstOrDefault(p => p.PointId == recipe.QrCodeConfig.Address);
+        }
+
         /// <summary>
         /// 关闭当前配方：销毁PLC连接，清空所有运行时状态
         /// </summary>
@@ -266,8 +268,6 @@ namespace MeasurementSoftware.Services.Config
             {
                 try { _ = _plcDeviceRuntimeService.DestroyAsync(device); } catch { }
             }
-            Devices.Clear();
-
             CurrentRecipe = null;
             CurrentRecipePath = string.Empty;
 
@@ -309,7 +309,6 @@ namespace MeasurementSoftware.Services.Config
                 // 同步运行时设备列表到配方
                 SyncSiemensCacheConfigurations(Devices);
                 CurrentRecipe.BasicInfo.ModifyTime = DateTime.Now;
-                CurrentRecipe.Devices = Devices;
 
                 var json = JsonSerializer.Serialize(CurrentRecipe, new JsonSerializerOptions { WriteIndented = true });
                 Directory.CreateDirectory(Path.GetDirectoryName(CurrentRecipePath)!);

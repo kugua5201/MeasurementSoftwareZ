@@ -44,6 +44,18 @@ namespace MeasurementSoftware.Models
         private bool isEnabled = true;
 
         /// <summary>
+        /// 是否要求启动测量后必须先完成扫码。
+        /// 启用后会先清空本轮数据并等待新的扫码结果，收到有效二维码后才开始通道采集。
+        /// </summary>
+        private bool requireQrCodeBeforeMeasurement;
+
+        public bool RequireQrCodeBeforeMeasurement
+        {
+            get => requireQrCodeBeforeMeasurement;
+            set => SetProperty(ref requireQrCodeBeforeMeasurement, value);
+        }
+
+        /// <summary>
         /// 数据源类型
         /// </summary>
         [ObservableProperty]
@@ -220,6 +232,29 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         [JsonIgnore]
         private string testValidationResult = string.Empty;
+
+        /// <summary>
+        /// 最近一次二维码校验展示文本（运行时，不序列化）。
+        /// 成功时显示提取结果，失败时显示错误原因。
+        /// </summary>
+        [ObservableProperty]
+        [JsonIgnore]
+        private string runtimeDisplayText = "未扫码";
+
+        /// <summary>
+        /// 最近一次二维码校验详细结果（运行时，不序列化）。
+        /// </summary>
+        [ObservableProperty]
+        [JsonIgnore]
+        private string runtimeValidationMessage = string.Empty;
+
+        /// <summary>
+        /// 最近一次二维码校验是否通过（运行时，不序列化）。
+        /// null 表示尚未开始或等待扫码中。
+        /// </summary>
+        [ObservableProperty]
+        [JsonIgnore]
+        private bool? runtimeValidationPassed;
 
         #endregion
     }

@@ -8,6 +8,7 @@ using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Events;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
 using MeasurementSoftware.Services.UserSetting;
 using MeasurementSoftware.UserControls;
@@ -45,6 +46,12 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<IStepOperationMonitorService, StepOperationMonitorService>();
             builder.RegisterSingleton<IPlcDeviceRuntimeFactory, PlcDeviceRuntimeFactory>();
             builder.RegisterSingleton<IPlcDeviceRuntimeService, PlcDeviceRuntimeService>();
+            builder.RegisterSingleton<IKeyboardQrCodeInputService, KeyboardQrCodeInputService>();
+            builder.RegisterSingleton<IQrCodeScanService, QrCodeScanService>();
+            builder.RegisterTransient<KeyboardInputQrCodeSourceHandler>();
+            builder.RegisterTransient<SerialPortQrCodeSourceHandler>();
+            builder.RegisterTransient<EthernetQrCodeSourceHandler>();
+            builder.RegisterSingleton<PlcRegisterQrCodeSourceHandler>();
 
             // 注册 AppConfig（全局唯一实例，实现所有配置接口）
             builder.RegisterType<AppConfig>()

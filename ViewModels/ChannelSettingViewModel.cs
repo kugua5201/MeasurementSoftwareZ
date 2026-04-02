@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Logs;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using HandyControl.Controls;
 using MeasurementSoftware.Services.Config;
@@ -15,6 +16,7 @@ namespace MeasurementSoftware.ViewModels
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
+        private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
 
         // 直接引用全局配置
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
@@ -50,10 +52,10 @@ namespace MeasurementSoftware.ViewModels
         private double clickY;
 
         /// <summary>
-        /// 可用的PLC设备列表（仅包含已启用的设备）
+        /// 可用的 PLC 设备列表（仅包含已启用的设备）。
+        /// 直接绑定共享的只读启用设备集合，避免各页面重复 new 列表。
         /// </summary>
-        [ObservableProperty]
-        private ObservableCollection<PlcDevice> availablePlcDevices;
+        public ReadOnlyObservableCollection<PlcDevice> EnabledPlcDevices => _enabledDevicesObserver.EnabledDevicesView;
 
         [ObservableProperty]
         private MeasurementChannel? selectedChannel;
@@ -85,9 +87,10 @@ namespace MeasurementSoftware.ViewModels
             _log = log;
             _recipeConfigService = recipeConfigService;
             _deviceConfigService = deviceConfigService;
+            _enabledDevicesObserver = new EnabledPlcDevicesObserver(_deviceConfigService);
 
             // 监听配方和设备变化
-            if (_recipeConfigService is System.ComponentModel.INotifyPropertyChanged npc)
+            if (_recipeConfigService is INotifyPropertyChanged npc)
             {
                 npc.PropertyChanged += (s, e) =>
                 {
@@ -98,7 +101,23 @@ namespace MeasurementSoftware.ViewModels
 
                 };
             }
-            AvailablePlcDevices = new ObservableCollection<PlcDevice>(_deviceConfigService.Devices.Where(d => d.IsEnabled));
+
+            _enabledDevicesObserver.Changed += (_, _) =>
+            {
+                if (CurrentRecipe != null)
+                {
+                    foreach (var channel in CurrentRecipe.Channels)
+                    {
+                        LoadDataPointsForChannel(channel);
+                    }
+                }
+
+                if (EditingChannel != null)
+                {
+                    LoadDataPointsForChannel(EditingChannel);
+                }
+
+            };
 
         }
 
@@ -109,6 +128,7 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private void OnRecipeChanged()
         {
+            _enabledDevicesObserver.Rebind();
             if (CurrentRecipe != null)
             {
                 foreach (var channel in CurrentRecipe.Channels)
@@ -121,11 +141,9 @@ namespace MeasurementSoftware.ViewModels
                     }
                 }
             }
-            AvailablePlcDevices = new ObservableCollection<PlcDevice>(_deviceConfigService.Devices.Where(d => d.IsEnabled));
             OnPropertyChanged(nameof(CurrentRecipe));
             OnPropertyChanged(nameof(SelectedRecipe));
             OnPropertyChanged(nameof(Channels));
-            OnPropertyChanged(nameof(AvailablePlcDevices));
             OnPropertyChanged(nameof(ProductImagePath));
             OnPropertyChanged(nameof(Annotations));
         }
@@ -246,7 +264,6 @@ namespace MeasurementSoftware.ViewModels
                 Growl.Warning("请先选择一个配方");
                 return;
             }
-            AvailablePlcDevices = new ObservableCollection<PlcDevice>(_deviceConfigService.Devices.Where(d => d.IsEnabled));
             ShowCacheToggle = false;
 
             // 创建新通道并打开编辑抽屉
@@ -263,7 +280,7 @@ namespace MeasurementSoftware.ViewModels
                 ChannelType = ChannelTypes.FirstOrDefault(),
             };
 
-            EditingChannel.BindDevice(AvailablePlcDevices.FirstOrDefault());
+            EditingChannel.BindDevice(EnabledPlcDevices.FirstOrDefault());
 
             // 加载数据点并设置默认值（如果有设备）
             if (EditingChannel.RuntimeDevice != null)
@@ -291,7 +308,6 @@ namespace MeasurementSoftware.ViewModels
                 Growl.Warning("请选择要编辑的通道");
                 return;
             }
-            AvailablePlcDevices = new ObservableCollection<PlcDevice>(_deviceConfigService.Devices.Where(d => d.IsEnabled));
             ShowCacheToggle = false;
 
             // 克隆通道数据进行编辑

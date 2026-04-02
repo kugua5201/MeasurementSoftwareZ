@@ -7,6 +7,7 @@ using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
 using Microsoft.Win32;
 using ScottPlot.ArrowShapes;
@@ -24,9 +25,15 @@ namespace MeasurementSoftware.ViewModels
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDataRecordService _dataRecordService;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
+        private readonly IQrCodeScanService _qrCodeScanService;
         private readonly IStepOperationMonitorService _stepOperationMonitorService;
         private DateTime? _acquisitionStartTime;
         private MeasurementRecipe? _subscribedRecipe;
+        private QrCodeConfig? _subscribedQrCodeConfig;
+        private bool _isWaitingForRequiredQrCode;
+        private Task? _optionalQrCodeListeningTask;
+        private string _scannedBarcode = string.Empty;
+        private DateTime? _barcodeScanTime;
 
         [ObservableProperty]
         private string? productImagePath;
@@ -58,6 +65,30 @@ namespace MeasurementSoftware.ViewModels
 
         [ObservableProperty]
         private MeasurementResult overallResult = MeasurementResult.NotMeasured;
+
+        private string currentBarcode = "未扫码";
+
+        public string CurrentBarcode
+        {
+            get => currentBarcode;
+            set => SetProperty(ref currentBarcode, value);
+        }
+
+        private bool? currentBarcodeValidationPassed;
+
+        public bool? CurrentBarcodeValidationPassed
+        {
+            get => currentBarcodeValidationPassed;
+            set => SetProperty(ref currentBarcodeValidationPassed, value);
+        }
+
+        private string currentBarcodeValidationMessage = string.Empty;
+
+        public string CurrentBarcodeValidationMessage
+        {
+            get => currentBarcodeValidationMessage;
+            set => SetProperty(ref currentBarcodeValidationMessage, value);
+        }
 
         /// <summary>
         /// 当前是否正在采集。
@@ -125,13 +156,14 @@ namespace MeasurementSoftware.ViewModels
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
 
-        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService)
+        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
             _dataRecordService = dataRecordService;
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
             _stepOperationMonitorService = stepOperationMonitorService;
+            _qrCodeScanService = qrCodeScanService;
             _stepOperationMonitorService.OperationTriggered += StepOperationMonitorService_OperationTriggered;
 
             // 不再从用户设置加载图片，图片跟随配方
@@ -209,6 +241,13 @@ namespace MeasurementSoftware.ViewModels
 
             if (_subscribedRecipe?.Statistics != null)
                 _subscribedRecipe.Statistics.PropertyChanged += Statistics_PropertyChanged;
+
+            if (_subscribedRecipe?.QrCodeConfig != null)
+            {
+                _subscribedQrCodeConfig = _subscribedRecipe.QrCodeConfig;
+                _subscribedQrCodeConfig.PropertyChanged += QrCodeConfig_PropertyChanged;
+                SyncQrCodeRuntimeState();
+            }
         }
 
         /// <summary>
@@ -229,7 +268,60 @@ namespace MeasurementSoftware.ViewModels
             if (_subscribedRecipe?.Statistics != null)
                 _subscribedRecipe.Statistics.PropertyChanged -= Statistics_PropertyChanged;
 
+            if (_subscribedQrCodeConfig != null)
+            {
+                _subscribedQrCodeConfig.PropertyChanged -= QrCodeConfig_PropertyChanged;
+                _subscribedQrCodeConfig = null;
+            }
+
             _subscribedRecipe = null;
+        }
+
+        /// <summary>
+        /// 同步二维码运行时状态到测量页自己的显示状态。
+        /// 测量页不直接依赖二维码设置页测试状态，但会消费扫码服务写入的运行时结果用于展示。
+        /// </summary>
+        private void QrCodeConfig_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(QrCodeConfig.RuntimeDisplayText)
+                or nameof(QrCodeConfig.RuntimeValidationMessage)
+                or nameof(QrCodeConfig.RuntimeValidationPassed))
+            {
+                SyncQrCodeRuntimeState();
+            }
+        }
+
+        private void SyncQrCodeRuntimeState()
+        {
+            if (_subscribedQrCodeConfig == null)
+            {
+                return;
+            }
+
+            void ApplyState()
+            {
+                CurrentBarcode = string.IsNullOrWhiteSpace(_subscribedQrCodeConfig.RuntimeDisplayText)
+                    ? "未扫码"
+                    : _subscribedQrCodeConfig.RuntimeDisplayText;
+
+                CurrentBarcodeValidationPassed = _subscribedQrCodeConfig.RuntimeValidationPassed;
+                CurrentBarcodeValidationMessage = _subscribedQrCodeConfig.RuntimeValidationMessage;
+
+                if (_isWaitingForRequiredQrCode)
+                {
+                    MeasurementStatus = _subscribedQrCodeConfig.RuntimeValidationPassed == false
+                        ? "扫码校验未通过，等待重新扫码..."
+                        : "等待扫码...";
+                }
+            }
+
+            if (Application.Current?.Dispatcher != null && !Application.Current.Dispatcher.CheckAccess())
+            {
+                _ = Application.Current.Dispatcher.InvokeAsync(ApplyState);
+                return;
+            }
+
+            ApplyState();
         }
 
         /// <summary>
@@ -343,7 +435,7 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private bool CanCompleteMeasurement()
         {
-            return CurrentRecipe != null && _recipeConfigService.IsCollecting;
+            return CurrentRecipe != null && _recipeConfigService.IsCollecting && !_isWaitingForRequiredQrCode;
         }
 
         /// <summary>
@@ -359,6 +451,11 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private bool CanPreviousStep()
         {
+            if (_isWaitingForRequiredQrCode)
+            {
+                return false;
+            }
+
             if (CurrentRecipe?.OtherSettings.EnableStepMode != true || CurrentStep <= 1)
             {
                 return false;
@@ -372,6 +469,11 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private bool CanNextStep()
         {
+            if (_isWaitingForRequiredQrCode)
+            {
+                return false;
+            }
+
             if (CurrentRecipe?.OtherSettings.EnableStepMode != true)
             {
                 return false;
@@ -543,6 +645,93 @@ namespace MeasurementSoftware.ViewModels
             // 清空全部表格状态，并把工步强制回到第 1 步，避免继续上次残留状态。
             ResetAllChannelStates();
             UpdateAnnotationActiveState();
+
+            if (CurrentRecipe.QrCodeConfig.RequireQrCodeBeforeMeasurement)
+            {
+                try
+                {
+                    if (CurrentRecipe.QrCodeConfig.IsEnabled)
+                    {
+                        if (!_qrCodeScanService.ValidateScanConfig(CurrentRecipe.QrCodeConfig, out var scanConfigError))
+                        {
+                            CurrentBarcode = scanConfigError;
+                            CurrentBarcodeValidationPassed = false;
+                            _recipeConfigService.SetCollect(false);
+                            RefreshCommandStates();
+                            MeasurementStatus = "就绪";
+                            Growl.Warning(scanConfigError);
+                            return;
+                        }
+
+                        _isWaitingForRequiredQrCode = true;
+                        RefreshCommandStates();
+                        CurrentBarcode = "等待扫码";
+                        CurrentBarcodeValidationPassed = null;
+                CurrentBarcodeValidationMessage = string.Empty;
+                        MeasurementStatus = "等待扫码...";
+                        _scannedBarcode = await _qrCodeScanService.WaitForQrCodeAsync(CurrentRecipe.QrCodeConfig, _cts.Token);
+                    }
+                    else
+                    {
+                        _scannedBarcode = _qrCodeScanService.GenerateBatchNumber(CurrentRecipe.QrCodeConfig);
+                        CurrentBarcodeValidationPassed = true;
+                        MeasurementStatus = "已生成流水号，开始采集...";
+                    }
+
+                    _barcodeScanTime = DateTime.Now;
+                    CurrentBarcode = _scannedBarcode;
+                    CurrentBarcodeValidationPassed = true;
+                    if (CurrentRecipe.QrCodeConfig.IsEnabled)
+                    {
+                        MeasurementStatus = "扫码成功，开始采集...";
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _isWaitingForRequiredQrCode = false;
+                    _recipeConfigService.SetCollect(false);
+                    RefreshCommandStates();
+                    CurrentBarcode = ex.Message;
+                    CurrentBarcodeValidationPassed = false;
+                    MeasurementStatus = "就绪";
+                    Growl.Error($"等待扫码失败: {ex.Message}");
+                    _log.Error($"等待扫码失败: {ex.Message}");
+                    return;
+                }
+                finally
+                {
+                    _isWaitingForRequiredQrCode = false;
+                    RefreshCommandStates();
+                }
+            }
+            else if (!CurrentRecipe.QrCodeConfig.IsEnabled)
+            {
+                _scannedBarcode = _qrCodeScanService.GenerateBatchNumber(CurrentRecipe.QrCodeConfig);
+                _barcodeScanTime = DateTime.Now;
+                CurrentBarcode = _scannedBarcode;
+                CurrentBarcodeValidationPassed = true;
+            }
+            else
+            {
+                if (_qrCodeScanService.ValidateScanConfig(CurrentRecipe.QrCodeConfig, out var scanConfigError))
+                {
+                    CurrentBarcode = "等待扫码";
+                    CurrentBarcodeValidationPassed = null;
+                    CurrentBarcodeValidationMessage = string.Empty;
+                    _optionalQrCodeListeningTask = ListenOptionalQrCodeDuringAcquisitionAsync(CurrentRecipe.QrCodeConfig, _cts.Token);
+                }
+                else
+                {
+                    CurrentBarcode = scanConfigError;
+                    CurrentBarcodeValidationPassed = false;
+                    _log.Warn($"二维码已启用，但配置无效，本次测量不读取二维码：{scanConfigError}");
+                }
+            }
+
             PrepareCurrentStepForAcquisition();
 
             try
@@ -651,11 +840,13 @@ namespace MeasurementSoftware.ViewModels
             _cts?.Cancel();
             _log.Info("停止数据采集");
             MeasurementStatus = "采集已停止";
+            _isWaitingForRequiredQrCode = false;
+            _optionalQrCodeListeningTask = null;
             _recipeConfigService.SetCollect(false);
             RefreshCommandStates();
 
-            var relevantChannels = GetRelevantChannelsForStop().ToList();
-            if (relevantChannels.Count == 0)
+            var relevantChannels = Channels.Where(c => c.IsMeasuredValueAvailable || c.IsResultValueAvailable).ToList();
+            if (!relevantChannels.Any())
             {
                 return;
             }
@@ -684,7 +875,9 @@ namespace MeasurementSoftware.ViewModels
                 MeasurementTime = DateTime.Now,
                 IsStepMeasurement = IsStepModeEnabled(),
                 OverallResult = OverallResult,
-                ChannelData = [.. Channels.Select(c => new ChannelMeasurementData
+                Barcode = _scannedBarcode,
+                BarcodeScanTime = _barcodeScanTime,
+                ChannelData = [.. relevantChannels.Select(c => new ChannelMeasurementData
                 {
                     ChannelNumber = c.ChannelNumber,
                     ChannelName = c.ChannelName,
@@ -740,6 +933,8 @@ namespace MeasurementSoftware.ViewModels
             }
 
             _cts?.Cancel();
+            _isWaitingForRequiredQrCode = false;
+            _optionalQrCodeListeningTask = null;
             _recipeConfigService.SetCollect(false);
             SetChannelDisplayState(GetActiveChannels(), MeasurementResult.Waiting);
             SyncAnnotationResults();
@@ -756,26 +951,15 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private IEnumerable<MeasurementChannel> GetActiveChannels()
         {
-            var enabledChannels = Channels.Where(c => c.IsEnabled && !string.IsNullOrEmpty(c.PlcDeviceName) && !string.IsNullOrEmpty(c.DataPointName));
 
             if (IsStepModeEnabled())
             {
-                return enabledChannels.Where(c => c.StepNumber == CurrentStep);
+                return Channels.Where(c => c.StepNumber == CurrentStep);
             }
 
-            return enabledChannels;
+            return Channels;
         }
 
-        /// <summary>
-        /// 停止采集时，获取需要参与最终判定的通道。
-        /// 分步模式只结算当前工步，非分步模式结算全部通道。
-        /// </summary>
-        private IEnumerable<MeasurementChannel> GetRelevantChannelsForStop()
-        {
-            return IsStepModeEnabled()
-                ? Channels.Where(c => c.StepNumber == CurrentStep)
-                : Channels;
-        }
 
         /// <summary>
         /// 根据当前模式刷新状态栏文本。
@@ -904,8 +1088,57 @@ namespace MeasurementSoftware.ViewModels
         private void ResetAllChannelStates()
         {
             ResetChannels(Channels);
+            _isWaitingForRequiredQrCode = false;
+            _optionalQrCodeListeningTask = null;
             OverallResult = MeasurementResult.NotMeasured;
+            _scannedBarcode = string.Empty;
+            _barcodeScanTime = null;
+            CurrentBarcode = "未扫码";
+            CurrentBarcodeValidationPassed = null;
+            CurrentBarcodeValidationMessage = string.Empty;
             MeasurementStatus = "就绪";
+        }
+
+        /// <summary>
+        /// 非必须扫码模式下，测量启动后后台按二维码配置继续等待扫码。
+        /// 读到后只更新当前编号，不阻塞通道采集；如果中途停止测量则跟随取消。
+        /// </summary>
+        private async Task ListenOptionalQrCodeDuringAcquisitionAsync(QrCodeConfig config, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var barcode = await _qrCodeScanService.WaitForQrCodeAsync(config, cancellationToken);
+                if (string.IsNullOrWhiteSpace(barcode))
+                {
+                    return;
+                }
+
+                _scannedBarcode = barcode;
+                _barcodeScanTime = DateTime.Now;
+
+                if (Application.Current?.Dispatcher != null)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        CurrentBarcode = barcode;
+                        CurrentBarcodeValidationPassed = true;
+                    });
+                }
+                else
+                {
+                    CurrentBarcode = barcode;
+                    CurrentBarcodeValidationPassed = true;
+                }
+
+                _log.Info($"测量过程中已读取二维码：{barcode}");
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"测量过程中读取二维码失败：{ex.Message}");
+            }
         }
 
         /// <summary>

@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using HandyControl.Controls;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
-using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -20,26 +19,39 @@ namespace MeasurementSoftware.ViewModels
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
+        private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
 
         private ObservableCollection<StepOperationBindingConfig>? _observedStepOperationBindings;
 
         [ObservableProperty]
         private AcquisitionCsvColumnDefinition? selectedAvailableCsvColumn;
 
+        /// <summary>
+        /// 当前选中的已配置导出列。
+        /// </summary>
         [ObservableProperty]
         private AcquisitionCsvColumnConfig? selectedConfiguredCsvColumn;
 
+        /// <summary>
+        /// 当前打开的配方。
+        /// </summary>
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
+
+        /// <summary>
+        /// 当前是否存在已打开配方。
+        /// </summary>
         public bool HasRecipe => CurrentRecipe != null;
+
+        /// <summary>
+        /// 所有可添加的导出列定义。
+        /// </summary>
         public ObservableCollection<AcquisitionCsvColumnDefinition> AvailableCsvColumns { get; } = [.. AcquisitionCsvColumnCatalog.All];
 
-
-        private readonly ObservableCollection<PlcDevice> _enabledStepOperationDevices = [];
         /// <summary>
         /// 工步操作可选设备。
         /// 仅显示已启用设备，并随设备启用状态实时联动。
         /// </summary>
-        public ObservableCollection<PlcDevice> StepOperationDevices => _enabledStepOperationDevices;
+        public ReadOnlyObservableCollection<PlcDevice> StepOperationDevices => _enabledDevicesObserver.EnabledDevicesView;
 
         /// <summary>
         /// 当前配方的工步操作绑定集合。
@@ -51,11 +63,15 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         public Array StepOperationTriggerModes => Enum.GetValues<StepOperationTriggerMode>();
 
+        /// <summary>
+        /// 创建其他设置页面的视图模型。
+        /// </summary>
         public OtherSettingsViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
             _deviceConfigService = deviceConfigService;
+            _enabledDevicesObserver = new EnabledPlcDevicesObserver(_deviceConfigService);
 
             if (_recipeConfigService is INotifyPropertyChanged npc)
             {
@@ -63,8 +79,8 @@ namespace MeasurementSoftware.ViewModels
                 {
                     if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
                     {
-                        RefreshStepOperationDeviceState();
-                        CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(StepOperationDevices);
+                        _enabledDevicesObserver.Rebind();
+                        CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
                         RebindStepOperationBindingNotifications();
                         OnPropertyChanged(nameof(CurrentRecipe));
                         OnPropertyChanged(nameof(HasRecipe));
@@ -74,26 +90,20 @@ namespace MeasurementSoftware.ViewModels
                 };
             }
 
-            if (_deviceConfigService is INotifyPropertyChanged deviceNpc)
+            _enabledDevicesObserver.Changed += (s, e) =>
             {
-                deviceNpc.PropertyChanged += (s, e) =>
-                {
-                    if (e.PropertyName == nameof(IDeviceConfigService.Devices))
-                    {
-                        RebindDeviceCollectionNotifications();
-                        RefreshStepOperationDeviceState();
-                        CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(StepOperationDevices);
-                        OnPropertyChanged(nameof(StepOperationDevices));
-                    }
-                };
-            }
+                CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
+            };
 
-            RebindDeviceCollectionNotifications();
-            RefreshStepOperationDeviceState();
-            CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(StepOperationDevices);
+            _enabledDevicesObserver.Rebind();
+            CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
             RebindStepOperationBindingNotifications();
         }
 
+        /// <summary>
+        /// 重新绑定当前配方的工步操作绑定集合监听。
+        /// 配方切换后需要重建绑定项与可选设备集合的关系。
+        /// </summary>
         private void RebindStepOperationBindingNotifications()
         {
             if (_observedStepOperationBindings != null)
@@ -115,10 +125,13 @@ namespace MeasurementSoftware.ViewModels
             _observedStepOperationBindings.CollectionChanged += StepOperationBindings_CollectionChanged;
             foreach (var binding in _observedStepOperationBindings)
             {
-                binding.AttachAvailableDevices(StepOperationDevices);
+                binding.AttachAvailableDevices(_enabledDevicesObserver.EnabledDevices);
             }
         }
 
+        /// <summary>
+        /// 处理工步绑定集合的增删，保证新增项也能接入设备集合监听。
+        /// </summary>
         private void StepOperationBindings_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             if (e.OldItems != null)
@@ -133,114 +146,14 @@ namespace MeasurementSoftware.ViewModels
             {
                 foreach (StepOperationBindingConfig binding in e.NewItems)
                 {
-                    binding.AttachAvailableDevices(StepOperationDevices);
+                    binding.AttachAvailableDevices(_enabledDevicesObserver.EnabledDevices);
                 }
             }
         }
 
-        private void RebindDeviceCollectionNotifications()
-        {
-            _deviceConfigService.Devices.CollectionChanged -= Devices_CollectionChanged;
-            _deviceConfigService.Devices.CollectionChanged += Devices_CollectionChanged;
-
-            foreach (var device in _deviceConfigService.Devices)
-            {
-                device.PropertyChanged -= Device_PropertyChanged;
-                device.PropertyChanged += Device_PropertyChanged;
-            }
-        }
-
-        private void Devices_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        {
-            if (e.OldItems != null)
-            {
-                foreach (PlcDevice device in e.OldItems)
-                {
-                    device.PropertyChanged -= Device_PropertyChanged;
-
-                    var enabledDevice = _enabledStepOperationDevices.FirstOrDefault(d => d.DeviceId == device.DeviceId);
-                    if (enabledDevice != null)
-                    {
-                        _enabledStepOperationDevices.Remove(enabledDevice);
-                    }
-                }
-            }
-
-            if (e.NewItems != null)
-            {
-                foreach (PlcDevice device in e.NewItems)
-                {
-                    device.PropertyChanged -= Device_PropertyChanged;
-                    device.PropertyChanged += Device_PropertyChanged;
-
-                    if (device.IsEnabled && !_enabledStepOperationDevices.Any(d => d.DeviceId == device.DeviceId))
-                    {
-                        _enabledStepOperationDevices.Add(device);
-                    }
-                }
-            }
-
-            if (e.Action is NotifyCollectionChangedAction.Reset or NotifyCollectionChangedAction.Replace or NotifyCollectionChangedAction.Move)
-            {
-                RefreshStepOperationDeviceState();
-                return;
-            }
-
-            OnPropertyChanged(nameof(StepOperationDevices));
-        }
-
-        private void Device_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName != nameof(PlcDevice.IsEnabled) || sender is not PlcDevice device)
-            {
-                return;
-            }
-
-            var existingDevice = _enabledStepOperationDevices.FirstOrDefault(d => d.DeviceId == device.DeviceId);
-
-            if (device.IsEnabled)
-            {
-                if (existingDevice == null)
-                {
-                    _enabledStepOperationDevices.Add(device);
-                }
-            }
-            else
-            {
-                if (existingDevice != null)
-                {
-                    _enabledStepOperationDevices.Remove(existingDevice);
-                }
-            }
-
-            OnPropertyChanged(nameof(StepOperationDevices));
-        }
-
-        private void RefreshStepOperationDeviceState()
-        {
-            var enabledDevices = _deviceConfigService.Devices.Where(device => device.IsEnabled).ToList();
-
-            var removedDevices = _enabledStepOperationDevices
-                .Where(existing => enabledDevices.All(device => device.DeviceId != existing.DeviceId))
-                .ToList();
-
-            foreach (var removedDevice in removedDevices)
-            {
-                _enabledStepOperationDevices.Remove(removedDevice);
-            }
-
-            foreach (var device in enabledDevices)
-            {
-                if (!_enabledStepOperationDevices.Any(existing => existing.DeviceId == device.DeviceId))
-                {
-                    _enabledStepOperationDevices.Add(device);
-                }
-            }
-
-            CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledStepOperationDevices);
-            OnPropertyChanged(nameof(StepOperationDevices));
-        }
-
+        /// <summary>
+        /// 当前已配置的 CSV 导出列。
+        /// </summary>
         public ObservableCollection<AcquisitionCsvColumnConfig> ConfiguredCsvColumns => CurrentRecipe?.OtherSettings.AcquisitionStorage.CsvColumns ?? [];
 
         [RelayCommand]
