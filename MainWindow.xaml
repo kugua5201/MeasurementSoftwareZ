@@ -140,9 +140,32 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <hc:ContextMenuButton Grid.Column="1"
+            <Button Grid.Column="1"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Click="RegistrationStatusButton_Click"
+                    ToolTip="{Binding RegistrationToolTip}">
+                <TextBlock Text="{Binding RegistrationStatusText}"
+                           FontSize="13"
+                           VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="#D13438"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsRegistered}" Value="True">
+                                    <Setter Property="Foreground" Value="#107C10"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Button>
+
+            <hc:ContextMenuButton Grid.Column="2"
                                   
                                   Style="{StaticResource CaptionIconButtonStyle}"
                                   ToolTip="设置">

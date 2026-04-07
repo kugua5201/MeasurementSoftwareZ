@@ -8,6 +8,7 @@ using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Events;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.Licensing;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
 using MeasurementSoftware.Services.UserSetting;
@@ -38,6 +39,7 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<ILog, Log>();
             builder.RegisterSingleton<IEventAggregator, EventAggregator>();
             builder.RegisterSingleton<IUserSettingsService, UserSettingsService>();
+            builder.RegisterSingleton<ILicenseService, LicenseService>();
 
             builder.RegisterSingleton<IMesService, MesService>();
             builder.RegisterSingleton<IDataRecordService, DataRecordService>();

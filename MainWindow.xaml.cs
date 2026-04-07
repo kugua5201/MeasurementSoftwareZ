@@ -5,6 +5,7 @@ using HandyControl.Tools;
 using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
+using MeasurementSoftware.Services.Licensing;
 using MeasurementSoftware.Services.UserSetting;
 using System;
 using System.ComponentModel;
@@ -80,19 +81,6 @@ namespace MeasurementSoftware
             RestoreWindowLayout();
             RestoreSelectedMenuButton();
         }
-
-        //private void MainWindow_StateChanged(object? sender, EventArgs e)
-        //{
-        //    if (_isExitRequested)
-        //    {
-        //        return;
-        //    }
-
-        //    if (WindowState == WindowState.Minimized)
-        //    {
-        //        HideToBackground();
-        //    }
-        //}
 
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
@@ -187,6 +175,31 @@ namespace MeasurementSoftware
             }
 
             Close();
+        }
+
+        private void RegistrationStatusButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is not ViewModels.MainWindowViewModel viewModel || viewModel.IsRegistered)
+            {
+                return;
+            }
+
+            var licenseService = ContainerBuilderExtensions.GetService<ILicenseService>();
+            if (licenseService == null)
+            {
+                HandyControl.Controls.MessageBox.Show("未找到注册服务。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var registrationWindow = new RegistrationWindow(licenseService)
+            {
+                Owner = this
+            };
+
+            if (registrationWindow.ShowDialog() == true)
+            {
+                viewModel.RefreshRegistrationStatus();
+            }
         }
 
         #region 窗口布局保存/恢复

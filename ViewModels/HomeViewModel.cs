@@ -6,6 +6,7 @@ using MeasurementSoftware.Models;
 using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
+using MeasurementSoftware.Services.Licensing;
 using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
@@ -16,6 +17,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Text;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace MeasurementSoftware.ViewModels
 {
@@ -25,9 +27,11 @@ namespace MeasurementSoftware.ViewModels
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDataRecordService _dataRecordService;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
+        private readonly ILicenseService _licenseService;
         private readonly IKeyboardQrCodeInputService _keyboardQrCodeInputService;
         private readonly IQrCodeScanService _qrCodeScanService;
         private readonly IStepOperationMonitorService _stepOperationMonitorService;
+        private readonly DispatcherTimer _licenseEnforcementTimer = new();
         private DateTime? _acquisitionStartTime;
         private MeasurementRecipe? _subscribedRecipe;
         private QrCodeConfig? _subscribedQrCodeConfig;
@@ -157,7 +161,7 @@ namespace MeasurementSoftware.ViewModels
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
 
-        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService)
+        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService, ILicenseService licenseService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
@@ -166,7 +170,12 @@ namespace MeasurementSoftware.ViewModels
             _stepOperationMonitorService = stepOperationMonitorService;
             _qrCodeScanService = qrCodeScanService;
             _keyboardQrCodeInputService = keyboardQrCodeInputService;
+            _licenseService = licenseService;
             _stepOperationMonitorService.OperationTriggered += StepOperationMonitorService_OperationTriggered;
+            _licenseEnforcementTimer.Interval = TimeSpan.FromHours(1);
+            _licenseEnforcementTimer.Tick += LicenseEnforcementTimer_Tick;
+            _licenseService.RegistrationStatusChanged += LicenseService_RegistrationStatusChanged;
+            UpdateLicenseEnforcementTimer();
 
             // 不再从用户设置加载图片，图片跟随配方
 
@@ -215,6 +224,45 @@ namespace MeasurementSoftware.ViewModels
             _stepOperationMonitorService.SetRecipe(CurrentRecipe);
             ResetAllChannelStates();
             RefreshCommandStates();
+        }
+
+        private void LicenseService_RegistrationStatusChanged(object? sender, bool isRegistered)
+        {
+            Application.Current.Dispatcher.Invoke(UpdateLicenseEnforcementTimer);
+        }
+
+        private void UpdateLicenseEnforcementTimer()
+        {
+            if (_licenseService.IsRegistered)
+            {
+                _licenseEnforcementTimer.Stop();
+                return;
+            }
+
+            if (!_licenseEnforcementTimer.IsEnabled)
+            {
+                _licenseEnforcementTimer.Start();
+            }
+        }
+
+        private async void LicenseEnforcementTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_licenseService.IsRegistered)
+            {
+                _licenseEnforcementTimer.Stop();
+                return;
+            }
+
+            if (_recipeConfigService.IsCollecting)
+            {
+                await TerminateMeasurementAsync();
+                Growl.Warning("软件未注册，已停止当前采集，请先完成注册。");
+                _log.Warn("软件未注册，已按授权限制停止当前采集。");
+                return;
+            }
+
+            Growl.Warning("软件未注册，请先完成注册。");
+            _log.Warn("软件未注册，授权限制提醒已触发。");
         }
 
         #region 配方订阅与界面联动

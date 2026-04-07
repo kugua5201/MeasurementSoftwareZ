@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using HandyControl.Controls;
 using MeasurementSoftware.Extensions;
 using MeasurementSoftware.Models;
+using MeasurementSoftware.Services.Licensing;
 using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.Services.UserSetting;
 using System.Collections.ObjectModel;
@@ -41,13 +42,41 @@ namespace MeasurementSoftware.ViewModels
         }
 
         private readonly ILog _log;
+        private readonly ILicenseService _licenseService;
         private readonly IUserSettingsService _userSettingsService;
 
-        public MainWindowViewModel(ILog log, IUserSettingsService userSettingsService)
+        [ObservableProperty]
+        private bool isRegistered;
+
+        public string RegistrationStatusText => IsRegistered ? "注册" : "未注册";
+
+        public string RegistrationToolTip => IsRegistered ? "软件已注册" : "点击注册软件";
+
+        public MainWindowViewModel(ILog log, IUserSettingsService userSettingsService, ILicenseService licenseService)
         {
             _log = log;
             _userSettingsService = userSettingsService;
+            _licenseService = licenseService;
+            IsRegistered = _licenseService.IsRegistered;
+            _licenseService.RegistrationStatusChanged += LicenseService_RegistrationStatusChanged;
             RestoreNavigationLayout();
+        }
+
+        partial void OnIsRegisteredChanged(bool value)
+        {
+            OnPropertyChanged(nameof(RegistrationStatusText));
+            OnPropertyChanged(nameof(RegistrationToolTip));
+        }
+
+        public void RefreshRegistrationStatus()
+        {
+            _licenseService.RefreshRegistrationStatus();
+            IsRegistered = _licenseService.IsRegistered;
+        }
+
+        private void LicenseService_RegistrationStatusChanged(object? sender, bool isRegistered)
+        {
+            Application.Current.Dispatcher.Invoke(() => IsRegistered = isRegistered);
         }
 
         /// <summary>
