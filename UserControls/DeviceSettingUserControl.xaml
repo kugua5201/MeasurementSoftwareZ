@@ -7,7 +7,8 @@
 		xmlns:hc="https://handyorg.github.io/handycontrol"
 		x:Name="CommunicationSettingControl"
         xmlns:helpers="clr-namespace:MeasurementSoftware.Helpers"
-		xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:model="clr-namespace:MultiProtocol.Model;assembly=MultiProtocol"
 	 mc:Ignorable="d"
    d:DesignHeight="700" d:DesignWidth="1200">
     <UserControl.Resources>
@@ -403,7 +404,7 @@
                                 <!-- 动态加载不同PLC类型的配置界面 -->
                                 <ContentControl Content="{Binding}" 
 												ContentTemplateSelector="{StaticResource PlcConfigTemplateSelector}"
-												Margin="0,15,0,0" />
+												Margin="0,10,0,0" />
 
                                 <Separator Margin="0,5"/>
 
@@ -544,7 +545,7 @@
 				   ShowMode="Cover"
 				   IsOpen="{Binding IsPointSettingOpen, Mode=TwoWay}">
             <Border Background="{DynamicResource RegionBrush}" 
-					MinWidth="800" MaxWidth="900" 
+					MinWidth="700" MaxWidth="900" 
 					BorderThickness="1,0,0,0" 
                     DataContext="{Binding Data, Source={StaticResource VmProxy}}"
 					BorderBrush="{DynamicResource BorderBrush}">
@@ -615,31 +616,17 @@
 					<DataGrid Grid.Row="2" 
 							  ItemsSource="{Binding SelectedDevice.DataPoints}" 
 							  SelectedItem="{Binding SelectedDataPoint}"
+                              BeginningEdit="DataGrid_BeginningEdit"
 							  AutoGenerateColumns="False"
 							  CanUserAddRows="False"
 
 							  SelectionMode="Single"
-
+                              HorizontalAlignment="Left"
 							  HeadersVisibility="Column"
 							  RowHeight="35"
 							  FontSize="13"
 							  BorderBrush="{DynamicResource BorderBrush}"
-							  Margin="10">
-						<!--<DataGrid.RowStyle>
-							<Style TargetType="DataGridRow" BasedOn="{StaticResource DataGridRowStyle}">
-								<Setter Property="ToolTip" Value="{Binding ErrorMessage}" />
-								<Style.Triggers>
-									<Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
-                                    </Trigger>
-								</Style.Triggers>
-							</Style>
-						</DataGrid.RowStyle>
-                        <DataGrid.CellStyle>
-                            <Style TargetType="DataGridCell"  BasedOn="{StaticResource DataGridCellStyle}">
-                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}"/>
-                            </Style>
-                        </DataGrid.CellStyle>-->
+							 >
 
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow" BasedOn="{StaticResource DataGridRowStyle}">
@@ -692,20 +679,69 @@
                             
                             <DataGridTextColumn Header="ID" Binding="{Binding PointId}" Width="50" IsReadOnly="True"/>
                             <DataGridTextColumn Header="点位名称" Binding="{Binding PointName}" Width="100"/>
-                            <DataGridTextColumn Header="数据地址" Binding="{Binding Address}" Width="150"/>
+                            <DataGridTextColumn Header="数据地址" Binding="{Binding Address}" Width="100"/>
                             <DataGridComboBoxColumn Header="字节顺序" SelectedItemBinding="{Binding ByteOrder}" ItemsSource="{Binding Source={StaticResource DataOrderValues}}" Width="80"/>
                             <DataGridComboBoxColumn Header="数据类型" SelectedItemBinding="{Binding DataType}" ItemsSource="{Binding Source={StaticResource DataTypeEnumValues}}" Width="80"/>
-                            <DataGridTextColumn Header="当前值" Binding="{Binding CurrentValue,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="100" IsReadOnly="True"/>
-                            <DataGridTemplateColumn Header="验证状态" Width="80">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding ValidationStatus}" 
+                            <DataGridTextColumn Header="长度" Width="90">
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource DataPointStringLengthDisplayConverter}" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding Path="DataLength" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged"/>
+                                        <Binding Path="DataType"/>
+                                        <Binding Path="DataContext.SelectedDevice.DeviceType" RelativeSource="{RelativeSource AncestorType=DataGrid}"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="TextAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                                <DataGridTextColumn.EditingElementStyle>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource TextBoxExtend}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                        <Setter Property="TextAlignment" Value="Center"/>
+                                        <Setter Property="Padding" Value="4,1"/>
+                                            <Setter Property="MaxLength" Value="4"/>
+                                            <Setter Property="IsEnabled" Value="False"/>
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}"/>
+                                                    <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="MitsubishiMC"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}"/>
+                                                    <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="ModbusTCP"/>
+                                                </MultiDataTrigger.Conditions>
+                                                    <Setter Property="IsEnabled" Value="True"/>
+                                                </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}"/>
+                                                    <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="ModbusRTU"/>
+                                                </MultiDataTrigger.Conditions>
+                                                    <Setter Property="IsEnabled" Value="True"/>
+                                                </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.EditingElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="当前值" Binding="{Binding CurrentValue,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="100" IsReadOnly="True" CanUserSort="False"/>
+                                <DataGridTemplateColumn Header="验证状态" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding ValidationStatus}" 
 												   ToolTip="{Binding ValidationError}"
 												   HorizontalAlignment="Center"
 												   VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="{StaticResource PlaceholderTextBrush}"/>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{StaticResource PlaceholderTextBrush}"/>
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsValidated}" Value="True">
                                                                 <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
@@ -715,15 +751,12 @@
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            
-                            
-                            <!--<DataGridCheckBoxColumn Header="启用" Binding="{Binding IsEnabled}" Width="50"/>-->
-                        </DataGrid.Columns>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
             </Border>

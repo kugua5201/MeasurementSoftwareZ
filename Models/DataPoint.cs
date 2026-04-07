@@ -41,6 +41,18 @@ namespace MeasurementSoftware.Models
         private ByteOrder byteOrder = ByteOrder.DCBA;
 
         /// <summary>
+        /// 字符串长度。
+        /// 仅当数据类型为 String 时生效。
+        /// </summary>
+        private int dataLength = 20;
+
+        public int DataLength
+        {
+            get => dataLength;
+            set => SetProperty(ref dataLength, value);
+        }
+
+        /// <summary>
         /// 当前值
         /// </summary>
         [ObservableProperty]

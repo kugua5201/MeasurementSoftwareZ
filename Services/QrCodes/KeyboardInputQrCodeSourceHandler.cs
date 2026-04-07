@@ -18,6 +18,7 @@ namespace MeasurementSoftware.Services.QrCodes
 
         public async Task<string?> WaitForRawDataAsync(QrCodeConfig config, CancellationToken cancellationToken)
         {
+            _keyboardQrCodeInputService.ClearPending();
             return await _keyboardQrCodeInputService.WaitForNextAsync(cancellationToken);
         }
     }

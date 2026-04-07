@@ -468,33 +468,32 @@ namespace MeasurementSoftware.ViewModels
             }
             var selectedDeviceId = SelectedDevice?.DeviceId;
 
-            await ExecuteWithLoadingAsync("正在保存设备配置...", async () =>
-            {
-                try
-                {
-                    var success = await _deviceConfigService.SaveDevicesAsync([.. Devices]);
-                    if (success)
-                    {
-                        if (selectedDeviceId.HasValue)
-                        {
-                            SelectedDevice = Devices.FirstOrDefault(d => d.DeviceId == selectedDeviceId.Value) ?? SelectedDevice;
-                        }
 
-                        Growl.Success($"设备配置已保存");
-                        _log.Info($"保存设备配置成功");
-                    }
-                    else
-                    {
-                        Growl.Error("保存配置失败");
-                        _log.Error("保存设备配置失败");
-                    }
-                }
-                catch (Exception ex)
+            try
+            {
+                var success = await _deviceConfigService.SaveDevicesAsync([.. Devices]);
+                if (success)
                 {
-                    Growl.Error($"保存失败: {ex.Message}");
-                    _log.Error($"保存设备配置异常: {ex.Message}");
+                    if (selectedDeviceId.HasValue)
+                    {
+                        SelectedDevice = Devices.FirstOrDefault(d => d.DeviceId == selectedDeviceId.Value) ?? SelectedDevice;
+                    }
+
+                    Growl.Success($"设备配置已保存");
+                    _log.Info($"保存设备配置成功");
                 }
-            });
+                else
+                {
+                    Growl.Error("保存配置失败");
+                    _log.Error("保存设备配置失败");
+                }
+            }
+            catch (Exception ex)
+            {
+                Growl.Error($"保存失败: {ex.Message}");
+                _log.Error($"保存设备配置异常: {ex.Message}");
+            }
+
         }
 
         /// <summary>
@@ -571,6 +570,7 @@ namespace MeasurementSoftware.ViewModels
                 PointName = $"点位{newPointId}",
                 Address = GetDefaultAddress(SelectedDevice.DeviceType),
                 DataType = FieldType.Float,
+                DataLength = 20,
                 ByteOrder = GetDefaultByteOrder(SelectedDevice.DeviceType),
                 IsEnabled = true
             };
@@ -703,11 +703,26 @@ namespace MeasurementSoftware.ViewModels
 
             try
             {
+                if (dataPoint.DataType == FieldType.String && RequiresStringLength(deviceType) && dataPoint.DataLength <= 0)
+                {
+                    error = "字符串类型的长度必须大于0";
+                    dataPoint.ValidationStatus = "❌ 失败";
+                    dataPoint.ValidationError = error;
+                    dataPoint.IsValidated = false;
+                    return false;
+                }
+
                 var driveType = GetDriveType(deviceType);
                 var fieldInfo = new FieldInfo(dataPoint.Address, dataPoint.DataType, dataPoint.ByteOrder)
                 {
                     Alias = dataPoint.PointName
                 };
+
+                if (dataPoint.DataType == FieldType.String && RequiresStringLength(deviceType))
+                {
+                    fieldInfo.Length = dataPoint.DataLength;
+                }
+
                 var fields = new List<FieldInfo> { fieldInfo };
 
                 // 使用 MultiProtocol 库验证地址
@@ -791,6 +806,11 @@ namespace MeasurementSoftware.ViewModels
                 PlcDeviceType.ModbusRTU => ByteOrder.CDAB,
                 _ => ByteOrder.CDAB,
             };
+        }
+
+        private static bool RequiresStringLength(PlcDeviceType deviceType)
+        {
+            return deviceType is not (PlcDeviceType.SiemensS7_1200 or PlcDeviceType.SiemensS7_1500);
         }
 
         /// <summary>

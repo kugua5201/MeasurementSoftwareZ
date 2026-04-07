@@ -98,8 +98,8 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private long plcDeviceId = 0;
 
-        [ObservableProperty]
-        private int plcReadLength = 20;
+        //[ObservableProperty]
+        //private int plcReadLength = 20;
 
         [ObservableProperty]
         private string address = string.Empty;
@@ -234,27 +234,60 @@ namespace MeasurementSoftware.Models
         private string testValidationResult = string.Empty;
 
         /// <summary>
-        /// 最近一次二维码校验展示文本（运行时，不序列化）。
-        /// 成功时显示提取结果，失败时显示错误原因。
+        /// 测试流程最近一次二维码校验是否通过（运行时，不序列化）。
+        /// null 表示尚未开始测试或测试状态已清空。
         /// </summary>
-        [ObservableProperty]
         [JsonIgnore]
-        private string runtimeDisplayText = "未扫码";
+        private bool? testValidationPassed;
+
+        [JsonIgnore]
+        public bool? TestValidationPassed
+        {
+            get => testValidationPassed;
+            set => SetProperty(ref testValidationPassed, value);
+        }
 
         /// <summary>
-        /// 最近一次二维码校验详细结果（运行时，不序列化）。
+        /// 最近一次测量流程二维码校验展示文本（运行时，不序列化）。
+        /// 仅供测量页显示本次测量过程中的二维码状态使用。
         /// </summary>
-        [ObservableProperty]
         [JsonIgnore]
-        private string runtimeValidationMessage = string.Empty;
+        private string measurementRuntimeDisplayText = "未扫码";
+
+        [JsonIgnore]
+        public string MeasurementRuntimeDisplayText
+        {
+            get => measurementRuntimeDisplayText;
+            set => SetProperty(ref measurementRuntimeDisplayText, value);
+        }
 
         /// <summary>
-        /// 最近一次二维码校验是否通过（运行时，不序列化）。
+        /// 最近一次测量流程二维码校验详细结果（运行时，不序列化）。
+        /// 仅供测量页显示本次测量过程中的二维码校验说明使用。
+        /// </summary>
+        [JsonIgnore]
+        private string measurementRuntimeValidationMessage = string.Empty;
+
+        [JsonIgnore]
+        public string MeasurementRuntimeValidationMessage
+        {
+            get => measurementRuntimeValidationMessage;
+            set => SetProperty(ref measurementRuntimeValidationMessage, value);
+        }
+
+        /// <summary>
+        /// 最近一次测量流程二维码校验是否通过（运行时，不序列化）。
         /// null 表示尚未开始或等待扫码中。
         /// </summary>
-        [ObservableProperty]
         [JsonIgnore]
-        private bool? runtimeValidationPassed;
+        private bool? measurementRuntimeValidationPassed;
+
+        [JsonIgnore]
+        public bool? MeasurementRuntimeValidationPassed
+        {
+            get => measurementRuntimeValidationPassed;
+            set => SetProperty(ref measurementRuntimeValidationPassed, value);
+        }
 
         #endregion
     }

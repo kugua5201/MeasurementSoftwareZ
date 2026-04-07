@@ -64,18 +64,18 @@ namespace MeasurementSoftware.Services.QrCodes
 
             // 先获取一次初始值
             var currentValue = Normalize(point.CurrentValue);
-            var baselineValue = currentValue.Length <= config.PlcReadLength
+            var baselineValue = currentValue.Length <= config.QrCodeLength
                 ? currentValue
-                : currentValue[..config.PlcReadLength];
+                : currentValue[..config.QrCodeLength];
 
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 currentValue = Normalize(point.CurrentValue);
-                var normalizedValue = currentValue.Length <= config.PlcReadLength
+                var normalizedValue = currentValue.Length <= config.QrCodeLength
                     ? currentValue
-                    : currentValue[..config.PlcReadLength];
+                    : currentValue[..config.QrCodeLength];
 
                 if (point.IsSuccess && !string.IsNullOrWhiteSpace(normalizedValue)
                     && !string.Equals(normalizedValue, baselineValue, StringComparison.Ordinal))

@@ -308,7 +308,7 @@ namespace MeasurementSoftware.Services.Config
             {
                 // 同步运行时设备列表到配方
                 SyncSiemensCacheConfigurations(Devices);
-                CurrentRecipe.BasicInfo.ModifyTime = DateTime.Now;
+                CurrentRecipe?.BasicInfo.ModifyTime = DateTime.Now;
 
                 var json = JsonSerializer.Serialize(CurrentRecipe, new JsonSerializerOptions { WriteIndented = true });
                 Directory.CreateDirectory(Path.GetDirectoryName(CurrentRecipePath)!);

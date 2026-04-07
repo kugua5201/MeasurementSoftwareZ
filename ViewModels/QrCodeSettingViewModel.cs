@@ -181,6 +181,12 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private PlcDevice? _lastDevice;
 
+        /// <summary>
+        /// 上一次选中的点位。
+        /// 点位切换或点位名称变化时用于刷新状态文本。
+        /// </summary>
+        private DataPoint? _lastPoint;
+
         partial void OnConfigChanged(QrCodeConfig? oldValue, QrCodeConfig newValue)
         {
             if (oldValue != null)
@@ -189,6 +195,12 @@ namespace MeasurementSoftware.ViewModels
                 if (_lastDevice != null)
                 {
                     _lastDevice.DataPoints.CollectionChanged -= DataPoints_CollectionChanged;
+                    _lastDevice.PropertyChanged -= SelectedDevice_PropertyChanged;
+                }
+
+                if (_lastPoint != null)
+                {
+                    _lastPoint.PropertyChanged -= SelectedPoint_PropertyChanged;
                 }
             }
 
@@ -202,6 +214,13 @@ namespace MeasurementSoftware.ViewModels
                 if (_lastDevice != null)
                 {
                     _lastDevice.DataPoints.CollectionChanged += DataPoints_CollectionChanged;
+                    _lastDevice.PropertyChanged += SelectedDevice_PropertyChanged;
+                }
+
+                _lastPoint = newValue.SelectedPoint;
+                if (_lastPoint != null)
+                {
+                    _lastPoint.PropertyChanged += SelectedPoint_PropertyChanged;
                 }
 
                 OnPropertyChanged(nameof(IsKeyboardInputVisible));
@@ -265,25 +284,32 @@ namespace MeasurementSoftware.ViewModels
                 if (_lastDevice != null)
                 {
                     _lastDevice.DataPoints.CollectionChanged -= DataPoints_CollectionChanged;
+                    _lastDevice.PropertyChanged -= SelectedDevice_PropertyChanged;
                 }
 
                 _lastDevice = Config.SelectedPlcDevice;
                 if (_lastDevice != null)
                 {
                     _lastDevice.DataPoints.CollectionChanged += DataPoints_CollectionChanged;
+                    _lastDevice.PropertyChanged += SelectedDevice_PropertyChanged;
                 }
 
                 EnsureSelectedPoint();
+                UpdateSelectedPointSubscription();
                 OnPropertyChanged(nameof(AvailablePoints));
+            }
+            else if (e.PropertyName == nameof(Config.SelectedPoint))
+            {
+                UpdateSelectedPointSubscription();
             }
 
             if (!IsListeningValidation
                 && e.PropertyName != nameof(Config.TestRawData)
                 && e.PropertyName != nameof(Config.TestExtractedQrCode)
                 && e.PropertyName != nameof(Config.TestValidationResult)
-                && e.PropertyName != nameof(Config.RuntimeDisplayText)
-                && e.PropertyName != nameof(Config.RuntimeValidationMessage)
-                && e.PropertyName != nameof(Config.RuntimeValidationPassed))
+                && e.PropertyName != nameof(Config.MeasurementRuntimeDisplayText)
+                && e.PropertyName != nameof(Config.MeasurementRuntimeValidationMessage)
+                && e.PropertyName != nameof(Config.MeasurementRuntimeValidationPassed))
             {
                 UpdateListenValidationStatus();
             }
@@ -310,9 +336,7 @@ namespace MeasurementSoftware.ViewModels
                 {
                     Config.TestExtractedQrCode = string.Empty;
                     Config.TestValidationResult = error;
-                    Config.RuntimeValidationPassed = false;
-                    Config.RuntimeDisplayText = error;
-                    Config.RuntimeValidationMessage = error;
+                    Config.TestValidationPassed = false;
                     ListenValidationStatus = $"当前配置不可接收二维码：{error}";
                     Growl.Warning(error);
                     return;
@@ -325,14 +349,16 @@ namespace MeasurementSoftware.ViewModels
                 IsListeningValidation = true;
                 Config.TestExtractedQrCode = string.Empty;
                 Config.TestValidationResult = "正在等待扫码数据...";
+                Config.TestValidationPassed = null;
                 ListenValidationStatus = $"监听已启动，{GetListeningStatusText()}。请手动点击“停止监听”结束。";
 
                 while (!_listenValidationCancellationTokenSource.IsCancellationRequested)
                 {
-                    var result = await _qrCodeScanService.ReceiveAndValidateOnceAsync(Config, _listenValidationCancellationTokenSource.Token);
+                    var result = await _qrCodeScanService.ReceiveAndValidateOnceAsync(Config, _listenValidationCancellationTokenSource.Token, false);
                     Config.TestRawData = result.RawData;
                     Config.TestExtractedQrCode = result.ExtractedQrCode;
                     Config.TestValidationResult = result.Message;
+                    Config.TestValidationPassed = result.Success;
                     ListenValidationStatus = result.Success
                         ? "监听中：最近一次已接收到有效二维码，继续等待下一条数据。"
                         : "监听中：最近一次已接收到数据，但未通过当前配置校验，继续等待下一条数据。";
@@ -341,15 +367,14 @@ namespace MeasurementSoftware.ViewModels
             catch (OperationCanceledException)
             {
                 Config.TestValidationResult = "已停止监听验证";
+                Config.TestValidationPassed = null;
                 ListenValidationStatus = "已停止监听验证";
             }
             catch (Exception ex)
             {
                 Config.TestExtractedQrCode = string.Empty;
                 Config.TestValidationResult = $"❌ 监听异常：{ex.Message}";
-                Config.RuntimeValidationPassed = false;
-                Config.RuntimeDisplayText = ex.Message;
-                Config.RuntimeValidationMessage = ex.Message;
+                Config.TestValidationPassed = false;
                 ListenValidationStatus = $"监听异常：{ex.Message}";
                 Growl.Error($"监听验证失败: {ex.Message}");
                 _log.Error($"监听验证异常: {ex.Message}");
@@ -390,6 +415,48 @@ namespace MeasurementSoftware.ViewModels
             }
 
             EnsureSelectedPoint();
+            UpdateSelectedPointSubscription();
+        }
+
+        /// <summary>
+        /// 当前选中设备的属性变化处理。
+        /// 设备名称变化时，刷新监听状态文本。
+        /// </summary>
+        private void SelectedDevice_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PlcDevice.DeviceName) && !IsListeningValidation)
+            {
+                UpdateListenValidationStatus();
+            }
+        }
+
+        /// <summary>
+        /// 当前选中点位的属性变化处理。
+        /// 点位名称变化时，刷新监听状态文本。
+        /// </summary>
+        private void SelectedPoint_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(DataPoint.PointName) or nameof(DataPoint.PointId) && !IsListeningValidation)
+            {
+                UpdateListenValidationStatus();
+            }
+        }
+
+        /// <summary>
+        /// 更新当前选中点位的订阅关系。
+        /// </summary>
+        private void UpdateSelectedPointSubscription()
+        {
+            if (_lastPoint != null)
+            {
+                _lastPoint.PropertyChanged -= SelectedPoint_PropertyChanged;
+            }
+
+            _lastPoint = Config?.SelectedPoint;
+            if (_lastPoint != null)
+            {
+                _lastPoint.PropertyChanged += SelectedPoint_PropertyChanged;
+            }
         }
 
         [RelayCommand]
@@ -440,16 +507,18 @@ namespace MeasurementSoftware.ViewModels
                     return;
                 }
 
-                if (!_qrCodeScanService.TryExtractQrCode(Config, Config.TestRawData, out var extractedCode, out var validationResult))
+                if (!_qrCodeScanService.TryExtractQrCode(Config, Config.TestRawData, out var extractedCode, out var validationResult, false))
                 {
                     Config.TestValidationResult = validationResult;
                     Config.TestExtractedQrCode = string.Empty;
+                    Config.TestValidationPassed = false;
                     Growl.Warning("测试提取失败");
                     return;
                 }
 
                 Config.TestExtractedQrCode = extractedCode;
                 Config.TestValidationResult = validationResult;
+                Config.TestValidationPassed = true;
                 Growl.Success("测试提取成功");
                 _log.Info($"测试提取成功：{extractedCode}");
             }
@@ -457,6 +526,7 @@ namespace MeasurementSoftware.ViewModels
             {
                 Config.TestValidationResult = $"❌ 测试异常：{ex.Message}";
                 Config.TestExtractedQrCode = string.Empty;
+                Config.TestValidationPassed = false;
                 Growl.Error($"测试失败: {ex.Message}");
                 _log.Error($"测试提取异常: {ex.Message}");
             }
@@ -494,6 +564,7 @@ namespace MeasurementSoftware.ViewModels
             Config.TestRawData = string.Empty;
             Config.TestExtractedQrCode = string.Empty;
             Config.TestValidationResult = string.Empty;
+            Config.TestValidationPassed = null;
             Growl.Info("已清除测试数据");
         }
 
@@ -560,12 +631,31 @@ namespace MeasurementSoftware.ViewModels
         {
             return Config.SourceType switch
             {
-                QrCodeSourceType.KeyboardInput => "等待键盘/扫码枪输入",
+                QrCodeSourceType.KeyboardInput => "等待键盘/扫码枪输入；输入后按回车/Tab 提交",
                 QrCodeSourceType.SerialPort => $"正在等待串口 {Config.SerialPortName} 数据",
                 QrCodeSourceType.Ethernet => $"正在等待 {Config.EthernetProtocol} {Config.EthernetIp}:{Config.EthernetPort} 数据",
-                QrCodeSourceType.PlcRegister => $"正在等待 PLC 点位 {Config.Address} 的新值",
+                QrCodeSourceType.PlcRegister => $"正在等待{GetPlcPointDisplayText()} 的新值",
                 _ => "正在等待二维码数据"
             };
+        }
+
+        private string GetPlcPointDisplayText()
+        {
+            var deviceName = Config?.SelectedPlcDevice?.DeviceName;
+            var pointName = Config?.SelectedPoint?.PointName;
+            var pointId = Config?.SelectedPoint?.PointId ?? Config?.Address;
+
+            if (!string.IsNullOrWhiteSpace(deviceName) && !string.IsNullOrWhiteSpace(pointName))
+            {
+                return $"{deviceName} / {pointName}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(deviceName) && !string.IsNullOrWhiteSpace(pointId))
+            {
+                return $"{deviceName} / {pointId}";
+            }
+
+            return pointId ?? "未选择点位";
         }
 
         /// <summary>

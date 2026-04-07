@@ -150,7 +150,7 @@ namespace MeasurementSoftware.Services.Devices
                 dataPoint.ValidationError = null;
                 dataPoint.IsValidated = true;
                 dataPoint.ErrorMessage = null;
-                fieldInfos.Add(new FieldInfo(dataPoint.Address, dataPoint.DataType, dataPoint.ByteOrder));
+                fieldInfos.Add(CreateFieldInfo(dataPoint));
             }
 
             var checkedFields = DataFieldsHelper.CheckFileds(GetDriveType(), fieldInfos);
@@ -199,7 +199,7 @@ namespace MeasurementSoftware.Services.Devices
                 return null;
             }
 
-            var fieldInfo = new FieldInfo(dataPoint.Address, dataPoint.DataType, dataPoint.ByteOrder);
+            var fieldInfo = CreateFieldInfo(dataPoint);
             var results = await _protocol.ReadDataAsync(Device.DeviceId, [fieldInfo]);
             return results.FirstOrDefault(r => r.IsSuccess)?.Value;
         }
@@ -214,16 +214,29 @@ namespace MeasurementSoftware.Services.Devices
                 return (false, $"设备 [{Device.DeviceName}] 未连接");
             }
 
-            var field = new FieldInfo(dataPoint.Address, dataPoint.DataType, dataPoint.ByteOrder)
-            {
-                Value = value
-            };
+            var field = CreateFieldInfo(dataPoint);
+            field.Value = value;
 
             var results = await _protocol.WriteDataAsync(Device.DeviceId, [field]);
             var result = results.FirstOrDefault();
             return result != null && result.IsSuccess
                 ? (true, null)
                 : (false, result?.Message ?? "写入失败");
+        }
+
+        private FieldInfo CreateFieldInfo(DataPoint dataPoint)
+        {
+            var fieldInfo = new FieldInfo(dataPoint.Address, dataPoint.DataType, dataPoint.ByteOrder)
+            {
+                Alias = dataPoint.PointName
+            };
+
+            if (dataPoint.DataType == FieldType.String && Device.DeviceType is not (PlcDeviceType.SiemensS7_1200 or PlcDeviceType.SiemensS7_1500))
+            {
+                fieldInfo.Length = dataPoint.DataLength;
+            }
+
+            return fieldInfo;
         }
 
         /// <summary>

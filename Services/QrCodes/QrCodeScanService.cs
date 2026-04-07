@@ -12,13 +12,11 @@ namespace MeasurementSoftware.Services.QrCodes
     public class QrCodeScanService : IQrCodeScanService
     {
         private readonly IComponentContext _componentContext;
-        private readonly IKeyboardQrCodeInputService _keyboardQrCodeInputService;
         private readonly ILog _log;
 
-        public QrCodeScanService(IComponentContext componentContext, IKeyboardQrCodeInputService keyboardQrCodeInputService, ILog log)
+        public QrCodeScanService(IComponentContext componentContext, ILog log)
         {
             _componentContext = componentContext;
-            _keyboardQrCodeInputService = keyboardQrCodeInputService;
             _log = log;
         }
 
@@ -94,7 +92,7 @@ namespace MeasurementSoftware.Services.QrCodes
             return true;
         }
 
-        public bool TryExtractQrCode(QrCodeConfig config, string rawData, out string extractedQrCode, out string validationMessage)
+        public bool TryExtractQrCode(QrCodeConfig config, string rawData, out string extractedQrCode, out string validationMessage, bool updateRuntimeState = true)
         {
             extractedQrCode = string.Empty;
             var builder = new StringBuilder();
@@ -102,7 +100,7 @@ namespace MeasurementSoftware.Services.QrCodes
 
             if (!QrCodeRawDataRuleHelper.TryValidate(config, out validationMessage))
             {
-                SetRuntimeValidationState(config, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
+                UpdateRuntimeStateIfNeeded(config, updateRuntimeState, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
                 return false;
             }
 
@@ -115,7 +113,7 @@ namespace MeasurementSoftware.Services.QrCodes
                 {
                     builder.AppendLine($"❌ 起始符校验失败：期望'{config.StartSymbol}'");
                     validationMessage = builder.ToString();
-                    SetRuntimeValidationState(config, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
+                    UpdateRuntimeStateIfNeeded(config, updateRuntimeState, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
                     return false;
                 }
 
@@ -128,7 +126,7 @@ namespace MeasurementSoftware.Services.QrCodes
                 {
                     builder.AppendLine($"❌ 结束符校验失败：期望'{config.EndSymbol}'");
                     validationMessage = builder.ToString();
-                    SetRuntimeValidationState(config, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
+                    UpdateRuntimeStateIfNeeded(config, updateRuntimeState, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
                     return false;
                 }
 
@@ -152,7 +150,7 @@ namespace MeasurementSoftware.Services.QrCodes
                 {
                     builder.AppendLine($"❌ 长度校验失败：期望{config.ExpectedLength}，实际{payload.Length}");
                     validationMessage = builder.ToString();
-                    SetRuntimeValidationState(config, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
+                    UpdateRuntimeStateIfNeeded(config, updateRuntimeState, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
                     return false;
                 }
 
@@ -163,7 +161,7 @@ namespace MeasurementSoftware.Services.QrCodes
             {
                 builder.AppendLine($"❌ 起始索引超出范围：{config.QrCodeStartIndex}");
                 validationMessage = builder.ToString();
-                SetRuntimeValidationState(config, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
+                UpdateRuntimeStateIfNeeded(config, updateRuntimeState, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
                 return false;
             }
 
@@ -172,41 +170,36 @@ namespace MeasurementSoftware.Services.QrCodes
             {
                 builder.AppendLine($"❌ 提取长度超出范围：起始{config.QrCodeStartIndex}，长度{config.QrCodeLength}");
                 validationMessage = builder.ToString();
-                SetRuntimeValidationState(config, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
+                UpdateRuntimeStateIfNeeded(config, updateRuntimeState, false, BuildDiagnosticMessage(rawData, validationMessage), validationMessage);
                 return false;
             }
 
             extractedQrCode = payload.Substring(config.QrCodeStartIndex, config.QrCodeLength);
             builder.AppendLine($"✅ 成功提取二维码：{extractedQrCode}");
             validationMessage = builder.ToString();
-            SetRuntimeValidationState(config, true, extractedQrCode, validationMessage);
+            UpdateRuntimeStateIfNeeded(config, updateRuntimeState, true, extractedQrCode, validationMessage);
             return true;
         }
 
-        public async Task<(bool Success, string RawData, string ExtractedQrCode, string Message)> ReceiveAndValidateOnceAsync(QrCodeConfig config, CancellationToken cancellationToken)
+        public async Task<(bool Success, string RawData, string ExtractedQrCode, string Message)> ReceiveAndValidateOnceAsync(QrCodeConfig config, CancellationToken cancellationToken, bool updateRuntimeState = true)
         {
             if (!ValidateScanConfig(config, out var error))
             {
-                SetRuntimeValidationState(config, false, error, error);
+                UpdateRuntimeStateIfNeeded(config, updateRuntimeState, false, error, error);
                 return (false, string.Empty, string.Empty, error);
             }
 
             var handler = CreateHandler(config.SourceType);
 
-            if (config.SourceType == QrCodeSourceType.KeyboardInput)
-            {
-                _keyboardQrCodeInputService.ClearPending();
-            }
-
             var rawData = await handler.WaitForRawDataAsync(config, cancellationToken) ?? string.Empty;
             if (string.IsNullOrEmpty(rawData))
             {
                 const string emptyMessage = "未接收到二维码数据";
-                SetRuntimeValidationState(config, false, emptyMessage, emptyMessage);
+                UpdateRuntimeStateIfNeeded(config, updateRuntimeState, false, emptyMessage, emptyMessage);
                 return (false, string.Empty, string.Empty, emptyMessage);
             }
 
-            if (TryExtractQrCode(config, rawData, out var extractedQrCode, out var validationMessage))
+            if (TryExtractQrCode(config, rawData, out var extractedQrCode, out var validationMessage, updateRuntimeState))
             {
                 return (true, rawData, extractedQrCode, BuildDiagnosticMessage(rawData, validationMessage));
             }
@@ -222,11 +215,6 @@ namespace MeasurementSoftware.Services.QrCodes
             }
 
             var handler = CreateHandler(config.SourceType);
-
-            if (config.SourceType == QrCodeSourceType.KeyboardInput)
-            {
-                _keyboardQrCodeInputService.ClearPending();
-            }
 
             while (true)
             {
@@ -248,9 +236,19 @@ namespace MeasurementSoftware.Services.QrCodes
 
         private static void SetRuntimeValidationState(QrCodeConfig config, bool passed, string displayText, string validationMessage)
         {
-            config.RuntimeValidationPassed = passed;
-            config.RuntimeDisplayText = string.IsNullOrWhiteSpace(displayText) ? (passed ? "扫码成功" : "扫码失败") : displayText;
-            config.RuntimeValidationMessage = validationMessage;
+            config.MeasurementRuntimeValidationPassed = passed;
+            config.MeasurementRuntimeDisplayText = string.IsNullOrWhiteSpace(displayText) ? (passed ? "扫码成功" : "扫码失败") : displayText;
+            config.MeasurementRuntimeValidationMessage = validationMessage;
+        }
+
+        private static void UpdateRuntimeStateIfNeeded(QrCodeConfig config, bool updateRuntimeState, bool passed, string displayText, string validationMessage)
+        {
+            if (!updateRuntimeState)
+            {
+                return;
+            }
+
+            SetRuntimeValidationState(config, passed, displayText, validationMessage);
         }
 
         private IQrCodeSourceHandler CreateHandler(QrCodeSourceType sourceType)

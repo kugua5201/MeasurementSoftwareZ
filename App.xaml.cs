@@ -47,6 +47,7 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<IPlcDeviceRuntimeFactory, PlcDeviceRuntimeFactory>();
             builder.RegisterSingleton<IPlcDeviceRuntimeService, PlcDeviceRuntimeService>();
             builder.RegisterSingleton<IKeyboardQrCodeInputService, KeyboardQrCodeInputService>();
+
             builder.RegisterSingleton<IQrCodeScanService, QrCodeScanService>();
             builder.RegisterTransient<KeyboardInputQrCodeSourceHandler>();
             builder.RegisterTransient<SerialPortQrCodeSourceHandler>();

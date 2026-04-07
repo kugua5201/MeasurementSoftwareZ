@@ -26,7 +26,7 @@ namespace MeasurementSoftware.Services.QrCodes
         /// <param name="extractedQrCode">提取后的二维码。</param>
         /// <param name="validationMessage">校验说明。</param>
         /// <returns>是否提取成功。</returns>
-        bool TryExtractQrCode(QrCodeConfig config, string rawData, out string extractedQrCode, out string validationMessage);
+        bool TryExtractQrCode(QrCodeConfig config, string rawData, out string extractedQrCode, out string validationMessage, bool updateRuntimeState = true);
 
         /// <summary>
         /// 根据配置等待一条新的有效二维码。
@@ -44,7 +44,7 @@ namespace MeasurementSoftware.Services.QrCodes
         /// <param name="config">二维码配置。</param>
         /// <param name="cancellationToken">取消令牌。</param>
         /// <returns>本次监听是否成功、接收值、提取结果以及校验说明。</returns>
-        Task<(bool Success, string RawData, string ExtractedQrCode, string Message)> ReceiveAndValidateOnceAsync(QrCodeConfig config, CancellationToken cancellationToken);
+        Task<(bool Success, string RawData, string ExtractedQrCode, string Message)> ReceiveAndValidateOnceAsync(QrCodeConfig config, CancellationToken cancellationToken, bool updateRuntimeState = true);
 
         /// <summary>
         /// 在未启用扫码功能时，根据批次流水号配置生成本次测量编号。

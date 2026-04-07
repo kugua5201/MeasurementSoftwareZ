@@ -242,7 +242,7 @@
                         <StackPanel >
                             <TextBlock Text="二维码：" FontSize="12" 
                                            Foreground="{StaticResource PlaceholderTextBrush}" VerticalAlignment="Center" Margin="0,0,0,3"/>
-                            <TextBlock Text="{Binding CurrentBarcode}" FontSize="15"
+                            <TextBlock Text="{Binding CurrentBarcode}" FontSize="12"
                                        HorizontalAlignment="Left" TextWrapping="Wrap">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
