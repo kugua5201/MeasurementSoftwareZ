@@ -14,6 +14,7 @@ using Microsoft.Win32;
 using ScottPlot.ArrowShapes;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -27,12 +28,9 @@ namespace MeasurementSoftware.ViewModels
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDataRecordService _dataRecordService;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
-        private readonly ILicenseService _licenseService;
         private readonly IKeyboardQrCodeInputService _keyboardQrCodeInputService;
         private readonly IQrCodeScanService _qrCodeScanService;
         private readonly IStepOperationMonitorService _stepOperationMonitorService;
-        private readonly DispatcherTimer _licenseEnforcementTimer = new();
-        private DateTime? _acquisitionStartTime;
         private MeasurementRecipe? _subscribedRecipe;
         private QrCodeConfig? _subscribedQrCodeConfig;
         private bool _isWaitingForRequiredQrCode;
@@ -44,7 +42,7 @@ namespace MeasurementSoftware.ViewModels
         private string? productImagePath;
 
         [ObservableProperty]
-        private string title = "测量数据采集";
+        private string title = "测量数据测量";
 
         /// <summary>
         /// 当前配方
@@ -96,7 +94,7 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 当前是否正在采集。
+        /// 当前是否正在测量。
         /// 用于界面按钮状态和外部触发操作联动。
         /// </summary>
         public bool IsCollecting => _recipeConfigService.IsCollecting;
@@ -151,17 +149,10 @@ namespace MeasurementSoftware.ViewModels
         /// 导出最大行数
         /// </summary>
         private const int MaxCsvRowsPerFile = 500000;
-
-        /// <summary>
-        /// 轮询间隔(ms)
-        /// </summary>
-
-        private int AcquisitionDelayMs => CurrentRecipe?.OtherSettings?.AcquisitionDelayMs ?? 500;
-
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
 
-        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService, ILicenseService licenseService)
+        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
@@ -170,12 +161,8 @@ namespace MeasurementSoftware.ViewModels
             _stepOperationMonitorService = stepOperationMonitorService;
             _qrCodeScanService = qrCodeScanService;
             _keyboardQrCodeInputService = keyboardQrCodeInputService;
-            _licenseService = licenseService;
             _stepOperationMonitorService.OperationTriggered += StepOperationMonitorService_OperationTriggered;
-            _licenseEnforcementTimer.Interval = TimeSpan.FromHours(1);
-            _licenseEnforcementTimer.Tick += LicenseEnforcementTimer_Tick;
-            _licenseService.RegistrationStatusChanged += LicenseService_RegistrationStatusChanged;
-            UpdateLicenseEnforcementTimer();
+
 
             // 不再从用户设置加载图片，图片跟随配方
 
@@ -226,44 +213,7 @@ namespace MeasurementSoftware.ViewModels
             RefreshCommandStates();
         }
 
-        private void LicenseService_RegistrationStatusChanged(object? sender, bool isRegistered)
-        {
-            Application.Current.Dispatcher.Invoke(UpdateLicenseEnforcementTimer);
-        }
 
-        private void UpdateLicenseEnforcementTimer()
-        {
-            if (_licenseService.IsRegistered)
-            {
-                _licenseEnforcementTimer.Stop();
-                return;
-            }
-
-            if (!_licenseEnforcementTimer.IsEnabled)
-            {
-                _licenseEnforcementTimer.Start();
-            }
-        }
-
-        private async void LicenseEnforcementTimer_Tick(object? sender, EventArgs e)
-        {
-            if (_licenseService.IsRegistered)
-            {
-                _licenseEnforcementTimer.Stop();
-                return;
-            }
-
-            if (_recipeConfigService.IsCollecting)
-            {
-                await TerminateMeasurementAsync();
-                Growl.Warning("软件未注册，已停止当前采集，请先完成注册。");
-                _log.Warn("软件未注册，已按授权限制停止当前采集。");
-                return;
-            }
-
-            Growl.Warning("软件未注册，请先完成注册。");
-            _log.Warn("软件未注册，授权限制提醒已触发。");
-        }
 
         #region 配方订阅与界面联动
 
@@ -475,7 +425,7 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 是否允许开始采集。
+        /// 是否允许开始测量。
         /// </summary>
         private bool CanStartAcquisition()
         {
@@ -483,7 +433,7 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 是否允许停止采集。
+        /// 是否允许停止测量。
         /// </summary>
         private bool CanCompleteMeasurement()
         {
@@ -575,7 +525,7 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 如果正在采集，切换工步前先校验目标工步是否有启用通道，避免切到空工步后被卡住。
+        /// 如果正在测量，切换工步前先校验目标工步是否有启用通道，避免切到空工步后被卡住。
         /// </summary>
         private bool CanSwitchStepDuringAcquisition(int targetStep)
         {
@@ -665,12 +615,12 @@ namespace MeasurementSoftware.ViewModels
 
         #endregion
 
-        #region 采集命令与轮询线程
+        #region 测量命令与事件测量
 
         /// <summary>
-        /// 开始采集。
-        /// 该方法负责初始化本次采集上下文，并进入采集轮询线程。
-        /// 调试时可重点看：是否误清空了错误范围的通道、当前工步是否正确、轮询是否正常退出。
+        /// 开始测量。
+        /// 该方法负责初始化本次测量上下文，并切换为运行时事件驱动更新通道值。
+        /// 调试时可重点看：当前工步是否正确、事件是否正常进入、停止后是否不再处理事件。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanStartAcquisition))]
         private async Task StartAcquisitionAsync()
@@ -688,7 +638,6 @@ namespace MeasurementSoftware.ViewModels
 
             _recipeConfigService.SetCollect(true);
             RefreshCommandStates();
-            _acquisitionStartTime = DateTime.Now;
             CurrentStep = 1;
             OverallResult = MeasurementResult.NotMeasured;
             _cts = new CancellationTokenSource();
@@ -727,7 +676,7 @@ namespace MeasurementSoftware.ViewModels
                     {
                         _scannedBarcode = _qrCodeScanService.GenerateBatchNumber(CurrentRecipe.QrCodeConfig);
                         CurrentBarcodeValidationPassed = true;
-                        MeasurementStatus = "已生成流水号，开始采集...";
+                        MeasurementStatus = "已生成流水号，开始测量...";
                     }
 
                     _barcodeScanTime = DateTime.Now;
@@ -735,7 +684,7 @@ namespace MeasurementSoftware.ViewModels
                     CurrentBarcodeValidationPassed = true;
                     if (CurrentRecipe.QrCodeConfig.IsEnabled)
                     {
-                        MeasurementStatus = "扫码成功，开始采集...";
+                        MeasurementStatus = "扫码成功，开始测量...";
                     }
                 }
                 catch (OperationCanceledException)
@@ -784,95 +733,235 @@ namespace MeasurementSoftware.ViewModels
                 }
             }
 
+            SubscribeRuntimeEvents();
             PrepareCurrentStepForAcquisition();
+            UpdateMeasurementStatusForCurrentContext();
+        }
 
-            try
+        /// <summary>
+        /// 运行时普通点位有新值时，按事件方式推送到当前参与测量的通道。
+        /// </summary>
+        private void PlcDeviceRuntimeService_DataPointsUpdated(object? sender, PlcDataPointsUpdatedEventArgs e)
+        {
+            if (Application.Current?.Dispatcher == null)
             {
-                while (!_cts.Token.IsCancellationRequested)
-                {
-                    var activeChannels = GetActiveChannels().ToList();
-                    UpdateMeasurementStatusForCurrentContext();
-
-                    foreach (var channel in activeChannels)
-                    {
-                        if (_cts.Token.IsCancellationRequested)
-                        {
-                            break;
-                        }
-
-                        var rawValue = GetChannelCurrentValue(channel);
-                        if (rawValue == null)
-                        {
-                            continue;
-                        }
-                        bool useCacheHistory = channel.UseCacheValue && channel.RuntimeDevice?.SiemensReadCache.IsEnabled == true && !string.IsNullOrWhiteSpace(channel.RuntimeDataPoint?.CacheFieldKey);
-                        if (useCacheHistory)
-                        {
-                            var cacheValues = _plcDeviceRuntimeService.TakeCacheFieldValues(channel.RuntimeDevice!, channel.RuntimeDataPoint!.CacheFieldKey);
-                            // 启用硬件缓存时，历史数据按整批结构结果一次性写入；当前实时值只更新显示，不重复进历史。
-                            if (cacheValues.Count > 0)
-                            {
-                                channel.AppendMeasuredValues(cacheValues, rawValue.Value);
-                            }
-                        }
-                        else
-                        {
-                            // 常规轮询模式下，每轮只追加一个实时值到历史。
-                            channel.UpdateMeasuredValue(rawValue.Value);
-                        }
-
-                        channel.DisplayState = MeasurementResult.Acquiring;
-                    }
-
-                    // 每轮采集后同步一次标注显示，便于调试 UI 颜色与结果是否一致。
-                    SyncAnnotationResults();
-
-                    await Task.Delay(AcquisitionDelayMs, _cts.Token);
-                }
+                return;
             }
-            catch (OperationCanceledException)
+
+            _ = Application.Current.Dispatcher.BeginInvoke(() => ApplyRuntimeDataPointUpdates(e));
+        }
+
+        /// <summary>
+        /// 西门子缓存解析出新数据后，按事件方式整批推送到使用缓存值的通道。
+        /// </summary>
+        private void PlcDeviceRuntimeService_CacheFieldsUpdated(object? sender, PlcCacheFieldsUpdatedEventArgs e)
+        {
+            if (Application.Current?.Dispatcher == null)
             {
+                return;
+            }
+
+            _ = Application.Current.Dispatcher.BeginInvoke(() => ApplyRuntimeCacheFieldUpdates(e));
+        }
+
+        /// <summary>
+        /// 设备连接状态变化时，及时把掉线/重连提示同步到当前参与测量的通道。
+        /// </summary>
+        private void PlcDeviceRuntimeService_ConnectionStateChanged(object? sender, PlcDeviceConnectionChangedEventArgs e)
+        {
+            if (Application.Current?.Dispatcher == null)
+            {
+                return;
+            }
+
+            _ = Application.Current.Dispatcher.InvokeAsync(() => ApplyRuntimeConnectionStateChanged(e));
+        }
+        //private int _dataReadCount = 0;
+        /// <summary>
+        /// 将普通点位更新应用到当前活动通道。
+        /// </summary>
+        private void ApplyRuntimeDataPointUpdates(PlcDataPointsUpdatedEventArgs e)
+        {
+            if (!_recipeConfigService.IsCollecting)
+            {
+                return;
+            }
+            //Interlocked.Increment(ref _dataReadCount);
+            //Debug.WriteLine($"DataReadCount: {_dataReadCount}");
+            bool hasUpdatedChannel = false;
+            foreach (var channel in GetActiveChannels())
+            {
+                if (channel.UseCacheValue || !ReferenceEquals(channel.RuntimeDevice, e.Device))
+                {
+                    //Debug.WriteLine($"跳过通道 {channel.ChannelName}，UseCacheValue={channel.UseCacheValue}，RuntimeDevice={channel.RuntimeDevice?.DeviceName}，EventDevice={e.Device.DeviceName}");
+                    continue;
+                }
+
+                var dataPoint = channel.RuntimeDataPoint;
+                if (dataPoint == null || !e.DataPoints.Contains(dataPoint))
+                {
+                    //Debug.WriteLine($"跳过通道 {channel.ChannelName}，RuntimeDataPoint={dataPoint?.PointName}，EventDataPoints={string.Join(",", e.DataPoints.Select(dp => dp.PointName))}");
+                    continue;
+                }
+
+                if (!TryGetChannelCurrentValue(channel, dataPoint, out var rawValue))
+                {
+                    //Debug.WriteLine($"通道 {channel.ChannelName} 当前值不可用，提示文本已更新为: {channel.ChannelDescription}");
+                    continue;
+                }
+
+                channel.UpdateMeasuredValue(rawValue);
+                channel.DisplayState = MeasurementResult.Acquiring;
+                hasUpdatedChannel = true;
+            }
+
+            if (hasUpdatedChannel)
+            {
+                SyncAnnotationResults();
             }
         }
-        /// <summary>
-        /// 获取通道当前值
-        /// 统一使用通道当前绑定的运行时设备和点位对象取值。
-        /// </summary>
-        private double? GetChannelCurrentValue(MeasurementChannel channel)
-        {
-            var device = channel.RuntimeDevice;
-            var dataPoint = channel.RuntimeDataPoint;
 
-            if (device == null || dataPoint == null)
+        /// <summary>
+        /// 将设备掉线或重连状态同步到当前活动通道，避免事件驱动模式下丢失连接提示。
+        /// </summary>
+        private void ApplyRuntimeConnectionStateChanged(PlcDeviceConnectionChangedEventArgs e)
+        {
+            if (!_recipeConfigService.IsCollecting)
+            {
+                return;
+            }
+
+            var affectedChannels = GetActiveChannels()
+                .Where(c => ReferenceEquals(c.RuntimeDevice, e.Device))
+                .ToList();
+
+            if (affectedChannels.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var channel in affectedChannels)
+            {
+                if (!e.IsConnected)
+                {
+                    channel.ChannelDescription = $"设备 {e.Device.DeviceName} 未连接";
+                    channel.DisplayState = MeasurementResult.Waiting;
+                    continue;
+                }
+
+                if (channel.RuntimeDataPoint?.IsSuccess == true && channel.RuntimeDataPoint.CurrentValue != null)
+                {
+                    channel.ChannelDescription = string.Empty;
+                    channel.DisplayState = MeasurementResult.Acquiring;
+                }
+                else
+                {
+                    channel.ChannelDescription = "设备已重连，等待数据更新...";
+                    channel.DisplayState = MeasurementResult.Acquiring;
+                }
+            }
+
+            SyncAnnotationResults();
+        }
+
+        /// <summary>
+        /// 将缓存字段更新应用到当前启用缓存值的通道。
+        /// </summary>
+        private void ApplyRuntimeCacheFieldUpdates(PlcCacheFieldsUpdatedEventArgs e)
+        {
+            if (!_recipeConfigService.IsCollecting)
+            {
+                return;
+            }
+
+            var updatesByKey = e.Updates
+                .Where(u => !string.IsNullOrWhiteSpace(u.CacheFieldKey))
+                .ToDictionary(u => u.CacheFieldKey, StringComparer.OrdinalIgnoreCase);
+
+            bool hasUpdatedChannel = false;
+            foreach (var channel in GetActiveChannels())
+            {
+                if (!channel.UseCacheValue || !ReferenceEquals(channel.RuntimeDevice, e.Device))
+                {
+                    continue;
+                }
+
+                var dataPoint = channel.RuntimeDataPoint;
+                var cacheFieldKey = dataPoint?.CacheFieldKey;
+                if (dataPoint == null || string.IsNullOrWhiteSpace(cacheFieldKey) || !updatesByKey.TryGetValue(cacheFieldKey, out var update))
+                {
+                    continue;
+                }
+
+                if (!TryGetChannelCurrentValue(channel, dataPoint, out var rawValue))
+                {
+                    channel.ChannelDescription = update.ErrorMessage ?? channel.ChannelDescription;
+                    continue;
+                }
+
+                if (update.NumericValues.Count <= 0)
+                {
+                    continue;
+                }
+
+                channel.AppendMeasuredValues(update.NumericValues, rawValue);
+                channel.DisplayState = MeasurementResult.Acquiring;
+                hasUpdatedChannel = true;
+            }
+
+            if (hasUpdatedChannel)
+            {
+                SyncAnnotationResults();
+            }
+        }
+
+        /// <summary>
+        /// 从当前绑定点位提取可参与计算的数值，并同步通道提示文本。
+        /// </summary>
+        private bool TryGetChannelCurrentValue(MeasurementChannel channel, DataPoint dataPoint, out double rawValue)
+        {
+            rawValue = default;
+            var device = channel.RuntimeDevice;
+
+            if (device == null)
             {
                 channel.ChannelDescription = "未绑定设备或点位";
-                return null;
+                return false;
             }
 
             if (!device.IsEnabled)
             {
                 channel.ChannelDescription = $"设备 {device.DeviceName} 未启用";
-                return null;
+                return false;
             }
+
             if (!device.IsConnected)
             {
                 channel.ChannelDescription = $"设备 {device.DeviceName} 未连接";
-                return null;
+                return false;
             }
 
             if (dataPoint.CurrentValue == null || !dataPoint.IsSuccess)
             {
                 channel.ChannelDescription = dataPoint.ErrorMessage ?? "读取中...";
-                return null;
+                return false;
             }
 
-            channel.ChannelDescription = string.Empty;
-            try { return Convert.ToDouble(dataPoint.CurrentValue); }
-            catch { return null; }
+            try
+            {
+                rawValue = Convert.ToDouble(dataPoint.CurrentValue);
+                channel.ChannelDescription = string.Empty;
+                return true;
+            }
+            catch
+            {
+                channel.ChannelDescription = "当前值无法转换为数值";
+                return false;
+            }
         }
 
         /// <summary>
-        /// 停止采集。
+        /// 停止测量。
         /// 该方法负责结束轮询线程、计算当前参与通道的结果、保存记录并更新统计信息。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanCompleteMeasurement))]
@@ -889,6 +978,7 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
+            UnsubscribeRuntimeEvents();
             _cts?.Cancel();
             var optionalQrCodeListeningTask = _optionalQrCodeListeningTask;
             if (optionalQrCodeListeningTask != null)
@@ -903,8 +993,8 @@ namespace MeasurementSoftware.ViewModels
             }
 
             _keyboardQrCodeInputService.ClearPending();
-            _log.Info("停止数据采集");
-            MeasurementStatus = "采集已停止";
+            _log.Info("停止数据测量");
+            MeasurementStatus = "测量已停止";
             _isWaitingForRequiredQrCode = false;
             _optionalQrCodeListeningTask = null;
             _recipeConfigService.SetCollect(false);
@@ -916,6 +1006,7 @@ namespace MeasurementSoftware.ViewModels
                 //查找通道备注不为空的
                 var findInfoChannel = Channels.Where(c => !string.IsNullOrEmpty(c.ChannelDescription));
                 SetChannelDisplayState(findInfoChannel, MeasurementResult.Waiting);
+
                 return;
             }
 
@@ -976,15 +1067,14 @@ namespace MeasurementSoftware.ViewModels
                 TotalSteps = CurrentRecipe.OtherSettings.TotalSteps
             };
 
-            await _dataRecordService.SaveRecordAsync(record);
+            //await _dataRecordService.SaveRecordAsync(record);
             await _dataRecordService.SaveRecordToConfiguredFileAsync(record, CurrentRecipe);
             _log.Info($"测量记录已保存: {OverallResult}");
-            _acquisitionStartTime = null;
         }
 
         /// <summary>
         /// 终止测量。
-        /// 终止只负责立即结束当前采集，不做完成判定、不计数、也不保存记录。
+        /// 终止只负责立即结束当前测量，不做完成判定、不计数、也不保存记录。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanTerminateMeasurement))]
         private async Task TerminateMeasurementAsync()
@@ -1000,6 +1090,7 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
+            UnsubscribeRuntimeEvents();
             _cts?.Cancel();
             var optionalQrCodeListeningTask = _optionalQrCodeListeningTask;
             if (optionalQrCodeListeningTask != null)
@@ -1020,13 +1111,36 @@ namespace MeasurementSoftware.ViewModels
             SetChannelDisplayState(GetActiveChannels(), MeasurementResult.Waiting);
             SyncAnnotationResults();
             MeasurementStatus = "测量已终止";
-            _acquisitionStartTime = null;
             RefreshCommandStates();
             _log.Info("测量已终止");
         }
 
         /// <summary>
-        /// 获取当前应参与采集轮询的通道。
+        /// 开始测量时挂载运行时事件，停止或终止时统一释放。
+        /// 这样主页只在真正测量期间接收 PLC 推送。
+        /// </summary>
+        private void SubscribeRuntimeEvents()
+        {
+
+
+            _plcDeviceRuntimeService.DataPointsUpdated += PlcDeviceRuntimeService_DataPointsUpdated;
+            _plcDeviceRuntimeService.CacheFieldsUpdated += PlcDeviceRuntimeService_CacheFieldsUpdated;
+            _plcDeviceRuntimeService.ConnectionStateChanged += PlcDeviceRuntimeService_ConnectionStateChanged;
+        }
+
+        /// <summary>
+        /// 释放当前测量期挂载的运行时事件，避免主页长期持有测量事件。
+        /// </summary>
+        private void UnsubscribeRuntimeEvents()
+        {
+
+            _plcDeviceRuntimeService.DataPointsUpdated -= PlcDeviceRuntimeService_DataPointsUpdated;
+            _plcDeviceRuntimeService.CacheFieldsUpdated -= PlcDeviceRuntimeService_CacheFieldsUpdated;
+            _plcDeviceRuntimeService.ConnectionStateChanged -= PlcDeviceRuntimeService_ConnectionStateChanged;
+        }
+
+        /// <summary>
+        /// 获取当前应参与测量轮询的通道。
         /// 分步模式下只采当前工步，同时模式下采所有已启用且已绑定的通道。
         /// </summary>
         private IEnumerable<MeasurementChannel> GetActiveChannels()
@@ -1051,7 +1165,7 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            MeasurementStatus = IsStepModeEnabled() ? $"工步 {CurrentStep}/{CurrentRecipe.OtherSettings.TotalSteps} 采集中..." : "采集中...";
+            MeasurementStatus = IsStepModeEnabled() ? $"工步 {CurrentStep}/{CurrentRecipe.OtherSettings.TotalSteps} 测量中..." : "测量中...";
         }
 
 
@@ -1061,7 +1175,7 @@ namespace MeasurementSoftware.ViewModels
 
         /// <summary>
         /// 切换到下一个工步。
-        /// 如果当前处于采集中，会先完成当前工步的结果结算，再切到目标工步继续采集。
+        /// 如果当前处于测量中，会先完成当前工步的结果结算，再切到目标工步继续测量。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanNextStep))]
         private void NextStep()
@@ -1083,7 +1197,7 @@ namespace MeasurementSoftware.ViewModels
 
         /// <summary>
         /// 切换到上一个工步。
-        /// 如果当前处于采集中，会先完成当前工步的结果结算，再切到目标工步继续采集。
+        /// 如果当前处于测量中，会先完成当前工步的结果结算，再切到目标工步继续测量。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanPreviousStep))]
         private void PreviousStep()
@@ -1128,12 +1242,12 @@ namespace MeasurementSoftware.ViewModels
 
             UpdateAnnotationActiveState();
             MeasurementStatus = _recipeConfigService.IsCollecting
-                ? $"工步 {CurrentStep}/{maxStep} 采集中..."
+                ? $"工步 {CurrentStep}/{maxStep} 测量中..."
                 : $"已切换到工步 {CurrentStep}/{maxStep}";
         }
 
         /// <summary>
-        /// 采集中切换工步前，先对当前工步做一次结果结算并刷新标注。
+        /// 测量中切换工步前，先对当前工步做一次结果结算并刷新标注。
         /// </summary>
         private void FinalizeCurrentStepBeforeSwitch()
         {
@@ -1181,7 +1295,7 @@ namespace MeasurementSoftware.ViewModels
 
         /// <summary>
         /// 非必须扫码模式下，测量启动后后台按二维码配置继续等待扫码。
-        /// 读到后只更新当前编号，不阻塞通道采集；如果中途停止测量则跟随取消。
+        /// 读到后只更新当前编号，不阻塞通道测量；如果中途停止测量则跟随取消。
         /// </summary>
         private async Task ListenOptionalQrCodeDuringAcquisitionAsync(QrCodeConfig config, CancellationToken cancellationToken)
         {
@@ -1237,7 +1351,7 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 开始采集当前工步前，先把本轮参与采集的通道显示状态改为“采集中”。
+        /// 开始测量当前工步前，先把本轮参与测量的通道显示状态改为“测量中”。
         /// </summary>
         private void PrepareCurrentStepForAcquisition()
         {
@@ -1339,7 +1453,7 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
-        /// 清空当前页面采集数据，并重置统计与工步状态。
+        /// 清空当前页面测量数据，并重置统计与工步状态。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanClearData))]
         private void ClearData()
@@ -1354,7 +1468,7 @@ namespace MeasurementSoftware.ViewModels
 
         /// <summary>
         /// 是否允许导出当前通道表格数据。
-        /// 仅在未采集中允许，避免导出半途中间态。
+        /// 仅在未测量中允许，避免导出半途中间态。
         /// </summary>
         private bool CanExportChannelDataCsv()
         {
@@ -1363,7 +1477,7 @@ namespace MeasurementSoftware.ViewModels
 
         /// <summary>
         /// 将当前首页通道表格数据导出为 CSV。
-        /// 支持导出通道当前缓存/寄存器采集后的显示结果，便于现场右键留档。
+        /// 支持导出通道当前缓存/寄存器测量后的显示结果，便于现场右键留档。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanExportChannelDataCsv))]
         private async Task ExportChannelDataCsvAsync(MeasurementChannel channel)

@@ -15,6 +15,9 @@ namespace MeasurementSoftware.Services.Devices.Siemens
         private readonly ConcurrentDictionary<string, object?> _cacheFieldValues = new();
         private readonly ConcurrentDictionary<string, ConcurrentQueue<double>> _cacheFieldHistoryValues = new();
 
+        /// <inheritdoc />
+        public event EventHandler<PlcCacheFieldsUpdatedEventArgs>? CacheFieldsUpdated;
+
 
         protected SiemensPlcDeviceRuntimeBase(PlcDevice device) : base(device)
         {
@@ -170,6 +173,7 @@ namespace MeasurementSoftware.Services.Devices.Siemens
 
             var cache = Device.SiemensReadCache;
             var now = DateTime.Now;
+            List<PlcCacheFieldUpdateItem> updates = [];
 
             if (cache.GroupSize <= 0)
             {
@@ -188,6 +192,7 @@ namespace MeasurementSoftware.Services.Devices.Siemens
             foreach (var expandedField in cache.ExpandedFieldDefinitions)
             {
                 object? latestValue = null;
+                List<double> currentNumericValues = [];
                 string description = remainder > 0 ? $"本次解析 {recordCount} 条，尾部剩余 {remainder} 字节" : string.Empty;
                 bool hasError = false;
 
@@ -213,6 +218,7 @@ namespace MeasurementSoftware.Services.Devices.Siemens
                         {
                             var queue = _cacheFieldHistoryValues.GetOrAdd(expandedField.CacheFieldKey, _ => new ConcurrentQueue<double>());
                             queue.Enqueue(numericValue);
+                            currentNumericValues.Add(numericValue);
                             var maxPending = Math.Clamp(Device.SiemensReadCache.MaxCacheCount, 1, 9999999);
                             while (queue.Count > maxPending)
                             {
@@ -236,18 +242,42 @@ namespace MeasurementSoftware.Services.Devices.Siemens
                 {
                     _cacheFieldValues[expandedField.CacheFieldKey] = latestValue;
                     UpdateCacheGeneratedPoint(expandedField.CacheFieldKey, latestValue, now, hasError ? description : null);
+                    updates.Add(new PlcCacheFieldUpdateItem
+                    {
+                        CacheFieldKey = expandedField.CacheFieldKey,
+                        LatestValue = latestValue,
+                        NumericValues = currentNumericValues,
+                        IsSuccess = !hasError,
+                        ErrorMessage = hasError ? description : null,
+                        UpdateTime = now
+                    });
                 }
                 else
                 {
                     _cacheFieldValues.TryRemove(expandedField.CacheFieldKey, out _);
                     UpdateCacheGeneratedPoint(expandedField.CacheFieldKey, null, now, hasError ? description : "未解析到有效数据");
+                    updates.Add(new PlcCacheFieldUpdateItem
+                    {
+                        CacheFieldKey = expandedField.CacheFieldKey,
+                        LatestValue = null,
+                        NumericValues = currentNumericValues,
+                        IsSuccess = false,
+                        ErrorMessage = hasError ? description : "未解析到有效数据",
+                        UpdateTime = now
+                    });
                 }
+            }
+
+            if (updates.Count > 0)
+            {
+                CacheFieldsUpdated?.Invoke(this, new PlcCacheFieldsUpdatedEventArgs(Device, updates, data.CacheIndex, now));
             }
         }
 
         private void SetCacheFieldDescriptions(int cacheIndex, string message)
         {
             var now = DateTime.Now;
+            List<PlcCacheFieldUpdateItem> updates = [];
             foreach (var field in Device.SiemensReadCache.ExpandedFieldDefinitions)
             {
                 field.Description = message;
@@ -255,6 +285,20 @@ namespace MeasurementSoftware.Services.Devices.Siemens
                 field.LastUpdateTime = now;
                 _cacheFieldValues.TryRemove(field.CacheFieldKey, out _);
                 UpdateCacheGeneratedPoint(field.CacheFieldKey, null, now, message);
+                updates.Add(new PlcCacheFieldUpdateItem
+                {
+                    CacheFieldKey = field.CacheFieldKey,
+                    LatestValue = null,
+                    NumericValues = [],
+                    IsSuccess = false,
+                    ErrorMessage = message,
+                    UpdateTime = now
+                });
+            }
+
+            if (updates.Count > 0)
+            {
+                CacheFieldsUpdated?.Invoke(this, new PlcCacheFieldsUpdatedEventArgs(Device, updates, cacheIndex, now));
             }
         }
 

@@ -177,30 +177,6 @@ namespace MeasurementSoftware
             Close();
         }
 
-        private void RegistrationStatusButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is not ViewModels.MainWindowViewModel viewModel || viewModel.IsRegistered)
-            {
-                return;
-            }
-
-            var licenseService = ContainerBuilderExtensions.GetService<ILicenseService>();
-            if (licenseService == null)
-            {
-                HandyControl.Controls.MessageBox.Show("未找到注册服务。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var registrationWindow = new RegistrationWindow(licenseService)
-            {
-                Owner = this
-            };
-
-            if (registrationWindow.ShowDialog() == true)
-            {
-                viewModel.RefreshRegistrationStatus();
-            }
-        }
 
         #region 窗口布局保存/恢复
 
@@ -522,12 +498,12 @@ namespace MeasurementSoftware
                 "测量" => HomeButton,
                 "配方管理" => RecipeManagementButton,
                 "校准" => CalibrationButton,
-                "数据管理" => DataManagementButton,
-                "SPC分析" => SpcButton,
+                //"数据管理" => DataManagementButton,
+                //"SPC分析" => SpcButton,
                 "通道设置" => ChannelSettingButton,
                 "设备管理" => CommunicationButton,
                 "二维码配置" => QrCodeSettingButton,
-                "MES配置" => MesSettingButton,
+                //"MES配置" => MesSettingButton,
                 "其他设置" => OtherSettingsButton,
                 "日志" => LogViewerButton,
                 _ => null

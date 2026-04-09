@@ -9,6 +9,21 @@ namespace MeasurementSoftware.Services.Devices
     public interface IPlcDeviceRuntimeService
     {
         /// <summary>
+        /// 任意设备运行时点位更新后触发。
+        /// </summary>
+        event EventHandler<PlcDataPointsUpdatedEventArgs>? DataPointsUpdated;
+
+        /// <summary>
+        /// 任意设备运行时连接状态变化后触发。
+        /// </summary>
+        event EventHandler<PlcDeviceConnectionChangedEventArgs>? ConnectionStateChanged;
+
+        /// <summary>
+        /// 任意缓存型设备运行时缓存字段更新后触发。
+        /// </summary>
+        event EventHandler<PlcCacheFieldsUpdatedEventArgs>? CacheFieldsUpdated;
+
+        /// <summary>
         /// 为指定设备创建并初始化匹配的运行时实例。
         /// </summary>
         Task InitializeAsync(PlcDevice device);

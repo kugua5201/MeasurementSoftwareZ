@@ -300,7 +300,7 @@ namespace MeasurementSoftware.Services.Config
             {
                 var recipesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Recipes");
                 Directory.CreateDirectory(recipesDir);
-                CurrentRecipePath = Path.Combine(recipesDir, $"{CurrentRecipe.BasicInfo.RecipeName}.json");
+                CurrentRecipePath = Path.Combine(recipesDir, $"{CurrentRecipe?.BasicInfo.RecipeName}.json");
                 _log.Info($"新配方自动分配路径: {CurrentRecipePath}");
             }
 

@@ -7,6 +7,12 @@
     public interface ICachePlcDeviceRuntime : IPlcDeviceRuntime
     {
         /// <summary>
+        /// 缓存字段解析完成后触发。
+        /// 用于将西门子硬件缓存结果以事件方式推送给上层通道。
+        /// </summary>
+        event EventHandler<PlcCacheFieldsUpdatedEventArgs>? CacheFieldsUpdated;
+
+        /// <summary>
         /// 启动缓存读取。
         /// </summary>
         void StartCacheReading();

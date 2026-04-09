@@ -12,6 +12,7 @@
     <Title>SF-GAMS通用自动测量系统</Title>
     <Description>SF-GAMS通用自动测量系统</Description>
     <ApplicationIcon>Images\ico.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>

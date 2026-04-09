@@ -1,753 +1,979 @@
-﻿<UserControl x:Class="MeasurementSoftware.UserControls.DeviceSettingUserControl"
-		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-		xmlns:local="clr-namespace:MeasurementSoftware.UserControls"
-		xmlns:hc="https://handyorg.github.io/handycontrol"
-		x:Name="CommunicationSettingControl"
-        xmlns:helpers="clr-namespace:MeasurementSoftware.Helpers"
-        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-        xmlns:model="clr-namespace:MultiProtocol.Model;assembly=MultiProtocol"
-	 mc:Ignorable="d"
-   d:DesignHeight="700" d:DesignWidth="1200">
+﻿<UserControl
+    x:Class="MeasurementSoftware.UserControls.DeviceSettingUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:hc="https://handyorg.github.io/handycontrol"
+    xmlns:helpers="clr-namespace:MeasurementSoftware.Helpers"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:local="clr-namespace:MeasurementSoftware.UserControls"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="clr-namespace:MultiProtocol.Model;assembly=MultiProtocol"
+    x:Name="CommunicationSettingControl"
+    d:DesignHeight="700"
+    d:DesignWidth="1200"
+    mc:Ignorable="d">
     <UserControl.Resources>
         <helpers:BindingProxy x:Key="VmProxy" Data="{Binding}" />
     </UserControl.Resources>
     <hc:SimplePanel>
         <Grid>
             <Grid Style="{StaticResource PageRootGrid}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-            <!-- 操作按钮栏 -->
-            <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
-                <Grid>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <Button Command="{Binding AddDeviceCommand}" 
-									Content="添加设备" 
-									Style="{StaticResource ButtonPrimary}"
-									Padding="15,6" Margin="0,0,8,0"
-									ToolTip="添加新的PLC设备"/>
-                        <Button Command="{Binding DeleteDeviceCommand}" 
-									Content="删除设备" 
-									Style="{StaticResource ButtonDanger}"
-									Padding="15,6" Margin="0,0,8,0"
-									ToolTip="删除当前选中的设备"/>
-                        <Button Command="{Binding TestConnectionCommand}" 
-									Content="连接设备" 
-									Style="{StaticResource ButtonDefault}"
-									Padding="15,6"
-									ToolTip="连接当前设备"/>
-                    </StackPanel>
-                    <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveConfigurationCommand}"/>
-                </Grid>
-            </Border>
-
-            <!-- 主内容区域 -->
-            <Grid Grid.Row="1" Margin="15">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="300"/>
-                    <ColumnDefinition Width="15"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- 左侧：设备列表 -->
-                <Border Grid.Column="0" 
-						Background="{DynamicResource RegionBrush}" 
-						BorderBrush="{DynamicResource BorderBrush}" 
-						BorderThickness="1" 
-						CornerRadius="6"
-						Effect="{StaticResource EffectShadow1}">
+                <!--  操作按钮栏  -->
+                <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
                     <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
+                        <StackPanel HorizontalAlignment="Left" Orientation="Horizontal">
+                            <Button
+                                Margin="0,0,8,0"
+                                Padding="15,6"
+                                Command="{Binding AddDeviceCommand}"
+                                Content="添加设备"
+                                Style="{StaticResource ButtonPrimary}"
+                                ToolTip="添加新的PLC设备" />
+                            <Button
+                                Margin="0,0,8,0"
+                                Padding="15,6"
+                                Command="{Binding DeleteDeviceCommand}"
+                                Content="删除设备"
+                                Style="{StaticResource ButtonDanger}"
+                                ToolTip="删除当前选中的设备" />
+                            <Button
+                                Padding="15,6"
+                                Command="{Binding TestConnectionCommand}"
+                                Content="连接设备"
+                                Style="{StaticResource ButtonDefault}"
+                                ToolTip="连接当前设备" />
+                        </StackPanel>
+                        <Button Command="{Binding SaveConfigurationCommand}" Style="{StaticResource SaveRecipeButton}" />
+                    </Grid>
+                </Border>
 
-                        <Border Grid.Row="0" 
-								Background="{DynamicResource SecondaryRegionBrush}" 
-								Padding="12,8" 
-								MinHeight="46"
-								BorderBrush="{DynamicResource BorderBrush}" 
-								BorderThickness="0,0,0,1"
-								CornerRadius="6,6,0,0">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Path Data="M20,18H4V6H20M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4Z" 
-									  Fill="{DynamicResource PrimaryBrush}" 
-									  Width="16" Height="16" 
-									  Stretch="Uniform" 
-									  Margin="0,0,8,0"
-									  VerticalAlignment="Center"/>
-                                <TextBlock Text="设备列表" 
-										   FontSize="14" 
-										   FontWeight="Bold"
-										   VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
+                <!--  主内容区域  -->
+                <Grid Grid.Row="1" Margin="15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300" />
+                        <ColumnDefinition Width="15" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                        <ListBox Grid.Row="1" 
-								 ItemsSource="{Binding Devices}" 
-								 SelectedItem="{Binding SelectedDevice}"
-								 BorderThickness="0"
-								 Background="Transparent"
-								 Margin="5">
+                    <!--  左侧：设备列表  -->
+                    <Border
+                        Grid.Column="0"
+                        Background="{DynamicResource RegionBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Effect="{StaticResource EffectShadow1}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Border
+                                Grid.Row="0"
+                                MinHeight="46"
+                                Padding="12,8"
+                                Background="{DynamicResource SecondaryRegionBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                CornerRadius="6,6,0,0">
+                                <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                    <Path
+                                        Width="16"
+                                        Height="16"
+                                        Margin="0,0,8,0"
+                                        VerticalAlignment="Center"
+                                        Data="M20,18H4V6H20M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4Z"
+                                        Fill="{DynamicResource PrimaryBrush}"
+                                        Stretch="Uniform" />
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        FontWeight="Bold"
+                                        Text="设备列表" />
+                                </StackPanel>
+                            </Border>
+
+                            <ListBox
+                                Grid.Row="1"
+                                Margin="5"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                ItemsSource="{Binding Devices}"
+                                SelectedItem="{Binding SelectedDevice}">
                                 <ListBox.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="添加设备" Command="{Binding AddDeviceCommand}" ></MenuItem>
-                                        <MenuItem Header="删除设备" Command="{Binding DeleteDeviceCommand}" ></MenuItem>
-                                        <MenuItem Header="连接设备" Command="{Binding TestConnectionCommand}" ></MenuItem>
+                                        <MenuItem Command="{Binding AddDeviceCommand}" Header="添加设备" />
+                                        <MenuItem Command="{Binding DeleteDeviceCommand}" Header="删除设备" />
+                                        <MenuItem Command="{Binding TestConnectionCommand}" Header="连接设备" />
                                     </ContextMenu>
                                 </ListBox.ContextMenu>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="Transparent" 
-											Padding="8,10" 
-											CornerRadius="4"
-											Margin="0,2">
-                                        <StackPanel Orientation="Horizontal">
-                                            <!-- 设备图标 + 连接状态小圆点 -->
-                                            <Grid VerticalAlignment="Center" Margin="0,0,10,0" Width="24" Height="24">
-                                                <Path Data="M20,18H4V6H20M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4Z" 
-													  Width="20" Height="20" Stretch="Uniform"
-													  HorizontalAlignment="Center" VerticalAlignment="Center">
-                                                    <Path.Style>
-                                                        <Style TargetType="Path">
-                                                            <Setter Property="Fill" Value="{StaticResource StatusInfoBrush}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                                    <Setter Property="Fill" Value="{StaticResource DisabledIconBrush}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Path.Style>
-                                                </Path>
-                                                <!-- 右下角连接状态圆点 -->
-                                                <Ellipse Width="8" Height="8" 
-														 HorizontalAlignment="Right" VerticalAlignment="Bottom"
-														 Margin="0,0,-1,-1"
-														 Stroke="White" StrokeThickness="1.5">
-                                                    <Ellipse.Style>
-                                                        <Style TargetType="Ellipse">
-                                                            <Setter Property="Fill" Value="{StaticResource StatusSuccessBrush}"/>
-                                                            <Setter Property="ToolTip" Value="已连接"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                                                    <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}"/>
-                                                                    <Setter Property="ToolTip" Value="未连接"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Ellipse.Style>
-                                                </Ellipse>
-                                            </Grid>
-                                            <StackPanel>
-                                                <!-- 设备名称样式根据启用状态变化 -->
-                                                <TextBlock FontWeight="SemiBold" FontSize="13">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="{Binding DeviceName}"/>
-                                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                                    <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}"/>
-                                                                    <Setter Property="TextDecorations" Value="Strikethrough"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <!-- 设备类型样式 -->
-                                                <TextBlock FontSize="11" Margin="0,2,0,0">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Text" Value="{Binding DeviceType}"/>
-                                                            <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                                    <Setter Property="Foreground" Value="{StaticResource DisabledIconBrush}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <!-- 启用状态标签 -->
-                                                <Border CornerRadius="3" 
-														Padding="6,2" 
-														Margin="0,4,0,0"
-														HorizontalAlignment="Left">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="{StaticResource StatusSuccessBgBrush}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                                    <Setter Property="Background" Value="{StaticResource StatusErrorBgBrush}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                    <TextBlock FontSize="10" FontWeight="Medium">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Text" Value="✓ 已启用"/>
-                                                                <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border
+                                            Margin="0,2"
+                                            Padding="8,10"
+                                            Background="Transparent"
+                                            CornerRadius="4">
+                                            <StackPanel Orientation="Horizontal">
+                                                <!--  设备图标 + 连接状态小圆点  -->
+                                                <Grid
+                                                    Width="24"
+                                                    Height="24"
+                                                    Margin="0,0,10,0"
+                                                    VerticalAlignment="Center">
+                                                    <Path
+                                                        Width="20"
+                                                        Height="20"
+                                                        HorizontalAlignment="Center"
+                                                        VerticalAlignment="Center"
+                                                        Data="M20,18H4V6H20M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4Z"
+                                                        Stretch="Uniform">
+                                                        <Path.Style>
+                                                            <Style TargetType="Path">
+                                                                <Setter Property="Fill" Value="{StaticResource StatusInfoBrush}" />
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                                                                        <Setter Property="Text" Value="✗ 已禁用"/>
-                                                                        <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
+                                                                        <Setter Property="Fill" Value="{StaticResource DisabledIconBrush}" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
-                                                        </TextBlock.Style>
-                                                    </TextBlock>
-                                                </Border>
-                                                <!-- 连接状态标签 -->
-                                                <Border CornerRadius="3" 
-																			Padding="6,2" 
-																			Margin="4,4,0,0"
-																			HorizontalAlignment="Left">
-                                                    <Border.Style>
-                                                        <Style TargetType="Border">
-                                                            <Setter Property="Background" Value="{StaticResource StatusInfoBgBrush}"/>
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                                                    <Setter Property="Background" Value="{StaticResource StatusWarningBgBrush}"/>
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Border.Style>
-                                                    <TextBlock FontSize="10" FontWeight="Medium">
-                                                        <TextBlock.Style>
-                                                            <Style TargetType="TextBlock">
-                                                                <Setter Property="Text" Value="● 在线"/>
-                                                                <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}"/>
+                                                        </Path.Style>
+                                                    </Path>
+                                                    <!--  右下角连接状态圆点  -->
+                                                    <Ellipse
+                                                        Width="8"
+                                                        Height="8"
+                                                        Margin="0,0,-1,-1"
+                                                        HorizontalAlignment="Right"
+                                                        VerticalAlignment="Bottom"
+                                                        Stroke="White"
+                                                        StrokeThickness="1.5">
+                                                        <Ellipse.Style>
+                                                            <Style TargetType="Ellipse">
+                                                                <Setter Property="Fill" Value="{StaticResource StatusSuccessBrush}" />
+                                                                <Setter Property="ToolTip" Value="已连接" />
                                                                 <Style.Triggers>
                                                                     <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                                                        <Setter Property="Text" Value="● 离线"/>
-                                                                        <Setter Property="Foreground" Value="{StaticResource StatusWarningBrush}"/>
+                                                                        <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}" />
+                                                                        <Setter Property="ToolTip" Value="未连接" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Ellipse.Style>
+                                                    </Ellipse>
+                                                </Grid>
+                                                <StackPanel>
+                                                    <!--  设备名称样式根据启用状态变化  -->
+                                                    <TextBlock FontSize="13" FontWeight="SemiBold">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding DeviceName}" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                                        <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
+                                                                        <Setter Property="TextDecorations" Value="Strikethrough" />
                                                                     </DataTrigger>
                                                                 </Style.Triggers>
                                                             </Style>
                                                         </TextBlock.Style>
                                                     </TextBlock>
-                                                </Border>
+                                                    <!--  设备类型样式  -->
+                                                    <TextBlock Margin="0,2,0,0" FontSize="11">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding DeviceType}" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                                        <Setter Property="Foreground" Value="{StaticResource DisabledIconBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <!--  启用状态标签  -->
+                                                    <Border
+                                                        Margin="0,4,0,0"
+                                                        Padding="6,2"
+                                                        HorizontalAlignment="Left"
+                                                        CornerRadius="3">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="{StaticResource StatusSuccessBgBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                                        <Setter Property="Background" Value="{StaticResource StatusErrorBgBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock FontSize="10" FontWeight="Medium">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Text" Value="✓ 已启用" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                                                            <Setter Property="Text" Value="✗ 已禁用" />
+                                                                            <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Border>
+                                                    <!--  连接状态标签  -->
+                                                    <Border
+                                                        Margin="4,4,0,0"
+                                                        Padding="6,2"
+                                                        HorizontalAlignment="Left"
+                                                        CornerRadius="3">
+                                                        <Border.Style>
+                                                            <Style TargetType="Border">
+                                                                <Setter Property="Background" Value="{StaticResource StatusInfoBgBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                        <Setter Property="Background" Value="{StaticResource StatusWarningBgBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Border.Style>
+                                                        <TextBlock FontSize="10" FontWeight="Medium">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Text" Value="● 在线" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource StatusInfoBrush}" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                            <Setter Property="Text" Value="● 离线" />
+                                                                            <Setter Property="Foreground" Value="{StaticResource StatusWarningBrush}" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Border>
+                                                </StackPanel>
                                             </StackPanel>
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                            <ListBox.ItemContainerStyle>
-                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource ListBoxItemBaseStyle}">
-                                    <Setter Property="Padding" Value="0"/>
-                                    <Setter Property="Margin" Value="2"/>
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                </Style>
-                            </ListBox.ItemContainerStyle>
-                        </ListBox>
-                    </Grid>
-                </Border>
-
-                <!-- 右侧：设备配置详情 -->
-                <Border Grid.Column="2" 
-						Background="{DynamicResource RegionBrush}" 
-						BorderBrush="{DynamicResource BorderBrush}" 
-						BorderThickness="1" 
-						CornerRadius="6"
-						Effect="{StaticResource EffectShadow1}">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- 当没有选中设备时显示提示 -->
-                        <Border Grid.Row="0" Grid.RowSpan="3" 
-								Background="{DynamicResource RegionBrush}" 
-								CornerRadius="6"
-								Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityReConverter}}">
-                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Path Fill="{DynamicResource BorderBrush}" 
-									  Data="M20,18H4V6H20M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M12,9A2,2 0 0,0 10,11A2,2 0 0,0 12,13A2,2 0 0,0 14,11A2,2 0 0,0 12,9M6,15C6,13.67 9.33,13 12,13C14.67,13 18,13.67 18,15V17H6V15Z" 
-									  Width="80" Height="80" Stretch="Uniform" Margin="0,0,0,20"
-									  Opacity="0.3"/>
-                                <TextBlock Text="请选择或添加设备" 
-										   FontSize="16" 
-										   Foreground="{DynamicResource ThirdTextBrush}" 
-										   HorizontalAlignment="Center"
-										   FontWeight="Medium"/>
-                                <TextBlock FontSize="12" 
-										   Foreground="{DynamicResource ThirdTextBrush}" 
-										   HorizontalAlignment="Center"
-										   Margin="0,8,0,0"
-										   Opacity="0.7">
-									<Run Text="从左侧列表选择设备，或点击上方"/>
-									<Run Text="&quot;添加设备&quot;"/>
-									<Run Text="按钮"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 当有选中设备时显示配置 -->
-                        <Border Grid.Row="0" 
-								Background="{DynamicResource SecondaryRegionBrush}" 
-								Padding="12,8" 
-								MinHeight="46"
-								BorderBrush="{DynamicResource BorderBrush}" 
-								BorderThickness="0,0,0,1"
-								CornerRadius="6,6,0,0"
-								Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityConverter}}">
-                            <Grid>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Path Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z" 
-										  Fill="{DynamicResource PrimaryBrush}" 
-										  Width="18" Height="18" 
-										  Stretch="Uniform" 
-										  Margin="0,0,8,0"
-										  VerticalAlignment="Center"/>
-                                    <TextBlock Text="设备配置" 
-											   FontSize="14" 
-											   FontWeight="Bold" 
-											   VerticalAlignment="Center"/>
-                                    <!-- 连接状态徽章 -->
-                                    <Border CornerRadius="8" Padding="8,3" Margin="12,0,0,0" VerticalAlignment="Center"
-											DataContext="{Binding SelectedDevice}">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{StaticResource StatusSuccessBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                                        <Setter Property="Background" Value="{StaticResource StatusErrorBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="6" Height="6" Fill="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                            <TextBlock FontSize="11" Foreground="White" FontWeight="Medium" VerticalAlignment="Center">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="在线"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                                                <Setter Property="Text" Value="离线"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-                                </StackPanel>
-                                <Button HorizontalAlignment="Right" 
-											VerticalAlignment="Center"
-											Command="{Binding OpenPointSettingCommand}"
-											Content="配置点位"
-											Style="{StaticResource ButtonPrimary}"
-											Padding="12,4"
-											ToolTip="配置数据点位"/>
-                            </Grid>
-                        </Border>
-
-                        <!-- 设备配置表单 -->
-                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
-									  Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityConverter}}">
-                            <StackPanel Margin="20" DataContext="{Binding SelectedDevice}" >
-                                <!-- 基本信息 -->
-                                <TextBlock Text="基本信息" FontSize="13" FontWeight="Bold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryBrush}"/>
-
-                                <Grid Margin="0,0,0,15">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!--<TextBlock Grid.Row="0" Grid.Column="0" Text="设备ID：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <TextBox Grid.Row="0" Grid.Column="1" 
-											 Style="{StaticResource TextBoxExtend}"
-											 Text="{Binding DeviceId}" 
-											 IsReadOnly="True" 
-											 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>-->
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="设备名称：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <TextBox Grid.Row="1" Grid.Column="1" 
-											 Style="{StaticResource TextBoxExtend}"
-											 Text="{Binding DeviceName, UpdateSourceTrigger=PropertyChanged}" 
-											 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"
-											 hc:InfoElement.Placeholder="请输入设备名称"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="设备类型：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <ComboBox Grid.Row="2" Grid.Column="1" 
-											  Style="{StaticResource ComboBoxExtend}"
-											  ItemsSource="{Binding DataContext.DeviceTypes, RelativeSource={RelativeSource AncestorType=UserControl}}"
-											  SelectedItem="{Binding DataContext.SelectedDeviceType, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-											  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8">
-                                    </ComboBox>
-
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="启用：" VerticalAlignment="Center"/>
-                                    <ToggleButton Grid.Row="3" Grid.Column="1" 
-                                            IsChecked="{Binding DataContext.SelectedDeviceEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-												  Style="{StaticResource ToggleButtonSwitch}" 
-												  HorizontalAlignment="Left"/>
-                                </Grid>
-
-                                <Separator Margin="0,5"/>
-
-                                <!-- 动态加载不同PLC类型的配置界面 -->
-                                <ContentControl Content="{Binding}" 
-												ContentTemplateSelector="{StaticResource PlcConfigTemplateSelector}"
-												Margin="0,10,0,0" />
-
-                                <Separator Margin="0,5"/>
-
-                                <!-- 公共参数配置 -->
-                                <TextBlock Text="公共参数" FontSize="13" FontWeight="Bold" Margin="0,10,0,10" Foreground="{DynamicResource WarningBrush}"/>
-
-                                <Grid Margin="0,0,0,15">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="{StaticResource FormGridWidthWide}"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                    </Grid.RowDefinitions>
-
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="连接超时(ms)：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <hc:NumericUpDown Grid.Row="0" Grid.Column="1" 
-													  Value="{Binding ConnectionTimeout}" 
-													  Minimum="100" Maximum="60000"
-													  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="接收超时(ms)：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <hc:NumericUpDown Grid.Row="1" Grid.Column="1" 
-													  Value="{Binding ReceiveTimeout}" 
-													  Minimum="100" Maximum="60000"
-													  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="操作超时(ms)：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <hc:NumericUpDown Grid.Row="2" Grid.Column="1" 
-													  Value="{Binding OperationTimeout}" 
-													  Minimum="100" Maximum="60000"
-													  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="轮询周期(ms)：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <hc:NumericUpDown Grid.Row="3" Grid.Column="1" 
-													  Value="{Binding PollingSpeed}" 
-													  Minimum="50" Maximum="60000"
-													  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="重连间隔(ms)：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <hc:NumericUpDown Grid.Row="4" Grid.Column="1" 
-													  Value="{Binding ReconnectInterval}" 
-													  Minimum="500" Maximum="60000"
-													  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="最大连接数：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                    <hc:NumericUpDown Grid.Row="5" Grid.Column="1" 
-													  Value="{Binding MaxConnections}" 
-													  Minimum="1" Maximum="100"
-													  Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
-
-                                    <TextBlock Grid.Row="6" Grid.Column="0" Text="自动重连：" VerticalAlignment="Center"/>
-                                    <ToggleButton Grid.Row="6" Grid.Column="1" 
-												  IsChecked="{Binding AutoReconnect}" 
-												  Style="{StaticResource ToggleButtonSwitch}" 
-												  HorizontalAlignment="Left"/>
-                                </Grid>
-
-                                <!-- 操作按钮 -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
-                                    <Button Command="{Binding DataContext.ApplyAndReconnectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-											Content="保存并重连" 
-											Style="{StaticResource ButtonPrimary}"
-											Padding="15,6" Margin="0,0,8,0"
-											ToolTip="保存当前参数并用新参数重新连接"/>
-                                    <!--<Button Command="{Binding DataContext.SaveConfigurationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-											Content="仅保存" 
-											Style="{StaticResource ButtonDefault}"
-											Padding="15,6"
-											ToolTip="仅保存配置到本地，不重连"/>-->
-                                </StackPanel>
-                            </StackPanel>
-                        </ScrollViewer>
-
-                        <!-- 点位统计信息 -->
-                        <Border Grid.Row="2" 
-								Background="{DynamicResource SecondaryRegionBrush}" 
-								Padding="10" 
-								BorderBrush="{DynamicResource BorderBrush}" 
-								BorderThickness="0,1,0,0"
-								Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityConverter}}">
-                            <Grid DataContext="{Binding SelectedDevice}">
-                                <StackPanel Orientation="Horizontal">
-                                    <!-- 连接状态指示 -->
-                                    <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,6,0">
-                                        <Ellipse.Style>
-                                            <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="{StaticResource StatusSuccessBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                                        <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Ellipse.Style>
-                                    </Ellipse>
-                                    <TextBlock FontSize="12" VerticalAlignment="Center" Margin="0,0,15,0"  >
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Setter Property="Text" Value="已连接"/>
-                                                <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                                        <Setter Property="Text" Value="未连接"/>
-                                                        <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <!-- 点位统计 -->
-                                    <Path Fill="{DynamicResource WarningBrush}" VerticalAlignment="Center" Margin="0,0,6,0"
-										  Data="M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" 
-										  Width="12" Height="12" Stretch="Uniform"/>
-                                    <TextBlock FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}">
-										<Run Text="已配置"/>
-										<Run Text="{Binding DataPoints.Count, Mode=OneWay}" FontWeight="Bold" Foreground="{DynamicResource PrimaryBrush}"/>
-										<Run Text="个点位"/>
-                                    </TextBlock>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                    </Grid>
-                </Border>
-            </Grid>
-            </Grid>
-
-            <!-- 右侧抽屉：点位设置 -->
-            <hc:Drawer 
-				   Dock="Right" 
-				   ShowMode="Cover"
-				   IsOpen="{Binding IsPointSettingOpen, Mode=TwoWay}">
-            <Border Background="{DynamicResource RegionBrush}" 
-					MinWidth="700" MaxWidth="900" 
-					BorderThickness="1,0,0,0" 
-                    DataContext="{Binding Data, Source={StaticResource VmProxy}}"
-					BorderBrush="{DynamicResource BorderBrush}">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- 抽屉标题栏 -->
-                    <Border Grid.Row="0" Background="{DynamicResource PrimaryBrush}" Padding="15,12">
-                        <Grid>
-                            <StackPanel Orientation="Horizontal">
-
-                                <StackPanel>
-                                    <TextBlock Text="数据点位配置" 
-											   FontSize="16" 
-											   FontWeight="Bold" 
-											   Foreground="White"/>
-                                    <TextBlock Text="{Binding SelectedDevice.DeviceName, StringFormat='设备: {0}'}" 
-											   FontSize="12" 
-											   Foreground="White" 
-											   Opacity="0.8"
-											   Margin="0,2,0,0"/>
-                                </StackPanel>
-                            </StackPanel>
-                            <Button Command="hc:ControlCommands.Close" 
-									HorizontalAlignment="Right" 
-									Foreground="White" 
-									Style="{StaticResource ButtonIcon}" 
-									hc:IconElement.Geometry="{StaticResource DeleteFillCircleGeometry}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                                <ListBox.ItemContainerStyle>
+                                    <Style BasedOn="{StaticResource ListBoxItemBaseStyle}" TargetType="ListBoxItem">
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="Margin" Value="2" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                            </ListBox>
                         </Grid>
                     </Border>
 
-                    <!-- 点位操作工具栏 -->
-                    <Border Grid.Row="1" Background="{DynamicResource SecondaryRegionBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="15,10">
-                        <StackPanel Orientation="Horizontal">
-                            <Button Command="{Binding AddDataPointCommand}" 
-									Content="添加点位"
-									Style="{StaticResource ButtonPrimary}"
-									Padding="12,6" Margin="0,0,8,0"
-									ToolTip="添加数据点"/>
-                            <Button Command="{Binding DeleteDataPointCommand}" 
-									Content="删除点位"
-									Style="{StaticResource ButtonDanger}"
-									Padding="12,6" Margin="0,0,8,0"
-									ToolTip="删除选中点位"/>
-                            <Button Command="{Binding CheckAllAddressesCommand}" 
-									Content="检查地址"
-									Style="{StaticResource ButtonWarning}"
-									Padding="12,6" Margin="0,0,8,0"
-									ToolTip="检查所有点位地址是否正确"/>
-                            <Button Command="{Binding SavePointConfigurationCommand}" 
-									Content="设置点位"
-									Style="{StaticResource ButtonSuccess}"
-									Padding="12,6" Margin="0,0,8,0"
-									ToolTip="保存点位配置"/>
-                            <Button Command="{Binding RenumberPointsCommand}" 
-									Content="重新编号"
-									Style="{StaticResource ButtonPrimary}"
-									Padding="12,6"
-									ToolTip="将点位ID按顺序重新编号"/>
-                        </StackPanel>
+                    <!--  右侧：设备配置详情  -->
+                    <Border
+                        Grid.Column="2"
+                        Background="{DynamicResource RegionBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Effect="{StaticResource EffectShadow1}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!--  当没有选中设备时显示提示  -->
+                            <Border
+                                Grid.Row="0"
+                                Grid.RowSpan="3"
+                                Background="{DynamicResource RegionBrush}"
+                                CornerRadius="6"
+                                Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityReConverter}}">
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Path
+                                        Width="80"
+                                        Height="80"
+                                        Margin="0,0,0,20"
+                                        Data="M20,18H4V6H20M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M12,9A2,2 0 0,0 10,11A2,2 0 0,0 12,13A2,2 0 0,0 14,11A2,2 0 0,0 12,9M6,15C6,13.67 9.33,13 12,13C14.67,13 18,13.67 18,15V17H6V15Z"
+                                        Fill="{DynamicResource BorderBrush}"
+                                        Opacity="0.3"
+                                        Stretch="Uniform" />
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontSize="16"
+                                        FontWeight="Medium"
+                                        Foreground="{DynamicResource ThirdTextBrush}"
+                                        Text="请选择或添加设备" />
+                                    <TextBlock
+                                        Margin="0,8,0,0"
+                                        HorizontalAlignment="Center"
+                                        FontSize="12"
+                                        Foreground="{DynamicResource ThirdTextBrush}"
+                                        Opacity="0.7">
+                                        <Run Text="从左侧列表选择设备，或点击上方" />
+                                        <Run Text="&quot;添加设备&quot;" />
+                                        <Run Text="按钮" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!--  当有选中设备时显示配置  -->
+                            <Border
+                                Grid.Row="0"
+                                MinHeight="46"
+                                Padding="12,8"
+                                Background="{DynamicResource SecondaryRegionBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="0,0,0,1"
+                                CornerRadius="6,6,0,0"
+                                Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityConverter}}">
+                                <Grid>
+                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                        <Path
+                                            Width="18"
+                                            Height="18"
+                                            Margin="0,0,8,0"
+                                            VerticalAlignment="Center"
+                                            Data="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"
+                                            Fill="{DynamicResource PrimaryBrush}"
+                                            Stretch="Uniform" />
+                                        <TextBlock
+                                            VerticalAlignment="Center"
+                                            FontSize="14"
+                                            FontWeight="Bold"
+                                            Text="设备配置" />
+                                        <!--  连接状态徽章  -->
+                                        <Border
+                                            Margin="12,0,0,0"
+                                            Padding="8,3"
+                                            VerticalAlignment="Center"
+                                            CornerRadius="8"
+                                            DataContext="{Binding SelectedDevice}">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="{StaticResource StatusSuccessBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                            <Setter Property="Background" Value="{StaticResource StatusErrorBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse
+                                                    Width="6"
+                                                    Height="6"
+                                                    Margin="0,0,5,0"
+                                                    VerticalAlignment="Center"
+                                                    Fill="White" />
+                                                <TextBlock
+                                                    VerticalAlignment="Center"
+                                                    FontSize="11"
+                                                    FontWeight="Medium"
+                                                    Foreground="White">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="在线" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                                    <Setter Property="Text" Value="离线" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                    <Button
+                                        Padding="12,4"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding OpenPointSettingCommand}"
+                                        Content="配置点位"
+                                        Style="{StaticResource ButtonPrimary}"
+                                        ToolTip="配置数据点位" />
+                                </Grid>
+                            </Border>
+
+                            <!--  设备配置表单  -->
+                            <ScrollViewer
+                                Grid.Row="1"
+                                VerticalScrollBarVisibility="Auto"
+                                Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityConverter}}">
+                                <StackPanel Margin="20" DataContext="{Binding SelectedDevice}">
+                                    <!--  基本信息  -->
+                                    <TextBlock
+                                        Margin="0,0,0,10"
+                                        FontSize="13"
+                                        FontWeight="Bold"
+                                        Foreground="{DynamicResource PrimaryBrush}"
+                                        Text="基本信息" />
+
+                                    <Grid Margin="0,0,0,15">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{StaticResource FormGridWidthWide}" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!--<TextBlock Grid.Row="0" Grid.Column="0" Text="设备ID：" VerticalAlignment="Center" Margin="0,0,0,8"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1"
+											 Style="{StaticResource TextBoxExtend}"
+											 Text="{Binding DeviceId}"
+											 IsReadOnly="True"
+											 Width="{StaticResource PlcFieldInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>-->
+
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="设备名称：" />
+                                        <TextBox
+                                            Grid.Row="1"
+                                            Grid.Column="1"
+                                            Width="{StaticResource PlcFieldInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            hc:InfoElement.Placeholder="请输入设备名称"
+                                            Style="{StaticResource TextBoxExtend}"
+                                            Text="{Binding DeviceName, UpdateSourceTrigger=PropertyChanged}" />
+
+                                        <TextBlock
+                                            Grid.Row="2"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="设备类型：" />
+                                        <ComboBox
+                                            Grid.Row="2"
+                                            Grid.Column="1"
+                                            Width="{StaticResource PlcFieldInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            ItemsSource="{Binding DataContext.DeviceTypes, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            SelectedItem="{Binding DataContext.SelectedDeviceType, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Style="{StaticResource ComboBoxExtend}" />
+
+                                        <TextBlock
+                                            Grid.Row="3"
+                                            Grid.Column="0"
+                                            VerticalAlignment="Center"
+                                            Text="启用：" />
+                                        <ToggleButton
+                                            Grid.Row="3"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Left"
+                                            IsChecked="{Binding DataContext.SelectedDeviceEnabled, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Style="{StaticResource ToggleButtonSwitch}" />
+                                    </Grid>
+
+                                    <Separator Margin="0,5" />
+
+                                    <!--  动态加载不同PLC类型的配置界面  -->
+                                    <ContentControl
+                                        Margin="0,10,0,0"
+                                        Content="{Binding}"
+                                        ContentTemplateSelector="{StaticResource PlcConfigTemplateSelector}" />
+
+                                    <Separator Margin="0,5" />
+
+                                    <!--  公共参数配置  -->
+                                    <TextBlock
+                                        Margin="0,10,0,10"
+                                        FontSize="13"
+                                        FontWeight="Bold"
+                                        Foreground="{DynamicResource WarningBrush}"
+                                        Text="公共参数" />
+
+                                    <Grid Margin="0,0,0,15">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{StaticResource FormGridWidthWide}" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock
+                                            Grid.Row="0"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="连接超时(ms)：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="0"
+                                            Grid.Column="1"
+                                            Width="{StaticResource PlcFieldInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            Maximum="60000"
+                                            Minimum="100"
+                                            Value="{Binding ConnectionTimeout}" />
+
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="接收超时(ms)：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="1"
+                                            Grid.Column="1"
+                                            Width="{StaticResource PlcFieldInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            Maximum="60000"
+                                            Minimum="100"
+                                            Value="{Binding ReceiveTimeout}" />
+
+                                        <TextBlock
+                                            Grid.Row="2"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="操作超时(ms)：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="2"
+                                            Grid.Column="1"
+                                            Width="{StaticResource PlcFieldInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            Maximum="60000"
+                                            Minimum="100"
+                                            Value="{Binding OperationTimeout}" />
+
+                                        <TextBlock
+                                            Grid.Row="3"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="轮询周期(ms)：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="3"
+                                            Grid.Column="1"
+                                            Width="{StaticResource PlcFieldInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            Maximum="60000"
+                                            Minimum="1"
+                                            Value="{Binding PollingSpeed}" />
+
+                                        <TextBlock
+                                            Grid.Row="4"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="重连间隔(ms)：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="4"
+                                            Grid.Column="1"
+                                            Width="{StaticResource PlcFieldInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            Maximum="60000"
+                                            Minimum="500"
+                                            Value="{Binding ReconnectInterval}" />
+
+                                        <TextBlock
+                                            Grid.Row="5"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="最大连接数：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="5"
+                                            Grid.Column="1"
+                                            Width="{StaticResource PlcFieldInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            Maximum="100"
+                                            Minimum="1"
+                                            Value="{Binding MaxConnections}" />
+
+                                        <TextBlock
+                                            Grid.Row="6"
+                                            Grid.Column="0"
+                                            VerticalAlignment="Center"
+                                            Text="自动重连：" />
+                                        <ToggleButton
+                                            Grid.Row="6"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Left"
+                                            IsChecked="{Binding AutoReconnect}"
+                                            Style="{StaticResource ToggleButtonSwitch}" />
+                                    </Grid>
+
+                                    <!--  操作按钮  -->
+                                    <StackPanel Margin="0,0,0,0" Orientation="Horizontal">
+                                        <Button
+                                            Margin="0,0,8,0"
+                                            Padding="15,6"
+                                            Command="{Binding DataContext.ApplyAndReconnectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            Content="保存并重连"
+                                            Style="{StaticResource ButtonPrimary}"
+                                            ToolTip="保存当前参数并用新参数重新连接" />
+                                        <!--<Button Command="{Binding DataContext.SaveConfigurationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+											Content="仅保存"
+											Style="{StaticResource ButtonDefault}"
+											Padding="15,6"
+											ToolTip="仅保存配置到本地，不重连"/>-->
+                                    </StackPanel>
+                                </StackPanel>
+                            </ScrollViewer>
+
+                            <!--  点位统计信息  -->
+                            <Border
+                                Grid.Row="2"
+                                Padding="10"
+                                Background="{DynamicResource SecondaryRegionBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="0,1,0,0"
+                                Visibility="{Binding SelectedDevice, Converter={StaticResource Object2VisibilityConverter}}">
+                                <Grid DataContext="{Binding SelectedDevice}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <!--  连接状态指示  -->
+                                        <Ellipse
+                                            Width="8"
+                                            Height="8"
+                                            Margin="0,0,6,0"
+                                            VerticalAlignment="Center">
+                                            <Ellipse.Style>
+                                                <Style TargetType="Ellipse">
+                                                    <Setter Property="Fill" Value="{StaticResource StatusSuccessBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                            <Setter Property="Fill" Value="{StaticResource StatusErrorBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Ellipse.Style>
+                                        </Ellipse>
+                                        <TextBlock
+                                            Margin="0,0,15,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="12">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="已连接" />
+                                                    <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsConnected}" Value="False">
+                                                            <Setter Property="Text" Value="未连接" />
+                                                            <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <!--  点位统计  -->
+                                        <Path
+                                            Width="12"
+                                            Height="12"
+                                            Margin="0,0,6,0"
+                                            VerticalAlignment="Center"
+                                            Data="M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"
+                                            Fill="{DynamicResource WarningBrush}"
+                                            Stretch="Uniform" />
+                                        <TextBlock FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}">
+                                            <Run Text="已配置" />
+                                            <Run
+                                                FontWeight="Bold"
+                                                Foreground="{DynamicResource PrimaryBrush}"
+                                                Text="{Binding DataPoints.Count, Mode=OneWay}" />
+                                            <Run Text="个点位" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </Border>
+                </Grid>
+            </Grid>
 
-					<!-- 数据点列表 -->
-					<DataGrid Grid.Row="2" 
-							  ItemsSource="{Binding SelectedDevice.DataPoints}" 
-							  SelectedItem="{Binding SelectedDataPoint}"
-                              BeginningEdit="DataGrid_BeginningEdit"
-							  AutoGenerateColumns="False"
-							  CanUserAddRows="False"
+            <!--  右侧抽屉：点位设置  -->
+            <hc:Drawer
+                Dock="Right"
+                IsOpen="{Binding IsPointSettingOpen, Mode=TwoWay}"
+                ShowMode="Cover">
+                <Border
+                    MinWidth="700"
+                    MaxWidth="900"
+                    Background="{DynamicResource RegionBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="1,0,0,0"
+                    DataContext="{Binding Data, Source={StaticResource VmProxy}}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
 
-							  SelectionMode="Single"
-                              HorizontalAlignment="Left"
-							  HeadersVisibility="Column"
-							  RowHeight="35"
-							  FontSize="13"
-							  BorderBrush="{DynamicResource BorderBrush}"
-							 >
+                        <!--  抽屉标题栏  -->
+                        <Border
+                            Grid.Row="0"
+                            Padding="15,12"
+                            Background="{DynamicResource PrimaryBrush}">
+                            <Grid>
+                                <StackPanel Orientation="Horizontal">
 
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow" BasedOn="{StaticResource DataGridRowStyle}">
-                                <Setter Property="ToolTip" Value="{Binding ErrorMessage}" />
-                                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
-                                        <Setter Property="Foreground" Value="White" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowStyle>
+                                    <StackPanel>
+                                        <TextBlock
+                                            FontSize="16"
+                                            FontWeight="Bold"
+                                            Foreground="White"
+                                            Text="数据点位配置" />
+                                        <TextBlock
+                                            Margin="0,2,0,0"
+                                            FontSize="12"
+                                            Foreground="White"
+                                            Opacity="0.8"
+                                            Text="{Binding SelectedDevice.DeviceName, StringFormat='设备: {0}'}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Button
+                                    HorizontalAlignment="Right"
+                                    hc:IconElement.Geometry="{StaticResource DeleteFillCircleGeometry}"
+                                    Command="hc:ControlCommands.Close"
+                                    Foreground="White"
+                                    Style="{StaticResource ButtonIcon}" />
+                            </Grid>
+                        </Border>
 
-                        <DataGrid.CellStyle>
-                            <Style TargetType="DataGridCell" BasedOn="{StaticResource DataGridCellStyle}">
-                                <Setter Property="Background" Value="Transparent" />
-                                <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}" />
-                                <Setter Property="BorderBrush" Value="Transparent" />
-                                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
-                                        <Setter Property="Foreground" Value="White" />
-                                        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
-                                    </Trigger>
+                        <!--  点位操作工具栏  -->
+                        <Border
+                            Grid.Row="1"
+                            Padding="15,10"
+                            Background="{DynamicResource SecondaryRegionBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0,0,0,1">
+                            <StackPanel Orientation="Horizontal">
+                                <Button
+                                    Margin="0,0,8,0"
+                                    Padding="12,6"
+                                    Command="{Binding AddDataPointCommand}"
+                                    Content="添加点位"
+                                    Style="{StaticResource ButtonPrimary}"
+                                    ToolTip="添加数据点" />
+                                <Button
+                                    Margin="0,0,8,0"
+                                    Padding="12,6"
+                                    Command="{Binding DeleteDataPointCommand}"
+                                    Content="删除点位"
+                                    Style="{StaticResource ButtonDanger}"
+                                    ToolTip="删除选中点位" />
+                                <Button
+                                    Margin="0,0,8,0"
+                                    Padding="12,6"
+                                    Command="{Binding CheckAllAddressesCommand}"
+                                    Content="检查地址"
+                                    Style="{StaticResource ButtonWarning}"
+                                    ToolTip="检查所有点位地址是否正确" />
+                                <Button
+                                    Margin="0,0,8,0"
+                                    Padding="12,6"
+                                    Command="{Binding SavePointConfigurationCommand}"
+                                    Content="设置点位"
+                                    Style="{StaticResource ButtonSuccess}"
+                                    ToolTip="保存点位配置" />
+                                <Button
+                                    Padding="12,6"
+                                    Command="{Binding RenumberPointsCommand}"
+                                    Content="重新编号"
+                                    Style="{StaticResource ButtonPrimary}"
+                                    ToolTip="将点位ID按顺序重新编号" />
+                            </StackPanel>
+                        </Border>
 
-                                    <MultiTrigger>
-                                        <MultiTrigger.Conditions>
-                                            <Condition Property="IsSelected" Value="True" />
-                                            <Condition Property="Selector.IsSelectionActive" Value="False" />
-                                        </MultiTrigger.Conditions>
-                                        <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
-                                        <Setter Property="Foreground" Value="White" />
-                                        <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
-                                    </MultiTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.CellStyle>
-                        <DataGrid.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="添加点位" Command="{Binding AddDataPointCommand}" />
-                                <MenuItem Header="删除点位" Command="{Binding DeleteDataPointCommand}" />
-                                <MenuItem Header="检查地址" Command="{Binding CheckAllAddressesCommand}" />
-                                <MenuItem Header="设置点位" Command="{Binding SavePointConfigurationCommand}" />
-                                <MenuItem Header="重新编号" Command="{Binding RenumberPointsCommand}" />
-                            </ContextMenu>
-                        </DataGrid.ContextMenu>
-                        <DataGrid.Columns>
-                            
-                            <DataGridTextColumn Header="ID" Binding="{Binding PointId}" Width="50" IsReadOnly="True"/>
-                            <DataGridTextColumn Header="点位名称" Binding="{Binding PointName}" Width="100"/>
-                            <DataGridTextColumn Header="数据地址" Binding="{Binding Address}" Width="100"/>
-                            <DataGridComboBoxColumn Header="字节顺序" SelectedItemBinding="{Binding ByteOrder}" ItemsSource="{Binding Source={StaticResource DataOrderValues}}" Width="80"/>
-                            <DataGridComboBoxColumn Header="数据类型" SelectedItemBinding="{Binding DataType}" ItemsSource="{Binding Source={StaticResource DataTypeEnumValues}}" Width="80"/>
-                            <DataGridTextColumn Header="长度" Width="90">
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource DataPointStringLengthDisplayConverter}" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged">
-                                        <Binding Path="DataLength" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged"/>
-                                        <Binding Path="DataType"/>
-                                        <Binding Path="DataContext.SelectedDevice.DeviceType" RelativeSource="{RelativeSource AncestorType=DataGrid}"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                            <Setter Property="HorizontalAlignment" Value="Center"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                        <Setter Property="TextAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                                <DataGridTextColumn.EditingElementStyle>
-                                    <Style TargetType="TextBox" BasedOn="{StaticResource TextBoxExtend}">
-                                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                                        <Setter Property="VerticalContentAlignment" Value="Center"/>
-                                        <Setter Property="TextAlignment" Value="Center"/>
-                                        <Setter Property="Padding" Value="4,1"/>
-                                            <Setter Property="MaxLength" Value="4"/>
-                                            <Setter Property="IsEnabled" Value="False"/>
-                                        <Style.Triggers>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}"/>
-                                                    <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="MitsubishiMC"/>
-                                                </MultiDataTrigger.Conditions>
-                                                <Setter Property="IsEnabled" Value="True"/>
-                                            </MultiDataTrigger>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}"/>
-                                                    <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="ModbusTCP"/>
-                                                </MultiDataTrigger.Conditions>
-                                                    <Setter Property="IsEnabled" Value="True"/>
+                        <!--  数据点列表  -->
+                        <DataGrid
+                            Grid.Row="2"
+                            HorizontalAlignment="Left"
+                            AutoGenerateColumns="False"
+                            BeginningEdit="DataGrid_BeginningEdit"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            CanUserAddRows="False"
+                            FontSize="13"
+                            HeadersVisibility="Column"
+                            ItemsSource="{Binding SelectedDevice.DataPoints}"
+                            RowHeight="35"
+                            SelectedItem="{Binding SelectedDataPoint}"
+                            SelectionMode="Single">
+
+                            <DataGrid.RowStyle>
+                                <Style BasedOn="{StaticResource DataGridRowStyle}" TargetType="DataGridRow">
+                                    <Setter Property="ToolTip" Value="{Binding ErrorMessage}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}" />
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+                                            <Setter Property="Foreground" Value="White" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+
+                            <DataGrid.CellStyle>
+                                <Style BasedOn="{StaticResource DataGridCellStyle}" TargetType="DataGridCell">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="Foreground" Value="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=Foreground}" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                                    <Style.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+                                            <Setter Property="Foreground" Value="White" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                                        </Trigger>
+
+                                        <MultiTrigger>
+                                            <MultiTrigger.Conditions>
+                                                <Condition Property="IsSelected" Value="True" />
+                                                <Condition Property="Selector.IsSelectionActive" Value="False" />
+                                            </MultiTrigger.Conditions>
+                                            <Setter Property="Background" Value="{DynamicResource PrimaryBrush}" />
+                                            <Setter Property="Foreground" Value="White" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource PrimaryBrush}" />
+                                        </MultiTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.CellStyle>
+                            <DataGrid.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Command="{Binding AddDataPointCommand}" Header="添加点位" />
+                                    <MenuItem Command="{Binding DeleteDataPointCommand}" Header="删除点位" />
+                                    <MenuItem Command="{Binding CheckAllAddressesCommand}" Header="检查地址" />
+                                    <MenuItem Command="{Binding SavePointConfigurationCommand}" Header="设置点位" />
+                                    <MenuItem Command="{Binding RenumberPointsCommand}" Header="重新编号" />
+                                </ContextMenu>
+                            </DataGrid.ContextMenu>
+                            <DataGrid.Columns>
+
+                                <DataGridTextColumn
+                                    Width="50"
+                                    Binding="{Binding PointId}"
+                                    Header="ID"
+                                    IsReadOnly="True" />
+                                <DataGridTextColumn
+                                    Width="100"
+                                    Binding="{Binding PointName}"
+                                    Header="点位名称" />
+                                <DataGridTextColumn
+                                    Width="100"
+                                    Binding="{Binding Address}"
+                                    Header="数据地址" />
+                                <DataGridComboBoxColumn
+                                    Width="80"
+                                    Header="字节顺序"
+                                    ItemsSource="{Binding Source={StaticResource DataOrderValues}}"
+                                    SelectedItemBinding="{Binding ByteOrder}" />
+                                <DataGridComboBoxColumn
+                                    Width="80"
+                                    Header="数据类型"
+                                    ItemsSource="{Binding Source={StaticResource DataTypeEnumValues}}"
+                                    SelectedItemBinding="{Binding DataType}" />
+                                <DataGridTextColumn Width="90" Header="长度">
+                                    <DataGridTextColumn.Binding>
+                                        <MultiBinding
+                                            Converter="{StaticResource DataPointStringLengthDisplayConverter}"
+                                            Mode="TwoWay"
+                                            UpdateSourceTrigger="PropertyChanged">
+                                            <Binding
+                                                Mode="TwoWay"
+                                                Path="DataLength"
+                                                UpdateSourceTrigger="PropertyChanged" />
+                                            <Binding Path="DataType" />
+                                            <Binding Path="DataContext.SelectedDevice.DeviceType" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                        </MultiBinding>
+                                    </DataGridTextColumn.Binding>
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center" />
+                                            <Setter Property="VerticalAlignment" Value="Center" />
+                                            <Setter Property="TextAlignment" Value="Center" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                    <DataGridTextColumn.EditingElementStyle>
+                                        <Style BasedOn="{StaticResource TextBoxExtend}" TargetType="TextBox">
+                                            <Setter Property="HorizontalContentAlignment" Value="Center" />
+                                            <Setter Property="VerticalContentAlignment" Value="Center" />
+                                            <Setter Property="TextAlignment" Value="Center" />
+                                            <Setter Property="Padding" Value="4,1" />
+                                            <Setter Property="MaxLength" Value="4" />
+                                            <Setter Property="IsEnabled" Value="False" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}" />
+                                                        <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="MitsubishiMC" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="IsEnabled" Value="True" />
                                                 </MultiDataTrigger>
-                                            <MultiDataTrigger>
-                                                <MultiDataTrigger.Conditions>
-                                                    <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}"/>
-                                                    <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="ModbusRTU"/>
-                                                </MultiDataTrigger.Conditions>
-                                                    <Setter Property="IsEnabled" Value="True"/>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}" />
+                                                        <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="ModbusTCP" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="IsEnabled" Value="True" />
                                                 </MultiDataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </DataGridTextColumn.EditingElementStyle>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="当前值" Binding="{Binding CurrentValue,Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="100" IsReadOnly="True" CanUserSort="False"/>
-                                <DataGridTemplateColumn Header="验证状态" Width="80">
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding DataType}" Value="{x:Static model:FieldType.String}" />
+                                                        <Condition Binding="{Binding DataContext.SelectedDevice.DeviceType, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="ModbusRTU" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="IsEnabled" Value="True" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.EditingElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Width="100"
+                                    Binding="{Binding CurrentValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    CanUserSort="False"
+                                    Header="当前值"
+                                    IsReadOnly="True" />
+                                <DataGridTemplateColumn Width="80" Header="验证状态">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <TextBlock Text="{Binding ValidationStatus}" 
-												   ToolTip="{Binding ValidationError}"
-												   HorizontalAlignment="Center"
-												   VerticalAlignment="Center">
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Text="{Binding ValidationStatus}"
+                                                ToolTip="{Binding ValidationError}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="{StaticResource PlaceholderTextBrush}"/>
+                                                        <Setter Property="Foreground" Value="{StaticResource PlaceholderTextBrush}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsValidated}" Value="True">
-                                                                <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource StatusSuccessBrush}" />
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding IsValidated}" Value="False">
-                                                                <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}"/>
+                                                                <Setter Property="Foreground" Value="{StaticResource StatusErrorBrush}" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -757,19 +983,32 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
-            </Border>
+                        </DataGrid>
+                    </Grid>
+                </Border>
             </hc:Drawer>
 
-            <Border Background="#66000000"
-                    Panel.ZIndex="999"
-                    Visibility="{Binding IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}" d:Visibility="Collapsed" >
+            <Border
+                Panel.ZIndex="999"
+                d:Visibility="Collapsed"
+                Background="#66000000"
+                Visibility="{Binding IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Border Background="{DynamicResource RegionBrush}" CornerRadius="12" Padding="28,24">
+                    <Border
+                        Padding="28,24"
+                        Background="{DynamicResource RegionBrush}"
+                        CornerRadius="12">
                         <StackPanel HorizontalAlignment="Center">
-                            <hc:LoadingCircle Width="56" Height="56" Foreground="{DynamicResource PrimaryBrush}"/>
-                            <TextBlock Text="{Binding BusyMessage}" Margin="0,16,0,0" FontSize="14" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                            <hc:LoadingCircle
+                                Width="56"
+                                Height="56"
+                                Foreground="{DynamicResource PrimaryBrush}" />
+                            <TextBlock
+                                Margin="0,16,0,0"
+                                HorizontalAlignment="Center"
+                                FontSize="14"
+                                Foreground="{DynamicResource PrimaryTextBrush}"
+                                Text="{Binding BusyMessage}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

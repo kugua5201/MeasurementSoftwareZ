@@ -9,6 +9,18 @@ namespace MeasurementSoftware.Services.Devices
     public interface IPlcDeviceRuntime
     {
         /// <summary>
+        /// 设备点位值更新后触发。
+        /// 用于将协议层读取结果以事件方式推送给上层通道。
+        /// </summary>
+        event EventHandler<PlcDataPointsUpdatedEventArgs>? DataPointsUpdated;
+
+        /// <summary>
+        /// 设备连接状态变化后触发。
+        /// 用于将掉线、重连等运行时状态推送给上层。
+        /// </summary>
+        event EventHandler<PlcDeviceConnectionChangedEventArgs>? ConnectionStateChanged;
+
+        /// <summary>
         /// 当前运行时对应的设备模型。
         /// </summary>
         PlcDevice Device { get; }

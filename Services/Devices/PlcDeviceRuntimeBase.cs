@@ -17,6 +17,12 @@ namespace MeasurementSoftware.Services.Devices
     {
         private IIndustrialProtocol? _protocol;
 
+        /// <inheritdoc />
+        public event EventHandler<PlcDataPointsUpdatedEventArgs>? DataPointsUpdated;
+
+        /// <inheritdoc />
+        public event EventHandler<PlcDeviceConnectionChangedEventArgs>? ConnectionStateChanged;
+
 
         protected PlcDeviceRuntimeBase(PlcDevice device)
         {
@@ -272,6 +278,9 @@ namespace MeasurementSoftware.Services.Devices
         /// </summary>
         protected virtual void OnProtocolDataRead(DataEventArgs e)
         {
+            List<DataPoint> updatedPoints = [];
+            DateTime updateTime = DateTime.Now;
+
             foreach (var fieldInfo in e.Data)
             {
                 var dataPoints = Device.DataPoints.Where(dp => dp.Address == fieldInfo.Address).ToList();
@@ -284,6 +293,7 @@ namespace MeasurementSoftware.Services.Devices
                 {
                     dataPoint.IsSuccess = fieldInfo.IsSuccess;
                     dataPoint.LastUpdateTime = fieldInfo.Time == default ? DateTime.Now : fieldInfo.Time;
+                    updateTime = dataPoint.LastUpdateTime;
 
                     if (fieldInfo.IsSuccess)
                     {
@@ -294,7 +304,14 @@ namespace MeasurementSoftware.Services.Devices
                     {
                         dataPoint.ErrorMessage = fieldInfo.Message;
                     }
+
+                    updatedPoints.Add(dataPoint);
                 }
+            }
+
+            if (updatedPoints.Count > 0)
+            {
+                DataPointsUpdated?.Invoke(this, new PlcDataPointsUpdatedEventArgs(Device, updatedPoints, updateTime));
             }
         }
 
@@ -304,6 +321,7 @@ namespace MeasurementSoftware.Services.Devices
         protected virtual void OnProtocolConnectChanged(bool connected)
         {
             Device.IsConnected = connected;
+            ConnectionStateChanged?.Invoke(this, new PlcDeviceConnectionChangedEventArgs(Device, connected, DateTime.Now));
             if (connected)
             {
                 ResetDevicePoints();
@@ -342,6 +360,7 @@ namespace MeasurementSoftware.Services.Devices
             };
         }
 
+    
         private void Protocol_OnDataRead(object? sender, DataEventArgs e)
         {
             OnProtocolDataRead(e);

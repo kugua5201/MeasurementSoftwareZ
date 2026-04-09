@@ -12,6 +12,12 @@ namespace MeasurementSoftware.Services.Devices
         private readonly IPlcDeviceRuntimeFactory _runtimeFactory;
         private readonly Dictionary<PlcDevice, IPlcDeviceRuntime> _runtimes = [];
 
+        public event EventHandler<PlcDataPointsUpdatedEventArgs>? DataPointsUpdated;
+
+        public event EventHandler<PlcDeviceConnectionChangedEventArgs>? ConnectionStateChanged;
+
+        public event EventHandler<PlcCacheFieldsUpdatedEventArgs>? CacheFieldsUpdated;
+
         public PlcDeviceRuntimeService(IPlcDeviceRuntimeFactory runtimeFactory)
         {
             _runtimeFactory = runtimeFactory;
@@ -162,6 +168,12 @@ namespace MeasurementSoftware.Services.Devices
         {
             lock (_syncRoot)
             {
+                if (_runtimes.TryGetValue(device, out var existingRuntime))
+                {
+                    UnsubscribeRuntimeEvents(existingRuntime);
+                }
+
+                SubscribeRuntimeEvents(runtime);
                 _runtimes[device] = runtime;
             }
         }
@@ -170,8 +182,47 @@ namespace MeasurementSoftware.Services.Devices
         {
             lock (_syncRoot)
             {
-                _runtimes.Remove(device);
+                if (_runtimes.TryGetValue(device, out var runtime))
+                {
+                    UnsubscribeRuntimeEvents(runtime);
+                    _runtimes.Remove(device);
+                }
             }
+        }
+
+        private void SubscribeRuntimeEvents(IPlcDeviceRuntime runtime)
+        {
+            runtime.DataPointsUpdated += Runtime_DataPointsUpdated;
+            runtime.ConnectionStateChanged += Runtime_ConnectionStateChanged;
+            if (runtime is ICachePlcDeviceRuntime cacheRuntime)
+            {
+                cacheRuntime.CacheFieldsUpdated += Runtime_CacheFieldsUpdated;
+            }
+        }
+
+        private void UnsubscribeRuntimeEvents(IPlcDeviceRuntime runtime)
+        {
+            runtime.DataPointsUpdated -= Runtime_DataPointsUpdated;
+            runtime.ConnectionStateChanged -= Runtime_ConnectionStateChanged;
+            if (runtime is ICachePlcDeviceRuntime cacheRuntime)
+            {
+                cacheRuntime.CacheFieldsUpdated -= Runtime_CacheFieldsUpdated;
+            }
+        }
+
+        private void Runtime_DataPointsUpdated(object? sender, PlcDataPointsUpdatedEventArgs e)
+        {
+            DataPointsUpdated?.Invoke(this, e);
+        }
+
+        private void Runtime_CacheFieldsUpdated(object? sender, PlcCacheFieldsUpdatedEventArgs e)
+        {
+            CacheFieldsUpdated?.Invoke(this, e);
+        }
+
+        private void Runtime_ConnectionStateChanged(object? sender, PlcDeviceConnectionChangedEventArgs e)
+        {
+            ConnectionStateChanged?.Invoke(this, e);
         }
     }
 }

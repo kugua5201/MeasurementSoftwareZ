@@ -42,42 +42,17 @@ namespace MeasurementSoftware.ViewModels
         }
 
         private readonly ILog _log;
-        private readonly ILicenseService _licenseService;
         private readonly IUserSettingsService _userSettingsService;
 
-        [ObservableProperty]
-        private bool isRegistered;
 
-        public string RegistrationStatusText => IsRegistered ? "注册" : "未注册";
-
-        public string RegistrationToolTip => IsRegistered ? "软件已注册" : "点击注册软件";
-
-        public MainWindowViewModel(ILog log, IUserSettingsService userSettingsService, ILicenseService licenseService)
+        public MainWindowViewModel(ILog log, IUserSettingsService userSettingsService)
         {
             _log = log;
             _userSettingsService = userSettingsService;
-            _licenseService = licenseService;
-            IsRegistered = _licenseService.IsRegistered;
-            _licenseService.RegistrationStatusChanged += LicenseService_RegistrationStatusChanged;
             RestoreNavigationLayout();
         }
 
-        partial void OnIsRegisteredChanged(bool value)
-        {
-            OnPropertyChanged(nameof(RegistrationStatusText));
-            OnPropertyChanged(nameof(RegistrationToolTip));
-        }
 
-        public void RefreshRegistrationStatus()
-        {
-            _licenseService.RefreshRegistrationStatus();
-            IsRegistered = _licenseService.IsRegistered;
-        }
-
-        private void LicenseService_RegistrationStatusChanged(object? sender, bool isRegistered)
-        {
-            Application.Current.Dispatcher.Invoke(() => IsRegistered = isRegistered);
-        }
 
         /// <summary>
         /// 关闭标签页命令

@@ -7,8 +7,8 @@ using MeasurementSoftware.Services;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Events;
-using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.Services.Licensing;
+using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
 using MeasurementSoftware.Services.UserSetting;
@@ -16,6 +16,8 @@ using MeasurementSoftware.UserControls;
 using MeasurementSoftware.ViewModels;
 using System.IO;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace MeasurementSoftware
@@ -30,6 +32,7 @@ namespace MeasurementSoftware
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            //RenderOptions.ProcessRenderMode = RenderMode.Default;
             base.OnStartup(e);
 
             var builder = new ContainerBuilder();
@@ -39,7 +42,7 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<ILog, Log>();
             builder.RegisterSingleton<IEventAggregator, EventAggregator>();
             builder.RegisterSingleton<IUserSettingsService, UserSettingsService>();
-            builder.RegisterSingleton<ILicenseService, LicenseService>();
+            //builder.RegisterSingleton<ILicenseService, LicenseService>();
 
             builder.RegisterSingleton<IMesService, MesService>();
             builder.RegisterSingleton<IDataRecordService, DataRecordService>();
