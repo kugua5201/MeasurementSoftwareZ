@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using MeasurementSoftware.Extensions;
 using MeasurementSoftware.ViewModels;
+using System.Globalization;
 
 namespace MeasurementSoftware.Models
 {
@@ -39,6 +41,36 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private MeasurementResult overallResult;
+
+        public string OverallResultTxt => OverallResult.GetDescription();
+
+        /// <summary>
+        /// 检测记录页显示用顺序号。
+        /// </summary>
+        [ObservableProperty]
+        private int displayIndex;
+
+        /// <summary>
+        /// 是否启用工步显示文本。
+        /// </summary>
+        public string IsStepMeasurementText => IsStepMeasurement ? "是" : "否";
+
+        /// <summary>
+        /// 工步数显示文本。
+        /// 启用工步时显示“当前工步/总工步”。
+        /// </summary>
+        public string StepDisplay => IsStepMeasurement ? $"{StepNumber}/{TotalSteps}" : "-";
+        /// <summary>
+        /// 本次测量中 OK 通道数量。
+        /// </summary>
+        [ObservableProperty]
+        private int passChannelCount;
+
+        /// <summary>
+        /// 本次测量中 NG 通道数量。
+        /// </summary>
+        [ObservableProperty]
+        private int failChannelCount;
 
         /// <summary>
         /// 通道测量数据
@@ -118,9 +150,20 @@ namespace MeasurementSoftware.Models
     public class ChannelMeasurementData
     {
         /// <summary>
+        /// 通道详情显示序号。
+        /// </summary>
+        public int DisplayIndex { get; set; }
+
+        /// <summary>
         /// 通道编号
         /// </summary>
         public int ChannelNumber { get; set; }
+
+        /// <summary>
+        /// 带前缀的通道编号文本。
+        /// 用于数据库持久化及导出显示。
+        /// </summary>
+        public string ChannelNumberText { get; set; } = string.Empty;
 
         /// <summary>
         /// 通道名称
@@ -242,5 +285,38 @@ namespace MeasurementSoftware.Models
         /// 测量结果
         /// </summary>
         public MeasurementResult Result { get; set; }
+
+        /// <summary>
+        /// 是否启用显示文本。
+        /// </summary>
+        public string IsEnabledText => IsEnabled ? "是" : "否";
+
+        /// <summary>
+        /// 是否校准显示文本。
+        /// </summary>
+        public string RequiresCalibrationText => RequiresCalibration ? "是" : "否";
+
+        /// <summary>
+        /// 校准方式显示文本。
+        /// </summary>
+        public string CalibrationModeText => CalibrationMode.GetDescription();
+
+        /// <summary>
+        /// 是否使用缓存显示文本。
+        /// </summary>
+        public string UseCacheValueText => UseCacheValue ? "是" : "否";
+
+        /// <summary>
+        /// 通道结果显示文本。
+        /// </summary>
+        public string ResultText => Result.GetDescription();
+
+        /// <summary>
+        /// 通道编号显示文本。
+        /// 优先显示持久化后的带前缀编号，兼容旧记录时回退为纯数字编号。
+        /// </summary>
+        public string ChannelNumberDisplay => string.IsNullOrWhiteSpace(ChannelNumberText)
+            ? ChannelNumber.ToString(CultureInfo.InvariantCulture)
+            : ChannelNumberText;
     }
 }

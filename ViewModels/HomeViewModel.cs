@@ -10,11 +10,13 @@ using MeasurementSoftware.Services.Licensing;
 using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
+using MultiProtocol.Model;
 using Microsoft.Win32;
 using ScottPlot.ArrowShapes;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -114,6 +116,12 @@ namespace MeasurementSoftware.ViewModels
             }
         }
 
+        /// <summary>
+        /// 合格率。
+        /// 按当前配方统计实时计算。
+        /// </summary>
+        public string PassRate => TotalCount <= 0 ? "0.00%" : $"{(double)PassCount / TotalCount:P2}";
+
         public int FailCount
         {
             get => CurrentRecipe?.Statistics.FailCount ?? 0;
@@ -128,6 +136,12 @@ namespace MeasurementSoftware.ViewModels
                 OnPropertyChanged();
             }
         }
+
+        /// <summary>
+        /// 不合格率。
+        /// 按当前配方统计实时计算。
+        /// </summary>
+        public string FailRate => TotalCount <= 0 ? "0.00%" : $"{(double)FailCount / TotalCount:P2}";
 
         public int TotalCount
         {
@@ -148,7 +162,7 @@ namespace MeasurementSoftware.ViewModels
         /// <summary>
         /// 导出最大行数
         /// </summary>
-        private const int MaxCsvRowsPerFile = 500000;
+        private const int MaxCsvRowsPerFile = 900000;
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
 
@@ -184,7 +198,9 @@ namespace MeasurementSoftware.ViewModels
                         OnPropertyChanged(nameof(Channels));
                         OnPropertyChanged(nameof(Annotations));
                         OnPropertyChanged(nameof(PassCount));
+                         OnPropertyChanged(nameof(PassRate));
                         OnPropertyChanged(nameof(FailCount));
+                         OnPropertyChanged(nameof(FailRate));
                         OnPropertyChanged(nameof(TotalCount));
 
                         ProductImagePath = CurrentRecipe?.BasicInfo.ProductImagePath ?? string.Empty;
@@ -357,14 +373,18 @@ namespace MeasurementSoftware.ViewModels
             if (e.PropertyName == nameof(RecipeStatisticsConfig.PassCount))
             {
                 OnPropertyChanged(nameof(PassCount));
+                OnPropertyChanged(nameof(PassRate));
             }
             else if (e.PropertyName == nameof(RecipeStatisticsConfig.FailCount))
             {
                 OnPropertyChanged(nameof(FailCount));
+                OnPropertyChanged(nameof(FailRate));
             }
             else if (e.PropertyName == nameof(RecipeStatisticsConfig.TotalCount))
             {
                 OnPropertyChanged(nameof(TotalCount));
+                OnPropertyChanged(nameof(PassRate));
+                OnPropertyChanged(nameof(FailRate));
             }
         }
 
@@ -1027,6 +1047,7 @@ namespace MeasurementSoftware.ViewModels
                 FailCount++;
             }
 
+            var channelDisplayPrefix = CurrentRecipe.OtherSettings.ChannelDisplayPrefix;
             var record = new MeasurementRecord
             {
                 RecipeId = CurrentRecipe.BasicInfo.RecipeId,
@@ -1034,11 +1055,17 @@ namespace MeasurementSoftware.ViewModels
                 MeasurementTime = DateTime.Now,
                 IsStepMeasurement = IsStepModeEnabled(),
                 OverallResult = OverallResult,
+                PassChannelCount = relevantChannels.Count(c => c.Result == MeasurementResult.Pass),
+                FailChannelCount = relevantChannels.Count(c => c.Result == MeasurementResult.Fail),
+                OperatorName = Environment.UserName,
                 Barcode = _scannedBarcode,
                 BarcodeScanTime = _barcodeScanTime,
                 ChannelData = [.. relevantChannels.Select(c => new ChannelMeasurementData
                 {
                     ChannelNumber = c.ChannelNumber,
+                    ChannelNumberText = string.IsNullOrWhiteSpace(channelDisplayPrefix)
+                        ? c.ChannelNumber.ToString(CultureInfo.InvariantCulture)
+                        : $"{channelDisplayPrefix}{c.ChannelNumber.ToString(CultureInfo.InvariantCulture)}",
                     ChannelName = c.ChannelName,
                     ChannelDescription = c.ChannelDescription,
                     ChannelType = c.ChannelType.ToString(),
@@ -1067,9 +1094,111 @@ namespace MeasurementSoftware.ViewModels
                 TotalSteps = CurrentRecipe.OtherSettings.TotalSteps
             };
 
-            //await _dataRecordService.SaveRecordAsync(record);
+            await WriteChannelResultOutputsAsync(relevantChannels);
+            await _dataRecordService.SaveRecordAsync(record);
             await _dataRecordService.SaveRecordToConfiguredFileAsync(record, CurrentRecipe);
             _log.Info($"测量记录已保存: {OverallResult}");
+        }
+
+        /// <summary>
+        /// 将启用了结果输出的通道 OK/NG 状态写入对应 PLC 点位。
+        /// </summary>
+        private async Task WriteChannelResultOutputsAsync(IEnumerable<MeasurementChannel> channels)
+        {
+            foreach (var channel in channels.Where(c => c.EnableResultOutput))
+            {
+                var outputDevice = channel.ResultOutputRuntimeDevice
+                    ?? CurrentRecipe?.Devices.FirstOrDefault(d => d.DeviceId == channel.ResultOutputPlcDeviceId);
+                var outputDataPoint = channel.ResultOutputRuntimeDataPoint
+                    ?? outputDevice?.DataPoints.FirstOrDefault(dp => dp.PointId == channel.ResultOutputDataPointId && dp.IsEnabled);
+
+                if (outputDevice == null || outputDataPoint == null)
+                {
+                    _log.Warn($"通道 {channel.ChannelName} 已启用结果输出，但未找到输出设备或点位");
+                    continue;
+                }
+
+                var rawValue = channel.Result == MeasurementResult.Pass ? channel.ResultOutputOkValue : channel.ResultOutputNgValue;
+                if (!TryConvertResultOutputValue(rawValue, outputDataPoint.DataType, out var writeValue, out var errorMessage))
+                {
+                    _log.Warn($"通道 {channel.ChannelName} 结果输出值无效：{errorMessage}");
+                    continue;
+                }
+
+                var (success, message) = await _plcDeviceRuntimeService.WriteDataPointValueAsync(outputDevice, outputDataPoint, writeValue!);
+                if (!success)
+                {
+                    _log.Warn($"通道 {channel.ChannelName} 结果输出失败：{message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 按输出点位类型将配置值转换为可写入 PLC 的对象。
+        /// </summary>
+        private static bool TryConvertResultOutputValue(string? rawValue, FieldType fieldType, out object? convertedValue, out string errorMessage)
+        {
+            var text = rawValue?.Trim() ?? string.Empty;
+            switch (fieldType)
+            {
+                case FieldType.Bool:
+                    if (bool.TryParse(text, out var boolValue))
+                    {
+                        convertedValue = boolValue;
+                        errorMessage = string.Empty;
+                        return true;
+                    }
+
+                    if (text == "1" || text.Equals("OK", StringComparison.OrdinalIgnoreCase))
+                    {
+                        convertedValue = true;
+                        errorMessage = string.Empty;
+                        return true;
+                    }
+
+                    if (text == "0" || text.Equals("NG", StringComparison.OrdinalIgnoreCase))
+                    {
+                        convertedValue = false;
+                        errorMessage = string.Empty;
+                        return true;
+                    }
+
+                    convertedValue = null;
+                    errorMessage = "Bool 点位仅支持 True/False/1/0";
+                    return false;
+                case FieldType.Float:
+                    if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var floatValue))
+                    {
+                        convertedValue = floatValue;
+                        errorMessage = string.Empty;
+                        return true;
+                    }
+                    break;
+                case FieldType.Double:
+                    if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var doubleValue))
+                    {
+                        convertedValue = doubleValue;
+                        errorMessage = string.Empty;
+                        return true;
+                    }
+                    break;
+                case FieldType.String:
+                    convertedValue = text;
+                    errorMessage = string.Empty;
+                    return true;
+                default:
+                    if (long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var longValue))
+                    {
+                        convertedValue = longValue;
+                        errorMessage = string.Empty;
+                        return true;
+                    }
+                    break;
+            }
+
+            convertedValue = null;
+            errorMessage = $"无法将值 [{text}] 转换为 {fieldType}";
+            return false;
         }
 
         /// <summary>

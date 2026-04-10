@@ -172,7 +172,7 @@ namespace MeasurementSoftware.ViewModels
                 "测量" => "Home",
                 "配方管理" => "RecipeManagement",
                 "校准" => "Calibration",
-                "数据管理" => "DataManagement",
+                "检测记录" => "DataManagement",
                 "SPC分析" => "Spc",
                 "通道设置" => "ChannelSetting",
                 "设备管理" => "CommunicationSetting",
@@ -190,8 +190,8 @@ namespace MeasurementSoftware.ViewModels
                 "Home" => "测量",
                 "RecipeManagement" => "配方管理",
                 "Calibration" => "校准",
-                "DataManagement" => "数据管理",
-                "DataRecord" => "数据管理",
+                "DataManagement" => "检测记录",
+                "DataRecord" => "检测记录",
                 "ChannelSetting" => "通道设置",
                 "DeviceManagement" => "设备管理",
                 "CommunicationSetting" => "设备管理",
@@ -259,7 +259,7 @@ namespace MeasurementSoftware.ViewModels
         private void NavigateToCalibration() => NavigateToPage("Calibration");
 
         /// <summary>
-        /// 导航到数据管理页面
+        /// 导航到检测记录页面
         /// </summary>
         [RelayCommand]
         private void NavigateToDataManagement() => NavigateToPage("DataManagement");

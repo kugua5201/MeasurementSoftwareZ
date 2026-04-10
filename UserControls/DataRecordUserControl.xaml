@@ -1,87 +1,356 @@
-﻿<UserControl x:Class="MeasurementSoftware.UserControls.DataRecordUserControl"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:hc="https://handyorg.github.io/handycontrol"
-             mc:Ignorable="d"
-             d:DesignHeight="700" d:DesignWidth="1200">
-    <Grid Margin="10">
+﻿<UserControl
+    x:Class="MeasurementSoftware.UserControls.DataRecordUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:hc="https://handyorg.github.io/handycontrol"
+    xmlns:helpers="clr-namespace:MeasurementSoftware.Helpers"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="700"
+    d:DesignWidth="1200"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <helpers:BindingProxy x:Key="VmProxy" Data="{Binding}" />
+    </UserControl.Resources>
+    <Grid Background="White">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- 标题 -->
+        <!--  标题  -->
 
 
-		<!-- 查询条件 -->
-		<Border Grid.Row="0" Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
-								Padding="15" CornerRadius="5" Margin="0,0,0,10">
-			<StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-				<hc:ComboBox SelectedItem="{Binding SelectedQueryMode}" ItemsSource="{Binding QueryModes}"
-												Width="{StaticResource FormButtonWidth}" Margin="5,0,15,0" hc:InfoElement.Placeholder="查询方式"/>
+        <!--  查询条件  -->
+        <Border
+            Grid.Row="0"
+            Margin="5,10,0,10"
+            Background="{DynamicResource RegionBrush}"
+            BorderBrush="{DynamicResource BorderBrush}">
+            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                <TextBlock
+                    Margin="5,0"
+                    VerticalAlignment="Center"
+                    Text="开始时间" />
+                <DatePicker
+                    Width="{StaticResource FormButtonWidth}"
+                    Margin="0"
+                    hc:InfoElement.Placeholder="开始时间"
+                    SelectedDate="{Binding StartDate}" />
 
-				<DatePicker SelectedDate="{Binding StartDate}" Width="{StaticResource FormButtonWidth}" Margin="5,0" hc:InfoElement.Placeholder="开始时间"/>
+                <TextBlock
+                    Margin="5,0"
+                    VerticalAlignment="Center"
+                    Text="结束时间" />
 
-				<TextBlock Text="到" VerticalAlignment="Center" Margin="10,0"/>
+                <DatePicker
+                    Width="{StaticResource FormButtonWidth}"
+                    Margin="0"
+                    hc:InfoElement.Placeholder="结束时间"
+                    SelectedDate="{Binding EndDate}" />
 
-				<DatePicker SelectedDate="{Binding EndDate}" Width="{StaticResource FormButtonWidth}" Margin="5,0"  hc:InfoElement.Placeholder="结束时间"/>
+                <hc:TextBox
+                    Width="{StaticResource FormNumericWidth}"
+                    Margin="5,0"
+                    hc:InfoElement.Placeholder="请输入配方名称或二维码"
+                    hc:InfoElement.ShowClearButton="True"
+                    Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}" />
 
-				<hc:TextBox hc:InfoElement.Placeholder="请输入二维码内容" Width="{StaticResource FormNumericWidth}" Margin="15,0"  Visibility="{Binding CodeTextbox}" />
+                <TextBlock
+                    Margin="0,0,0,0"
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource SecondaryTextBrush}"
+                    Text="{Binding PageSummary}" />
+                <Button
+                    Width="{StaticResource FormButtonWidth}"
+                    Margin="5,0,0,0"
+                    Command="{Binding QueryCommand}"
+                    Content="查询"
+                    Style="{StaticResource ButtonPrimary}" />
+                <Button
+                    Width="{StaticResource FormButtonWidth}"
+                    Margin="10,0,0,0"
+                    Command="{Binding ExportCsvCommand}"
+                    Content="导出"
+                    Style="{StaticResource ButtonDefault}" />
 
+            </StackPanel>
+        </Border>
 
-				<Button Content="查询" Command="{Binding QueryCommand}"
-						Style="{StaticResource ButtonPrimary}"
-												Width="{StaticResource FormButtonWidth}" Margin="20,0,0,0"/>
-				<Button Content="导出" Command="{Binding ExportCsvCommand}"
-						Style="{StaticResource ButtonDefault}"
-												Width="{StaticResource FormButtonWidth}" Margin="10,0,0,0"/>
-			</StackPanel>
-		</Border>
-
-        <!-- 数据列表 -->
-        <Border Grid.Row="1" Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" 
-                Padding="10" CornerRadius="5">
-            <DataGrid ItemsSource="{Binding Records}"
-                         SelectedItem="{Binding SelectedRecord}"
-                         AutoGenerateColumns="False" IsReadOnly="True" 
-                         CanUserSortColumns="True" CanUserResizeColumns="True">
+        <!--  数据列表  -->
+        <Border
+            Grid.Row="1"
+            Background="{DynamicResource RegionBrush}"
+            BorderBrush="{DynamicResource BorderBrush}">
+            <DataGrid
+                x:Name="RecordsDataGrid"
+                AutoGenerateColumns="False"
+                CanUserResizeColumns="True"
+                CanUserSortColumns="True"
+                IsReadOnly="True"
+                ItemsSource="{Binding Records}"
+                SelectedItem="{Binding SelectedRecord}">
+                <i:Interaction.Triggers>
+                    <i:EventTrigger EventName="MouseDoubleClick">
+                        <i:InvokeCommandAction Command="{Binding OpenChannelDetailCommand}" CommandParameter="{Binding SelectedItem, ElementName=RecordsDataGrid}" />
+                    </i:EventTrigger>
+                </i:Interaction.Triggers>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="测量时间" Binding="{Binding MeasurementTime, StringFormat='yyyy-MM-dd HH:mm:ss'}" Width="150"/>
-                    <DataGridTextColumn Header="配方名称" Binding="{Binding RecipeName}" Width="150"/>
-                    <DataGridTextColumn Header="二维码" Binding="{Binding Barcode}" Width="150"/>
-                    <DataGridTemplateColumn Header="测量结果" Width="80">
+                    <DataGridTextColumn
+                        Width="60"
+                        Binding="{Binding DisplayIndex}"
+                        Header="序号" />
+                    <DataGridTextColumn
+                        Width="150"
+                        Binding="{Binding MeasurementTime, StringFormat='yyyy-MM-dd HH:mm:ss'}"
+                        Header="测量时间" />
+                    <DataGridTextColumn
+                        Width="150"
+                        Binding="{Binding RecipeName}"
+                        Header="配方名称" />
+                    <DataGridTextColumn
+                        Width="150"
+                        Binding="{Binding Barcode}"
+                        Header="二维码" />
+                    <DataGridTextColumn
+                        Width="100"
+                        Binding="{Binding OperatorName}"
+                        Header="操作员" />
+                    <DataGridTextColumn
+                        Width="90"
+                        Binding="{Binding IsStepMeasurementText}"
+                        Header="启用工步" />
+                    <DataGridTextColumn
+                        Width="90"
+                        Binding="{Binding StepDisplay}"
+                        Header="工步数" />
+                    <DataGridTextColumn
+                        Width="80"
+                        Binding="{Binding OverallResultTxt}"
+                        Header="测量结果" />
+                    <!--<DataGridTemplateColumn Width="90" Header="操作">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding OverallResult}" 
-                                              FontWeight="Bold"
-                                              Foreground="{Binding OverallResult, Converter={StaticResource Result2ColorConverter}}"/>
+                                <Button
+                                    HorizontalAlignment="Left"
+                                    Command="{Binding DataContext.OpenChannelDetailCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                    CommandParameter="{Binding}"
+                                    Content="详情"
+                                    Style="{StaticResource ButtonPrimary.Small}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="工步" Binding="{Binding StepNumber, StringFormat='{}{0}/{1}'}" Width="60"/>
-                    <DataGridTextColumn Header="操作员" Binding="{Binding OperatorName}" Width="100"/>
-                    <DataGridTemplateColumn Header="MES上传" Width="80">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding MesUploadStatus}" 
-                                              Foreground="{Binding MesUploadStatus, Converter={StaticResource Status2ColorConverter}}"/>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="备注" Binding="{Binding Remarks}" Width="*"/>
+                    </DataGridTemplateColumn>-->
                 </DataGrid.Columns>
 
                 <DataGrid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="查看详情" Command="{Binding ViewDetailsCommand}"/>
-                        <Separator/>
-                        <MenuItem Header="删除记录" Command="{Binding DeleteRecordCommand}"/>
+                        <MenuItem
+                            Command="{Binding PlacementTarget.DataContext.OpenChannelDetailCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                            CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                            Header="查看通道数据" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
             </DataGrid>
         </Border>
+
+        <Border
+            Grid.Row="2"
+            Padding="10,8"
+            Background="{DynamicResource RegionBrush}"
+            BorderBrush="{DynamicResource BorderBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+
+
+                <hc:Pagination
+                    Grid.Column="1"
+                    DataCountPerPage="{Binding PageSize, Mode=TwoWay}"
+                    IsJumpEnabled="True"
+                    MaxPageCount="{Binding TotalPages}"
+                    PageIndex="{Binding CurrentPage, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+        </Border>
+
+        <hc:Drawer
+            Dock="Right"
+            IsOpen="{Binding IsChannelDetailDrawerOpen, Mode=TwoWay}"
+            ShowMode="Cover">
+            <Border
+                Width="1000"
+                MaxWidth="1200"
+                Background="{DynamicResource RegionBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1,0,0,0"
+                DataContext="{Binding Data, Source={StaticResource VmProxy}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border
+                        Grid.Row="0"
+                        Padding="15,12"
+                        Background="{DynamicResource PrimaryBrush}">
+                        <Grid>
+                            <TextBlock
+                                VerticalAlignment="Center"
+                                FontSize="16"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                Text="{Binding ChannelDetailTitle}" />
+                            <Button
+                                HorizontalAlignment="Right"
+                                hc:IconElement.Geometry="{StaticResource DeleteFillCircleGeometry}"
+                                Command="{Binding CloseChannelDetailDrawerCommand}"
+                                Foreground="White"
+                                Style="{StaticResource ButtonIcon}" />
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Border
+                            Grid.Row="0"
+                            Padding="12"
+                            Background="{DynamicResource SecondaryRegionBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}">
+                            <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Text="{Binding ChannelDetailSummaryText}" />
+                        </Border>
+
+                        <Border
+                            Grid.Row="1"
+                            Background="{DynamicResource RegionBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}">
+                            <DataGrid
+                                AutoGenerateColumns="False"
+                                CanUserAddRows="False"
+                                CanUserDeleteRows="False"
+                                CanUserResizeRows="False"
+                                CanUserSortColumns="True"
+                                FontSize="13"
+                                HeadersVisibility="Column"
+                                IsReadOnly="True"
+                                ItemsSource="{Binding ChannelDetailItems}"
+                                RowHeight="35">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn
+                                        Width="60"
+                                        Binding="{Binding DisplayIndex}"
+                                        Header="序号" />
+                                    <DataGridTextColumn
+                                        Width="80"
+                                        Binding="{Binding ChannelNumberDisplay}"
+                                        Header="通道" />
+                                    <DataGridTextColumn
+                                        Width="110"
+                                        Binding="{Binding ChannelName}"
+                                        Header="通道名称" />
+                                    <DataGridTextColumn
+                                        Width="120"
+                                        Binding="{Binding ChannelDescription}"
+                                        Header="通道说明" />
+                                    <DataGridTextColumn
+                                        Width="80"
+                                        Binding="{Binding StepNumber}"
+                                        Header="工步编号" />
+                                    <DataGridTextColumn
+                                        Width="110"
+                                        Binding="{Binding StepName}"
+                                        Header="工步名称" />
+                                    <DataGridTextColumn
+                                        Width="100"
+                                        Binding="{Binding ChannelType}"
+                                        Header="通道类型" />
+                                    <DataGridTextColumn
+                                        Width="100"
+                                        Binding="{Binding MeasurementType}"
+                                        Header="测量类型" />
+                                    <DataGridTextColumn
+                                        Width="100"
+                                        Binding="{Binding PlcDeviceName}"
+                                        Header="PLC设备" />
+                                    <DataGridTextColumn
+                                        Width="100"
+                                        Binding="{Binding DataPointName}"
+                                        Header="数据点位" />
+                                    <DataGridTextColumn
+                                        Width="100"
+                                        Binding="{Binding DataSourceAddress}"
+                                        Header="点位地址" />
+                                    <DataGridTextColumn
+                                        Width="70"
+                                        Binding="{Binding StandardValue}"
+                                        Header="标准值" />
+                                    <DataGridTextColumn
+                                        Width="70"
+                                        Binding="{Binding UpperTolerance}"
+                                        Header="上公差" />
+                                    <DataGridTextColumn
+                                        Width="70"
+                                        Binding="{Binding LowerTolerance}"
+                                        Header="下公差" />
+                                    <DataGridTextColumn
+                                        Width="70"
+                                        Binding="{Binding MeasuredValue}"
+                                        Header="测量值" />
+                                    <DataGridTextColumn
+                                        Width="60"
+                                        Binding="{Binding Unit}"
+                                        Header="单位" />
+                                    <DataGridTextColumn
+                                        Width="70"
+                                        Binding="{Binding DecimalPlaces}"
+                                        Header="小数位" />
+                                    <DataGridTextColumn
+                                        Width="70"
+                                        Binding="{Binding IsEnabledText}"
+                                        Header="启用" />
+                                    <DataGridTextColumn
+                                        Width="70"
+                                        Binding="{Binding RequiresCalibrationText}"
+                                        Header="校准" />
+                                    <DataGridTextColumn
+                                        Width="120"
+                                        Binding="{Binding CalibrationModeText}"
+                                        Header="校准方式" />
+                                    <DataGridTextColumn
+                                        Width="90"
+                                        Binding="{Binding CalibrationCoefficientA, StringFormat='{}{0:F5}'}"
+                                        Header="系数A" />
+                                    <DataGridTextColumn
+                                        Width="90"
+                                        Binding="{Binding CalibrationCoefficientB, StringFormat='{}{0:F5}'}"
+                                        Header="系数B" />
+                                    <DataGridTextColumn
+                                        Width="70"
+                                        Binding="{Binding UseCacheValueText}"
+                                        Header="缓存" />
+                                    <DataGridTextColumn
+                                        Width="80"
+                                        Binding="{Binding SampleCount}"
+                                        Header="采样数量" />
+                                    <DataGridTextColumn
+                                        Width="80"
+                                        Binding="{Binding ResultText}"
+                                        Header="通道结果" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Border>
+                    </Grid>
+                </Grid>
+            </Border>
+        </hc:Drawer>
 
     </Grid>
 </UserControl>

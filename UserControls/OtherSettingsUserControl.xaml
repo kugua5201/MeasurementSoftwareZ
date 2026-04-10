@@ -1,43 +1,50 @@
-﻿<UserControl x:Class="MeasurementSoftware.UserControls.OtherSettingsUserControl"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:hc="https://handyorg.github.io/handycontrol"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d"
-             d:DesignHeight="600" d:DesignWidth="900">
+﻿<UserControl
+    x:Class="MeasurementSoftware.UserControls.OtherSettingsUserControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:hc="https://handyorg.github.io/handycontrol"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    d:DesignHeight="600"
+    d:DesignWidth="900"
+    mc:Ignorable="d">
     <UserControl.Resources>
         <Style x:Key="SettingsRowPanelStyle" TargetType="StackPanel">
-            <Setter Property="Orientation" Value="Horizontal"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="Margin" Value="0,0,0,8" />
         </Style>
 
         <Style x:Key="SettingsLabelTextStyle" TargetType="TextBlock">
-            <Setter Property="Width" Value="90"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Width" Value="90" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </UserControl.Resources>
     <Grid Style="{StaticResource PageRootGrid}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- 顶部工具栏 -->
+        <!--  顶部工具栏  -->
         <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
             <Grid>
 
-                <Button Style="{StaticResource SaveRecipeButton}" Command="{Binding SaveRecipeCommand}"/>
+                <Button Command="{Binding SaveRecipeCommand}" Style="{StaticResource SaveRecipeButton}" />
             </Grid>
         </Border>
 
-        <!-- 设置内容 -->
-        <Grid Grid.Row="1" >
+        <!--  设置内容  -->
+        <Grid Grid.Row="1">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <Border Background="{DynamicResource RegionBrush}" BorderBrush="{DynamicResource BorderBrush}"
-                            BorderThickness="0"  Padding="20,15" VerticalAlignment="Top" Margin="0,0,0,12"
-                            Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityConverter}}">
+                    <Border
+                        Margin="0,0,0,12"
+                        Padding="20,15"
+                        VerticalAlignment="Top"
+                        Background="{DynamicResource RegionBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0"
+                        Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <StackPanel>
                             <!--<StackPanel Margin="0,0,0,20">
                                 <TextBlock Text="采集设置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
@@ -61,79 +68,157 @@
                             </StackPanel>
                             <Separator Margin="0,5,0,15"/>-->
 
-                            <TextBlock Text="存储规则设置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
-                                       Foreground="{DynamicResource InfoBrush}"/>
+                            <TextBlock
+                                Margin="0,0,0,15"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Foreground="{DynamicResource InfoBrush}"
+                                Text="存储规则设置" />
 
                             <StackPanel Margin="0,0,0,20">
                                 <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
-                                    <TextBlock Text="是否存储：" Style="{StaticResource SettingsLabelTextStyle}"/>
-                                    <ToggleButton Content="启用"
-                                              IsChecked="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.AutoSaveEnabled}"
-                                              VerticalAlignment="Center" HorizontalAlignment="Left" Style="{StaticResource ToggleButtonSwitch}"/>
+                                    <TextBlock Style="{StaticResource SettingsLabelTextStyle}" Text="是否存储：" />
+                                    <ToggleButton
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Content="启用"
+                                        IsChecked="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.AutoSaveEnabled}"
+                                        Style="{StaticResource ToggleButtonSwitch}" />
                                 </StackPanel>
 
-                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
-                                    <TextBlock Text="存储规则：" Style="{StaticResource SettingsLabelTextStyle}"/>
-                                    <TextBox Style="{StaticResource TextBoxExtend}"
-                                             Text="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.FileNamePattern, UpdateSourceTrigger=PropertyChanged}"
-                                             Width="300" HorizontalAlignment="Left"
-                                             hc:InfoElement.Placeholder="例如: {RecipeName}、{Time:yyyyMMdd_HHmmss} 占位符"/>
-
-                                </StackPanel>
-
-                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
-                                    <TextBlock Text="存储文件夹：" Style="{StaticResource SettingsLabelTextStyle}"/>
-                                    <StackPanel Orientation="Horizontal" >
-                                        <TextBox Style="{StaticResource TextBoxExtend}"
-                                                 Text="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.OutputFolder, UpdateSourceTrigger=PropertyChanged}"
-                                                 Width="300" HorizontalAlignment="Left"
-                                                 hc:InfoElement.Placeholder="默认：软件目录\AcquisitionRecords" IsReadOnly="True"/>
-                                        <Button Content="选择" Command="{Binding SelectStorageFolderCommand}" Style="{StaticResource ButtonPrimary}" Width="60" Margin="8,0,0,0" />
-                                    </StackPanel>
-                                </StackPanel>
-
-                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
-                                    <TextBlock Text="文件上限：" Style="{StaticResource SettingsLabelTextStyle}"/>
+                                <StackPanel VerticalAlignment="Top" Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Style="{StaticResource SettingsLabelTextStyle}" Text="存储名称：" />
                                     <StackPanel Orientation="Horizontal">
-                                        <hc:NumericUpDown Value="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.MaxFileSizeMb}"
-                                                           Minimum="1" Maximum="1024"
-                                                           Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"/>
-                                        <TextBlock Text="MB，超过后自动生成 _1、_2、_3... 新文件"
-                                                   Margin="10,0,0,0" VerticalAlignment="Center"
-                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                        <TextBox
+                                            Width="300"
+                                            HorizontalAlignment="Left"
+                                            hc:InfoElement.Placeholder="请输入名称"
+                                            Style="{StaticResource TextBoxExtend}"
+                                            Text="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.FileBaseName, UpdateSourceTrigger=PropertyChanged}" />
+                                        <WrapPanel VerticalAlignment="Center">
+                                            <CheckBox
+                                                Margin="3,0,0,0"
+                                                Content="配方"
+                                                IsChecked="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.AppendRecipeNameToFileName}" />
+                                            <CheckBox
+                                                Margin="3,0,0,0"
+                                                Content="日期"
+                                                IsChecked="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.AppendDateToFileName}" />
+                                            <CheckBox
+                                                Margin="3,0,0,0"
+                                                Content="时间"
+                                                IsChecked="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.AppendTimeToFileName}" />
+                                            <CheckBox
+                                                Margin="3,0,0,0"
+                                                Content="二维码"
+                                                IsChecked="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.AppendBarcodeToFileName}" />
+                                        </WrapPanel>
+                                        <TextBlock
+                                            Margin="10,0,0,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Foreground="{DynamicResource SecondaryTextBrush}"
+                                            Text="命名方式：基础名称 + 勾选项自动拼接" />
                                     </StackPanel>
                                 </StackPanel>
 
-                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}" VerticalAlignment="Top">
-                                    <TextBlock Text="列配置：" Style="{StaticResource SettingsLabelTextStyle}"/>
+                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Style="{StaticResource SettingsLabelTextStyle}" Text="存储文件夹：" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBox
+                                            Width="300"
+                                            HorizontalAlignment="Left"
+                                            hc:InfoElement.Placeholder="默认：软件目录\AcquisitionRecords"
+                                            IsReadOnly="True"
+                                            Style="{StaticResource TextBoxExtend}"
+                                            Text="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.OutputFolder, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button
+                                            Width="60"
+                                            Margin="8,0,0,0"
+                                            Command="{Binding SelectStorageFolderCommand}"
+                                            Content="选择"
+                                            Style="{StaticResource ButtonPrimary}" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Style="{StaticResource SettingsLabelTextStyle}" Text="文件上限：" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <hc:NumericUpDown
+                                            Width="{StaticResource FormInputWidth}"
+                                            HorizontalAlignment="Left"
+                                            Maximum="1024"
+                                            Minimum="1"
+                                            Value="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.MaxFileSizeMb}" />
+                                        <TextBlock
+                                            Margin="10,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource SecondaryTextBrush}"
+                                            Text="MB，超过后自动生成 _1、_2、_3... 新文件" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!--<StackPanel Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Style="{StaticResource SettingsLabelTextStyle}" Text="导出模式：" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <ToggleButton
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Content="单行展开"
+                                            IsChecked="{Binding CurrentRecipe.OtherSettings.AcquisitionStorage.ExportSingleLinePerMeasurement}"
+                                            Style="{StaticResource ToggleButtonSwitch}" />
+                                        <TextBlock
+                                            Margin="10,0,0,0"
+                                            VerticalAlignment="Center"
+                                            FontSize="11"
+                                            Foreground="{DynamicResource SecondaryTextBrush}"
+                                            Text="启用后每次测量只导出一行，前面保留总字段，后面按通道依次展开列" />
+                                    </StackPanel>
+                                </StackPanel>-->
+
+                                <StackPanel VerticalAlignment="Top" Style="{StaticResource SettingsRowPanelStyle}">
+                                    <TextBlock Style="{StaticResource SettingsLabelTextStyle}" Text="列配置：" />
                                     <StackPanel Orientation="Horizontal">
                                         <StackPanel>
-                                            <TextBlock Text="可选列" Margin="0,0,0,6"/>
-                                            <ListBox ItemsSource="{Binding AvailableCsvColumns}"
-                                                     SelectedItem="{Binding SelectedAvailableCsvColumn}"
-                                                     Height="180" Width="180">
+                                            <TextBlock Margin="0,0,0,6" Text="可选列" />
+                                            <ListBox
+                                                Width="180"
+                                                Height="180"
+                                                ItemsSource="{Binding AvailableCsvColumns}"
+                                                SelectedItem="{Binding SelectedAvailableCsvColumn}">
                                                 <ListBox.ItemTemplate>
                                                     <DataTemplate>
-                                                        <TextBlock Text="{Binding Header}"/>
+                                                        <TextBlock Text="{Binding Header}" />
                                                     </DataTemplate>
                                                 </ListBox.ItemTemplate>
                                             </ListBox>
                                         </StackPanel>
 
                                         <StackPanel Margin="10,24,10,0" VerticalAlignment="Center">
-                                            <Button Content=">>" Command="{Binding AddCsvColumnCommand}" Style="{StaticResource ButtonPrimary.Small}" Width="42" Margin="0,0,0,10"/>
-                                            <Button Content="移除" Command="{Binding RemoveCsvColumnCommand}" Style="{StaticResource ButtonDanger.Small}" Width="42"/>
+                                            <Button
+                                                Width="42"
+                                                Margin="0,0,0,10"
+                                                Command="{Binding AddCsvColumnCommand}"
+                                                Content="&gt;&gt;"
+                                                Style="{StaticResource ButtonPrimary.Small}" />
+                                            <Button
+                                                Width="42"
+                                                Command="{Binding RemoveCsvColumnCommand}"
+                                                Content="移除"
+                                                Style="{StaticResource ButtonDanger.Small}" />
                                         </StackPanel>
 
                                         <StackPanel>
-                                            <TextBlock Text="已选列" Margin="0,0,0,6"/>
+                                            <TextBlock Margin="0,0,0,6" Text="已选列" />
                                             <StackPanel Orientation="Horizontal">
-                                                <ListBox ItemsSource="{Binding ConfiguredCsvColumns}"
-                                                         SelectedItem="{Binding SelectedConfiguredCsvColumn}"
-                                                         Height="180" Width="180">
+                                                <ListBox
+                                                    Width="180"
+                                                    Height="180"
+                                                    ItemsSource="{Binding ConfiguredCsvColumns}"
+                                                    SelectedItem="{Binding SelectedConfiguredCsvColumn}">
                                                     <ListBox.ItemTemplate>
                                                         <DataTemplate>
-                                                            <TextBlock Text="{Binding Header}"/>
+                                                            <TextBlock Text="{Binding Header}" />
                                                         </DataTemplate>
                                                     </ListBox.ItemTemplate>
                                                 </ListBox>
@@ -143,242 +228,462 @@
 
                                         </StackPanel>
                                         <StackPanel Margin="10,24,10,0" VerticalAlignment="Center">
-                                            <Button Content="上移" Command="{Binding MoveCsvColumnUpCommand}" Style="{StaticResource ButtonPrimary.Small}" Width="42" Margin="0,0,0,10"/>
-                                            <Button Content="下移" Command="{Binding MoveCsvColumnDownCommand}" Style="{StaticResource ButtonPrimary.Small}" Width="42" Margin="0,0,0,10"/>
-                                            <Button Content="重置" Command="{Binding ResetCsvColumnsCommand}" Style="{StaticResource ButtonPrimary.Small}" Width="42"/>
+                                            <Button
+                                                Width="42"
+                                                Margin="0,0,0,10"
+                                                Command="{Binding MoveCsvColumnUpCommand}"
+                                                Content="上移"
+                                                Style="{StaticResource ButtonPrimary.Small}" />
+                                            <Button
+                                                Width="42"
+                                                Margin="0,0,0,10"
+                                                Command="{Binding MoveCsvColumnDownCommand}"
+                                                Content="下移"
+                                                Style="{StaticResource ButtonPrimary.Small}" />
+                                            <Button
+                                                Width="42"
+                                                Command="{Binding ResetCsvColumnsCommand}"
+                                                Content="重置"
+                                                Style="{StaticResource ButtonPrimary.Small}" />
                                         </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
 
-                            <Separator Margin="0,5,0,15"/>
+                            <Separator Margin="0,5,0,15" />
 
 
 
-                            <!-- 工步配置 -->
-                            <TextBlock Text="工步配置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
-                                       Foreground="{DynamicResource PrimaryBrush}"/>
+                            <!--  工步配置  -->
+                            <TextBlock
+                                Margin="0,0,0,15"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Foreground="{DynamicResource PrimaryBrush}"
+                                Text="工步配置" />
 
                             <Grid Margin="0,0,0,20">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="分步模式：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                    <ToggleButton IsChecked="{Binding CurrentRecipe.OtherSettings.EnableStepMode}"
-                                                  Style="{StaticResource ToggleButtonSwitch}" VerticalAlignment="Center"/>
-                                    <TextBlock Text="启用后按工步分步采集，“上一步/下一步”仅在分步模式下生效" FontSize="11" Margin="10,0,0,0"
-                                               Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="分步模式：" />
+                                <StackPanel
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Margin="0,0,0,8"
+                                    Orientation="Horizontal">
+                                    <ToggleButton
+                                        VerticalAlignment="Center"
+                                        IsChecked="{Binding CurrentRecipe.OtherSettings.EnableStepMode}"
+                                        Style="{StaticResource ToggleButtonSwitch}" />
+                                    <TextBlock
+                                        Margin="10,0,0,0"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource SecondaryTextBrush}"
+                                        Text="启用后按工步分步采集，“上一步/下一步”仅在分步模式下生效" />
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="总工步数：" VerticalAlignment="Center"/>
-                                <hc:NumericUpDown Grid.Row="1" Grid.Column="1"
-                                                  Value="{Binding CurrentRecipe.OtherSettings.TotalSteps}"
-                                                  Minimum="1" Maximum="99"
-                                                  Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
-                                                  IsEnabled="{Binding CurrentRecipe.OtherSettings.EnableStepMode}"/>
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center"
+                                    Text="总工步数：" />
+                                <hc:NumericUpDown
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    HorizontalAlignment="Left"
+                                    IsEnabled="{Binding CurrentRecipe.OtherSettings.EnableStepMode}"
+                                    Maximum="99"
+                                    Minimum="1"
+                                    Value="{Binding CurrentRecipe.OtherSettings.TotalSteps}" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="点位绑定：" VerticalAlignment="Center" Margin="0,8,0,0"/>
-                                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,8,0,0">
-                                    <ToggleButton IsChecked="{Binding CurrentRecipe.OtherSettings.EnableStepOperationBinding}"
-                                                  Style="{StaticResource ToggleButtonSwitch}" VerticalAlignment="Center"/>
-                                    <TextBlock Text="启用后开始/停止可由点位自动触发；“上一步/下一步”仍需同时启用分步模式，关闭后仅支持手动操作"
-                                               FontSize="11" Margin="10,0,0,0"
-                                               Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                <TextBlock
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="0,8,0,0"
+                                    VerticalAlignment="Center"
+                                    Text="点位绑定：" />
+                                <StackPanel
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Margin="0,8,0,0"
+                                    Orientation="Horizontal">
+                                    <ToggleButton
+                                        VerticalAlignment="Center"
+                                        IsChecked="{Binding CurrentRecipe.OtherSettings.EnableStepOperationBinding}"
+                                        Style="{StaticResource ToggleButtonSwitch}" />
+                                    <TextBlock
+                                        Margin="10,0,0,0"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource SecondaryTextBrush}"
+                                        Text="启用后开始/停止可由点位自动触发；“上一步/下一步”仍需同时启用分步模式，关闭后仅支持手动操作" />
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="工步操作：" VerticalAlignment="Top" Margin="0,8,0,0"/>
-                                <Border Grid.Row="3" Grid.Column="1" Margin="0,8,0,0"
-                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="4" Padding="8">
-                                    <DataGrid ItemsSource="{Binding StepOperationBindings}"
-                                               AutoGenerateColumns="False"
-                                               CanUserAddRows="False"
-                                               HeadersVisibility="Column"
-                                             
-                                               MinHeight="180"
-                                               Background="White"
-                                               ColumnHeaderStyle="{StaticResource ColoredHeaderStyle}"
-                                                BorderThickness="0"
-                                                IsEnabled="{Binding CurrentRecipe.OtherSettings.EnableStepOperationBinding}">
+                                <TextBlock
+                                    Grid.Row="3"
+                                    Grid.Column="0"
+                                    Margin="0,8,0,0"
+                                    VerticalAlignment="Top"
+                                    Text="工步操作：" />
+                                <Border
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="0,8,0,0"
+                                    Padding="8"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4">
+                                    <DataGrid
+                                        MinHeight="180"
+                                        AutoGenerateColumns="False"
+                                        Background="White"
+                                        BorderThickness="0"
+                                        CanUserAddRows="False"
+                                        ColumnHeaderStyle="{StaticResource ColoredHeaderStyle}"
+                                        HeadersVisibility="Column"
+                                        IsEnabled="{Binding CurrentRecipe.OtherSettings.EnableStepOperationBinding}"
+                                        ItemsSource="{Binding StepOperationBindings}">
                                         <DataGrid.Columns>
-                                            <DataGridTemplateColumn Header="操作" Width="90">
+                                            <DataGridTemplateColumn Width="90" Header="操作">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <TextBlock VerticalAlignment="Center"
-                                                                   Text="{Binding OperationType, Converter={StaticResource EnumDescriptionConverter}}"/>
+                                                        <TextBlock VerticalAlignment="Center" Text="{Binding OperationType, Converter={StaticResource EnumDescriptionConverter}}" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
                                             <!--<DataGridCheckBoxColumn Header="启用" Binding="{Binding IsEnabled}" Width="55"/>-->
-                                            <DataGridTemplateColumn Header="设备" Width="140">
+                                            <DataGridTemplateColumn Width="140" Header="设备">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <ComboBox Style="{StaticResource ComboBoxBaseStyle}"
-                                                                   ItemsSource="{Binding DataContext.StepOperationDevices, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                    SelectedItem="{Binding RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                   DisplayMemberPath="DeviceName"/>
+                                                        <ComboBox
+                                                            DisplayMemberPath="DeviceName"
+                                                            ItemsSource="{Binding DataContext.StepOperationDevices, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            SelectedItem="{Binding RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            Style="{StaticResource ComboBoxBaseStyle}" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridTemplateColumn Header="点位" Width="160">
+                                            <DataGridTemplateColumn Width="160" Header="点位">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <ComboBox Style="{StaticResource ComboBoxBaseStyle}"
-                                                                   ItemsSource="{Binding AvailableDataPoints}"
-                                                                    SelectedItem="{Binding RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                    DisplayMemberPath="PointName"/>
+                                                        <ComboBox
+                                                            DisplayMemberPath="PointName"
+                                                            ItemsSource="{Binding AvailableDataPoints}"
+                                                            SelectedItem="{Binding RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            Style="{StaticResource ComboBoxBaseStyle}" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridTemplateColumn Header="触发方式" Width="110">
+                                            <DataGridTemplateColumn Width="110" Header="触发方式">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <ComboBox Style="{ StaticResource ComboBoxBaseStyle}"
-                                                                   ItemsSource="{Binding DataContext.StepOperationTriggerModes, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                                    SelectedItem="{Binding TriggerMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                                        <ComboBox
+                                                            ItemsSource="{Binding DataContext.StepOperationTriggerModes, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            SelectedItem="{Binding TriggerMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                            Style="{StaticResource ComboBoxBaseStyle}">
                                                             <ComboBox.ItemTemplate>
                                                                 <DataTemplate>
-                                                                    <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}"/>
+                                                                    <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
                                                                 </DataTemplate>
                                                             </ComboBox.ItemTemplate>
                                                         </ComboBox>
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridTemplateColumn Header="触发值" Width="90">
+                                            <DataGridTemplateColumn Width="90" Header="触发值">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <TextBox Style="{StaticResource TextBoxBaseBaseStyle}"
-                                                                  Text="{Binding TriggerValue, UpdateSourceTrigger=PropertyChanged}"
-                                                                  IsEnabled="{Binding RequiresTriggerValue}"/>
+                                                        <TextBox
+                                                            IsEnabled="{Binding RequiresTriggerValue}"
+                                                            Style="{StaticResource TextBoxBaseBaseStyle}"
+                                                            Text="{Binding TriggerValue, UpdateSourceTrigger=PropertyChanged}" />
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
                                         </DataGrid.Columns>
                                     </DataGrid>
                                 </Border>
-                                <TextBlock Grid.Row="4" Grid.Column="1" Margin="0,6,0,0"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource SecondaryTextBrush}"
-                                           Text="说明：开始/停止可直接使用点位自动控制；上一步/下一步只有在启用分步模式后才会触发。触发方式：值等于=点位变化到指定值时触发；上升沿=0/False→1/True；下降沿=1/True→0/False；值变化=当前值与上一拍不相同。"/>
+                                <TextBlock
+                                    Grid.Row="4"
+                                    Grid.Column="1"
+                                    Margin="0,6,0,0"
+                                    FontSize="11"
+                                    Foreground="{DynamicResource SecondaryTextBrush}"
+                                    Text="说明：开始/停止可直接使用点位自动控制；上一步/下一步只有在启用分步模式后才会触发。触发方式：值等于=点位变化到指定值时触发；上升沿=0/False→1/True；下降沿=1/True→0/False；值变化=当前值与上一拍不相同。" />
                             </Grid>
 
-                            <Separator Margin="0,5,0,15"/>
+                            <Separator Margin="0,5,0,15" />
 
-                            <!-- 标注配置 -->
-                            <TextBlock Text="标注配置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
-                                       Foreground="{DynamicResource WarningBrush}"/>
+                            <!--  标注配置  -->
+                            <TextBlock
+                                Margin="0,0,0,15"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Foreground="{DynamicResource WarningBrush}"
+                                Text="标注配置" />
 
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Grid.Row="0" Grid.Column="0" Text="标注大小：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <hc:NumericUpDown Grid.Row="0" Grid.Column="1"
-                                              Value="{Binding CurrentRecipe.OtherSettings.AnnotationSize}"
-                                              Minimum="16" Maximum="80"
-                                              Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="标注大小：" />
+                                <hc:NumericUpDown
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    Margin="0,0,0,8"
+                                    HorizontalAlignment="Left"
+                                    Maximum="80"
+                                    Minimum="16"
+                                    Value="{Binding CurrentRecipe.OtherSettings.AnnotationSize}" />
 
-                                <TextBlock Grid.Row="1" Grid.Column="0" Text="标注形状：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <ComboBox Grid.Row="1" Grid.Column="1"
-                                      Style="{StaticResource ComboBoxExtend}"
-                                      ItemsSource="{Binding Source={StaticResource AnnotationShapeValues}}"
-                                      SelectedItem="{Binding CurrentRecipe.OtherSettings.AnnotationShape}"
-                                      Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="标注形状：" />
+                                <ComboBox
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    Margin="0,0,0,8"
+                                    HorizontalAlignment="Left"
+                                    ItemsSource="{Binding Source={StaticResource AnnotationShapeValues}}"
+                                    SelectedItem="{Binding CurrentRecipe.OtherSettings.AnnotationShape}"
+                                    Style="{StaticResource ComboBoxExtend}" />
 
-                                <TextBlock Grid.Row="2" Grid.Column="0" Text="显示内容：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <ComboBox Grid.Row="2" Grid.Column="1"
-                                      Style="{StaticResource ComboBoxExtend}"
-                                      ItemsSource="{Binding Source={StaticResource AnnotationDisplayFormatValues}}"
-                                      SelectedItem="{Binding CurrentRecipe.OtherSettings.AnnotationDisplayFormat}"
-                                      Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                <TextBlock
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="显示内容：" />
+                                <ComboBox
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    Margin="0,0,0,8"
+                                    HorizontalAlignment="Left"
+                                    ItemsSource="{Binding Source={StaticResource AnnotationDisplayFormatValues}}"
+                                    SelectedItem="{Binding CurrentRecipe.OtherSettings.AnnotationDisplayFormat}"
+                                    Style="{StaticResource ComboBoxExtend}" />
 
-                                <!-- OK颜色 -->
-                                <TextBlock Grid.Row="3" Grid.Column="0" Text="OK颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                    <Border Background="{Binding CurrentRecipe.OtherSettings.OkBrush}" Width="40" Height="24" CornerRadius="3"
-                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <Button Content="选择颜色" Tag="Ok" Click="ChooseColor_Click" Padding="8,4"/>
+                                <!--  OK颜色  -->
+                                <TextBlock
+                                    Grid.Row="3"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="OK颜色：" />
+                                <StackPanel
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Margin="0,0,0,8"
+                                    Orientation="Horizontal">
+                                    <Border
+                                        Width="40"
+                                        Height="24"
+                                        Margin="0,0,8,0"
+                                        Background="{Binding CurrentRecipe.OtherSettings.OkBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="3" />
+                                    <Button
+                                        Padding="8,4"
+                                        Click="ChooseColor_Click"
+                                        Content="选择颜色"
+                                        Tag="Ok" />
                                 </StackPanel>
 
-                                <!-- NG颜色 -->
-                                <TextBlock Grid.Row="4" Grid.Column="0" Text="NG颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                    <Border Background="{Binding CurrentRecipe.OtherSettings.NgBrush}" Width="40" Height="24" CornerRadius="3"
-                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <Button Content="选择颜色" Tag="Ng" Click="ChooseColor_Click" Padding="8,4"/>
+                                <!--  NG颜色  -->
+                                <TextBlock
+                                    Grid.Row="4"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="NG颜色：" />
+                                <StackPanel
+                                    Grid.Row="4"
+                                    Grid.Column="1"
+                                    Margin="0,0,0,8"
+                                    Orientation="Horizontal">
+                                    <Border
+                                        Width="40"
+                                        Height="24"
+                                        Margin="0,0,8,0"
+                                        Background="{Binding CurrentRecipe.OtherSettings.NgBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="3" />
+                                    <Button
+                                        Padding="8,4"
+                                        Click="ChooseColor_Click"
+                                        Content="选择颜色"
+                                        Tag="Ng" />
                                 </StackPanel>
 
-                                <!-- 默认颜色（未测量） -->
-                                <TextBlock Grid.Row="5" Grid.Column="0" Text="默认颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                    <Border Background="{Binding CurrentRecipe.OtherSettings.DefaultBrush}" Width="40" Height="24" CornerRadius="3"
-                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <Button Content="选择颜色" Tag="Default" Click="ChooseColor_Click" Padding="8,4"/>
+                                <!--  默认颜色（未测量）  -->
+                                <TextBlock
+                                    Grid.Row="5"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="默认颜色：" />
+                                <StackPanel
+                                    Grid.Row="5"
+                                    Grid.Column="1"
+                                    Margin="0,0,0,8"
+                                    Orientation="Horizontal">
+                                    <Border
+                                        Width="40"
+                                        Height="24"
+                                        Margin="0,0,8,0"
+                                        Background="{Binding CurrentRecipe.OtherSettings.DefaultBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="3" />
+                                    <Button
+                                        Padding="8,4"
+                                        Click="ChooseColor_Click"
+                                        Content="选择颜色"
+                                        Tag="Default" />
                                 </StackPanel>
 
-                                <TextBlock Grid.Row="6" Grid.Column="0" Text="采集中颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                    <Border Background="{Binding CurrentRecipe.OtherSettings.AcquiringBrush}" Width="40" Height="24" CornerRadius="3"
-                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <Button Content="选择颜色" Tag="Acquiring" Click="ChooseColor_Click" Padding="8,4"/>
+                                <TextBlock
+                                    Grid.Row="6"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="采集中颜色：" />
+                                <StackPanel
+                                    Grid.Row="6"
+                                    Grid.Column="1"
+                                    Margin="0,0,0,8"
+                                    Orientation="Horizontal">
+                                    <Border
+                                        Width="40"
+                                        Height="24"
+                                        Margin="0,0,8,0"
+                                        Background="{Binding CurrentRecipe.OtherSettings.AcquiringBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="3" />
+                                    <Button
+                                        Padding="8,4"
+                                        Click="ChooseColor_Click"
+                                        Content="选择颜色"
+                                        Tag="Acquiring" />
                                 </StackPanel>
 
-                                <!-- 字体大小 -->
-                                <TextBlock Grid.Row="7" Grid.Column="0" Text="字体大小：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <hc:NumericUpDown Grid.Row="7" Grid.Column="1"
-                                              Value="{Binding CurrentRecipe.OtherSettings.AnnotationFontSize}"
-                                              Minimum="6" Maximum="36"
-                                              Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left" Margin="0,0,0,8"/>
+                                <!--  字体大小  -->
+                                <TextBlock
+                                    Grid.Row="7"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="字体大小：" />
+                                <hc:NumericUpDown
+                                    Grid.Row="7"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    Margin="0,0,0,8"
+                                    HorizontalAlignment="Left"
+                                    Maximum="36"
+                                    Minimum="6"
+                                    Value="{Binding CurrentRecipe.OtherSettings.AnnotationFontSize}" />
 
-                                <!-- 文字颜色 -->
-                                <TextBlock Grid.Row="8" Grid.Column="0" Text="文字颜色：" VerticalAlignment="Center" Margin="0,0,0,8"/>
-                                <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
-                                    <Border Background="{Binding CurrentRecipe.OtherSettings.AnnotationTextBrush}" Width="40" Height="24" CornerRadius="3"
-                                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Margin="0,0,8,0"/>
-                                    <Button Content="选择颜色" Tag="AnnotationText" Click="ChooseColor_Click" Padding="8,4"/>
+                                <!--  文字颜色  -->
+                                <TextBlock
+                                    Grid.Row="8"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="文字颜色：" />
+                                <StackPanel
+                                    Grid.Row="8"
+                                    Grid.Column="1"
+                                    Margin="0,0,0,8"
+                                    Orientation="Horizontal">
+                                    <Border
+                                        Width="40"
+                                        Height="24"
+                                        Margin="0,0,8,0"
+                                        Background="{Binding CurrentRecipe.OtherSettings.AnnotationTextBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="3" />
+                                    <Button
+                                        Padding="8,4"
+                                        Click="ChooseColor_Click"
+                                        Content="选择颜色"
+                                        Tag="AnnotationText" />
                                 </StackPanel>
 
 
                             </Grid>
 
-                            <Separator Margin="0,5,0,15"/>
-                            <TextBlock Text="通道设置" FontSize="14" FontWeight="Bold" Margin="0,0,0,15"
-                             Foreground="{DynamicResource PrimaryBrush}"/>
+                            <Separator Margin="0,5,0,15" />
+                            <TextBlock
+                                Margin="0,0,0,15"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Foreground="{DynamicResource PrimaryBrush}"
+                                Text="通道设置" />
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="90"/>
-                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Row="9" Grid.Column="0" Text="编号前缀：" VerticalAlignment="Center"/>
-                                <TextBox Grid.Row="9" Grid.Column="1"
-                            Style="{StaticResource TextBoxExtend}"
-                            Text="{Binding CurrentRecipe.OtherSettings.ChannelDisplayPrefix, UpdateSourceTrigger=PropertyChanged}"
-                            Width="{StaticResource FormInputWidth}" HorizontalAlignment="Left"
-                            hc:InfoElement.Placeholder="例如：M、A、CD"/>
+                                <TextBlock
+                                    Grid.Row="9"
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center"
+                                    Text="编号前缀：" />
+                                <TextBox
+                                    Grid.Row="9"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    HorizontalAlignment="Left"
+                                    hc:InfoElement.Placeholder="例如：M、A、CD"
+                                    Style="{StaticResource TextBoxExtend}"
+                                    Text="{Binding CurrentRecipe.OtherSettings.ChannelDisplayPrefix, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
 
                         </StackPanel>
@@ -386,16 +691,31 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- 无配方提示 -->
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                        Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityReConverter}}">
-                <TextBlock Text="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="48"
-                           HorizontalAlignment="Center" Margin="0,0,0,15"
-                           Foreground="{DynamicResource SecondaryTextBrush}" Opacity="0.4"/>
-                <TextBlock Text="尚未打开配方" FontSize="18" HorizontalAlignment="Center"
-                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,8"/>
-                <TextBlock Text="请先在「配方管理」中新建或打开配方" FontSize="13" HorizontalAlignment="Center"
-                           Foreground="{DynamicResource SecondaryTextBrush}" Opacity="0.6"/>
+            <!--  无配方提示  -->
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Visibility="{Binding HasRecipe, Converter={StaticResource Boolean2VisibilityReConverter}}">
+                <TextBlock
+                    Margin="0,0,0,15"
+                    HorizontalAlignment="Center"
+                    FontFamily="Segoe MDL2 Assets"
+                    FontSize="48"
+                    Foreground="{DynamicResource SecondaryTextBrush}"
+                    Opacity="0.4"
+                    Text="&#xE8F1;" />
+                <TextBlock
+                    Margin="0,0,0,8"
+                    HorizontalAlignment="Center"
+                    FontSize="18"
+                    Foreground="{DynamicResource SecondaryTextBrush}"
+                    Text="尚未打开配方" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    FontSize="13"
+                    Foreground="{DynamicResource SecondaryTextBrush}"
+                    Opacity="0.6"
+                    Text="请先在「配方管理」中新建或打开配方" />
             </StackPanel>
         </Grid>
     </Grid>

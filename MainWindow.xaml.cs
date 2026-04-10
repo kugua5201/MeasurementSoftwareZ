@@ -33,6 +33,7 @@ namespace MeasurementSoftware
         private readonly Forms.NotifyIcon _notifyIcon = new();
         private bool _isExitRequested;
         private bool _isHiddenToBackground;
+        private WindowState _lastVisibleWindowState = WindowState.Normal;
         private DrawingIcon? _trayIcon;
 
         public MainWindow()
@@ -42,8 +43,16 @@ namespace MeasurementSoftware
 
             this.Loaded += MainWindow_Loaded;
             this.Closing += MainWindow_Closing;
-            //this.StateChanged += MainWindow_StateChanged;
+            this.StateChanged += MainWindow_StateChanged;
             this.Closed += MainWindow_Closed;
+        }
+
+        private void MainWindow_StateChanged(object? sender, EventArgs e)
+        {
+            if (WindowState != WindowState.Minimized)
+            {
+                _lastVisibleWindowState = WindowState;
+            }
         }
 
         private void MainWindow_Closing(object? sender, CancelEventArgs e)
@@ -122,6 +131,11 @@ namespace MeasurementSoftware
                 return;
             }
 
+            if (WindowState != WindowState.Minimized)
+            {
+                _lastVisibleWindowState = WindowState;
+            }
+
             _isHiddenToBackground = true;
             _notifyIcon.Visible = true;
             ShowInTaskbar = false;
@@ -150,7 +164,7 @@ namespace MeasurementSoftware
             _isHiddenToBackground = false;
             ShowInTaskbar = true;
             Show();
-            WindowState = WindowState.Normal;
+            WindowState = _lastVisibleWindowState;
             Activate();
             Topmost = true;
             Topmost = false;
@@ -171,7 +185,7 @@ namespace MeasurementSoftware
                 _isHiddenToBackground = false;
                 Show();
                 ShowInTaskbar = true;
-                WindowState = WindowState.Normal;
+                WindowState = _lastVisibleWindowState;
             }
 
             Close();
@@ -186,10 +200,13 @@ namespace MeasurementSoftware
             if (settings == null) return;
 
             var layout = settings.Settings.WindowLayout;
+            var effectiveState = WindowState == WindowState.Minimized || _isHiddenToBackground
+                ? _lastVisibleWindowState
+                : WindowState;
 
             // 保存窗口状态
-            layout.IsMaximized = WindowState == WindowState.Maximized;
-            if (WindowState == WindowState.Maximized)
+            layout.IsMaximized = effectiveState == WindowState.Maximized;
+            if (effectiveState == WindowState.Maximized)
             {
                 // 最大化时用 RestoreBounds 保存正常状态的位置和大小
                 var bounds = RestoreBounds;
@@ -200,10 +217,11 @@ namespace MeasurementSoftware
             }
             else
             {
-                layout.Left = Left;
-                layout.Top = Top;
-                layout.Width = Width;
-                layout.Height = Height;
+                var bounds = RestoreBounds;
+                layout.Left = bounds.Left;
+                layout.Top = bounds.Top;
+                layout.Width = bounds.Width;
+                layout.Height = bounds.Height;
             }
 
             // 保存菜单列宽（使用当前值或保存的值）
@@ -498,8 +516,8 @@ namespace MeasurementSoftware
                 "测量" => HomeButton,
                 "配方管理" => RecipeManagementButton,
                 "校准" => CalibrationButton,
-                //"数据管理" => DataManagementButton,
-                //"SPC分析" => SpcButton,
+                "检测记录" => DataManagementButton,
+                "SPC分析" => SpcButton,
                 "通道设置" => ChannelSettingButton,
                 "设备管理" => CommunicationButton,
                 "二维码配置" => QrCodeSettingButton,

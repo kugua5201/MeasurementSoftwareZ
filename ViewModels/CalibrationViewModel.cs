@@ -266,11 +266,80 @@ namespace MeasurementSoftware.ViewModels
 
             var record = SelectedCalibrationHistory;
 
+            // 回用历史时必须把当前方式切换到该历史记录对应的校准方式，
+            // 同时恢复当时这条历史记录保存的校准点和输入状态，避免界面仍停留在别的方式上。
+            SelectedChannel.CalibrationMode = record.Mode;
+            SelectedCalibrationMode = record.Mode;
             SelectedChannel.CalibrationCoefficientA = record.CoefficientA;
             SelectedChannel.CalibrationCoefficientB = record.CoefficientB;
 
-            Growl.Success($"已回用历史系数 A={record.CoefficientA:F6}, B={record.CoefficientB:F6}");
-            _log.Info($"通道 {SelectedChannel.ChannelName} 已回用历史系数 A={record.CoefficientA:F6}, B={record.CoefficientB:F6}");
+            if (record.Mode == CalibrationMode.SinglePoint)
+            {
+                var point = record.CalibrationPoints.FirstOrDefault();
+                if (point != null)
+                {
+                    SelectedChannel.SinglePointCalibration.StandardValue = point.StandardValue;
+                    SelectedChannel.SinglePointCalibration.MeasuredValue = point.MeasuredValue;
+                    SinglePointStandardValue = point.StandardValue;
+                    SinglePointMeasuredValue = point.MeasuredValue;
+                }
+
+                SelectedChannel.SinglePointCalibration.CoefficientA = record.CoefficientA;
+                SelectedChannel.SinglePointCalibration.CoefficientB = record.CoefficientB;
+            }
+            else if (record.Mode == CalibrationMode.LeastSquares)
+            {
+                var points = new ObservableCollection<LeastSquaresCalibrationPoint>(record.CalibrationPoints
+                    .Select((p, index) => new LeastSquaresCalibrationPoint
+                    {
+                        Index = index + 1,
+                        StandardValue = p.StandardValue,
+                        MeasuredValue = p.MeasuredValue
+                    }));
+
+                SelectedChannel.LeastSquaresCalibration.Points = points;
+                LeastSquaresCalibrationPoints = points;
+                SelectedChannel.LeastSquaresCalibration.CoefficientA = record.CoefficientA;
+                SelectedChannel.LeastSquaresCalibration.CoefficientB = record.CoefficientB;
+
+                var lastPoint = record.CalibrationPoints.LastOrDefault();
+                if (lastPoint != null)
+                {
+                    SelectedChannel.LeastSquaresCalibration.InputStandardValue = lastPoint.StandardValue;
+                    SelectedChannel.LeastSquaresCalibration.InputMeasuredValue = lastPoint.MeasuredValue;
+                    LeastSquaresStandardValue = lastPoint.StandardValue;
+                    LeastSquaresMeasuredValue = lastPoint.MeasuredValue;
+                }
+            }
+            else if (record.Mode == CalibrationMode.LinearRegression)
+            {
+                var points = new ObservableCollection<LinearRegressionCalibrationPoint>(record.CalibrationPoints
+                    .Select((p, index) => new LinearRegressionCalibrationPoint
+                    {
+                        Index = index + 1,
+                        StandardValue = p.StandardValue,
+                        MeasuredValue = p.MeasuredValue
+                    }));
+
+                SelectedChannel.LinearRegressionCalibration.Points = points;
+                LinearRegressionCalibrationPoints = points;
+                SelectedChannel.LinearRegressionCalibration.CoefficientA = record.CoefficientA;
+                SelectedChannel.LinearRegressionCalibration.CoefficientB = record.CoefficientB;
+
+                var lastPoint = record.CalibrationPoints.LastOrDefault();
+                if (lastPoint != null)
+                {
+                    SelectedChannel.LinearRegressionCalibration.InputStandardValue = lastPoint.StandardValue;
+                    SelectedChannel.LinearRegressionCalibration.InputMeasuredValue = lastPoint.MeasuredValue;
+                    LinearRegressionStandardValue = lastPoint.StandardValue;
+                    LinearRegressionMeasuredValue = lastPoint.MeasuredValue;
+                }
+            }
+
+            LoadCalibrationData(SelectedChannel);
+
+            Growl.Success($"已回用{record.MethodName}历史，A={record.CoefficientA:F6}, B={record.CoefficientB:F6}");
+            _log.Info($"通道 {SelectedChannel.ChannelName} 已回用{record.MethodName}历史，A={record.CoefficientA:F6}, B={record.CoefficientB:F6}");
         }
 
         /// <summary>

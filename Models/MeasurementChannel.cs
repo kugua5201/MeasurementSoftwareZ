@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.ViewModels;
+using MultiProtocol.Model;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
@@ -104,6 +105,55 @@ namespace MeasurementSoftware.Models
         private ObservableCollection<DataPoint> availableDataPoints = new();
 
         /// <summary>
+        /// 是否启用测量结果输出。
+        /// 启用后会在测量完成时将当前通道 OK/NG 结果写入指定 PLC 点位。
+        /// </summary>
+        [ObservableProperty]
+        private bool enableResultOutput;
+
+        /// <summary>
+        /// 测量结果输出目标 PLC 设备 ID。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ResultOutputPlcDeviceName))]
+        private long resultOutputPlcDeviceId;
+
+        /// <summary>
+        /// 测量结果输出目标点位 ID。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ResultOutputDataPointName))]
+        private string resultOutputDataPointId = string.Empty;
+
+        /// <summary>
+        /// 测量结果输出地址。
+        /// </summary>
+        [ObservableProperty]
+        private string resultOutputAddress = string.Empty;
+
+        /// <summary>
+        /// 输出 OK 时写入的值。
+        /// Bool 点位会自动使用 True。
+        /// </summary>
+        [ObservableProperty]
+        private string resultOutputOkValue = "1";
+
+        /// <summary>
+        /// 输出 NG 时写入的值。
+        /// Bool 点位会自动使用 False。
+        /// </summary>
+        [ObservableProperty]
+        private string resultOutputNgValue = "0";
+
+        /// <summary>
+        /// 结果输出可用点位列表。
+        /// 根据输出设备动态联动。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ResultOutputDataPointName))]
+        private ObservableCollection<DataPoint> availableResultOutputDataPoints = new();
+
+        /// <summary>
         /// 运行时绑定的 PLC 设备实例。
         /// 仅在程序运行期使用，不参与配方持久化。
         /// </summary>
@@ -156,6 +206,108 @@ namespace MeasurementSoftware.Models
         }
 
         /// <summary>
+        /// 运行时绑定的结果输出 PLC 设备实例。
+        /// 仅在程序运行期使用，不参与配方持久化。
+        /// </summary>
+        private PlcDevice? resultOutputRuntimeDevice;
+        private PropertyChangedEventHandler? resultOutputRuntimeDevicePropertyChangedHandler;
+
+        [JsonIgnore]
+        public PlcDevice? ResultOutputRuntimeDevice
+        {
+            get => resultOutputRuntimeDevice;
+            set
+            {
+                var oldDevice = resultOutputRuntimeDevice;
+                if (ReferenceEquals(resultOutputRuntimeDevice, value))
+                {
+                    return;
+                }
+
+                if (oldDevice != null && resultOutputRuntimeDevicePropertyChangedHandler != null)
+                {
+                    oldDevice.PropertyChanged -= resultOutputRuntimeDevicePropertyChangedHandler;
+                }
+
+                resultOutputRuntimeDevice = value;
+
+                if (oldDevice != null && oldDevice.DeviceId != value?.DeviceId)
+                {
+                    ResultOutputRuntimeDataPoint = null;
+                }
+
+                ResultOutputPlcDeviceId = value?.DeviceId ?? 0;
+                RefreshAvailableResultOutputDataPoints();
+
+                if (resultOutputRuntimeDataPoint == null || !AvailableResultOutputDataPoints.Contains(resultOutputRuntimeDataPoint))
+                {
+                    ResultOutputRuntimeDataPoint = AvailableResultOutputDataPoints.FirstOrDefault(dp => dp.PointId == ResultOutputDataPointId);
+                }
+
+                if (resultOutputRuntimeDevice != null)
+                {
+                    resultOutputRuntimeDevicePropertyChangedHandler = ResultOutputRuntimeDevice_PropertyChanged;
+                    resultOutputRuntimeDevice.PropertyChanged += resultOutputRuntimeDevicePropertyChangedHandler;
+                }
+
+                OnPropertyChanged(nameof(ResultOutputRuntimeDevice));
+                OnPropertyChanged(nameof(ResultOutputPlcDeviceName));
+                OnPropertyChanged(nameof(ResultOutputDataPointName));
+            }
+        }
+
+        /// <summary>
+        /// 运行时绑定的结果输出点位实例。
+        /// 仅在程序运行期使用，不参与配方持久化。
+        /// </summary>
+        private DataPoint? resultOutputRuntimeDataPoint;
+        private PropertyChangedEventHandler? resultOutputRuntimeDataPointPropertyChangedHandler;
+
+        [JsonIgnore]
+        public DataPoint? ResultOutputRuntimeDataPoint
+        {
+            get => resultOutputRuntimeDataPoint;
+            set
+            {
+                if (ReferenceEquals(resultOutputRuntimeDataPoint, value))
+                {
+                    return;
+                }
+
+                if (resultOutputRuntimeDataPoint != null && resultOutputRuntimeDataPointPropertyChangedHandler != null)
+                {
+                    resultOutputRuntimeDataPoint.PropertyChanged -= resultOutputRuntimeDataPointPropertyChangedHandler;
+                }
+
+                resultOutputRuntimeDataPoint = value;
+                ResultOutputDataPointId = value?.PointId ?? string.Empty;
+                ResultOutputAddress = value?.Address ?? string.Empty;
+
+                if (resultOutputRuntimeDataPoint != null)
+                {
+                    resultOutputRuntimeDataPointPropertyChangedHandler = ResultOutputRuntimeDataPoint_PropertyChanged;
+                    resultOutputRuntimeDataPoint.PropertyChanged += resultOutputRuntimeDataPointPropertyChangedHandler;
+                }
+
+                if (IsResultOutputBoolDataPoint)
+                {
+                    ResultOutputOkValue = bool.TrueString;
+                    ResultOutputNgValue = bool.FalseString;
+                }
+
+                OnPropertyChanged(nameof(ResultOutputRuntimeDataPoint));
+                OnPropertyChanged(nameof(ResultOutputDataPointName));
+                OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
+            }
+        }
+
+        /// <summary>
+        /// 当前结果输出点位是否为 Bool 类型。
+        /// </summary>
+        [JsonIgnore]
+        public bool IsResultOutputBoolDataPoint => ResultOutputRuntimeDataPoint?.DataType == FieldType.Bool;
+
+        /// <summary>
         /// 运行时绑定的采集点位实例。
         /// 仅在程序运行期使用，不参与配方持久化。
         /// </summary>
@@ -191,6 +343,57 @@ namespace MeasurementSoftware.Models
                 OnPropertyChanged(nameof(RuntimeDataPoint));
                 OnPropertyChanged(nameof(DataPointName));
             }
+        }
+
+        /// <summary>
+        /// 按已保存的输出设备/点位标识回填结果输出运行时绑定。
+        /// </summary>
+        public void HydrateResultOutputBindings(PlcDevice? device)
+        {
+            if (resultOutputRuntimeDevice != null && resultOutputRuntimeDevicePropertyChangedHandler != null)
+            {
+                resultOutputRuntimeDevice.PropertyChanged -= resultOutputRuntimeDevicePropertyChangedHandler;
+            }
+
+            if (resultOutputRuntimeDataPoint != null && resultOutputRuntimeDataPointPropertyChangedHandler != null)
+            {
+                resultOutputRuntimeDataPoint.PropertyChanged -= resultOutputRuntimeDataPointPropertyChangedHandler;
+            }
+
+            resultOutputRuntimeDevice = device;
+
+            AvailableResultOutputDataPoints = resultOutputRuntimeDevice == null
+                ? []
+                : new ObservableCollection<DataPoint>(resultOutputRuntimeDevice.DataPoints
+                    .Where(dp => dp.IsEnabled)
+                    .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
+
+            resultOutputRuntimeDataPoint = AvailableResultOutputDataPoints.FirstOrDefault(dp => dp.PointId == ResultOutputDataPointId);
+
+            if (resultOutputRuntimeDevice != null)
+            {
+                resultOutputRuntimeDevicePropertyChangedHandler = ResultOutputRuntimeDevice_PropertyChanged;
+                resultOutputRuntimeDevice.PropertyChanged += resultOutputRuntimeDevicePropertyChangedHandler;
+            }
+
+            if (resultOutputRuntimeDataPoint != null)
+            {
+                resultOutputRuntimeDataPointPropertyChangedHandler = ResultOutputRuntimeDataPoint_PropertyChanged;
+                resultOutputRuntimeDataPoint.PropertyChanged += resultOutputRuntimeDataPointPropertyChangedHandler;
+                ResultOutputAddress = resultOutputRuntimeDataPoint.Address;
+            }
+
+            if (IsResultOutputBoolDataPoint)
+            {
+                ResultOutputOkValue = bool.TrueString;
+                ResultOutputNgValue = bool.FalseString;
+            }
+
+            OnPropertyChanged(nameof(ResultOutputRuntimeDevice));
+            OnPropertyChanged(nameof(ResultOutputRuntimeDataPoint));
+            OnPropertyChanged(nameof(ResultOutputPlcDeviceName));
+            OnPropertyChanged(nameof(ResultOutputDataPointName));
+            OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
         }
 
         /// <summary>
@@ -249,6 +452,38 @@ namespace MeasurementSoftware.Models
                     return string.Empty;
 
                 return RuntimeDevice?.DeviceName ?? PlcDeviceId.ToString();
+            }
+        }
+
+        /// <summary>
+        /// 结果输出 PLC 设备名称。
+        /// </summary>
+        public string ResultOutputPlcDeviceName
+        {
+            get
+            {
+                if (ResultOutputPlcDeviceId == 0)
+                    return string.Empty;
+
+                return ResultOutputRuntimeDevice?.DeviceName ?? ResultOutputPlcDeviceId.ToString();
+            }
+        }
+
+        /// <summary>
+        /// 结果输出点位名称。
+        /// </summary>
+        public string ResultOutputDataPointName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(ResultOutputDataPointId))
+                    return string.Empty;
+
+                if (ResultOutputRuntimeDataPoint != null)
+                    return ResultOutputRuntimeDataPoint.PointName;
+
+                var point = AvailableResultOutputDataPoints?.FirstOrDefault(p => p.PointId == ResultOutputDataPointId);
+                return point?.PointName ?? ResultOutputDataPointId;
             }
         }
 
@@ -407,6 +642,22 @@ namespace MeasurementSoftware.Models
         }
 
         /// <summary>
+        /// 绑定结果输出设备。
+        /// </summary>
+        public void BindResultOutputDevice(PlcDevice? device)
+        {
+            ResultOutputRuntimeDevice = device;
+        }
+
+        /// <summary>
+        /// 绑定结果输出点位。
+        /// </summary>
+        public void BindResultOutputDataPoint(DataPoint? dataPoint)
+        {
+            ResultOutputRuntimeDataPoint = dataPoint;
+        }
+
+        /// <summary>
         /// 清空运行时设备与点位绑定。
         /// </summary>
         public void ClearRuntimeBindings()
@@ -420,6 +671,22 @@ namespace MeasurementSoftware.Models
             UseCacheValue = false;
             OnPropertyChanged(nameof(PlcDeviceName));
             OnPropertyChanged(nameof(DataPointName));
+        }
+
+        /// <summary>
+        /// 清空结果输出运行时绑定。
+        /// </summary>
+        public void ClearResultOutputBindings()
+        {
+            ResultOutputRuntimeDevice = null;
+            ResultOutputRuntimeDataPoint = null;
+            ResultOutputPlcDeviceId = 0;
+            ResultOutputDataPointId = string.Empty;
+            ResultOutputAddress = string.Empty;
+            AvailableResultOutputDataPoints = [];
+            OnPropertyChanged(nameof(ResultOutputPlcDeviceName));
+            OnPropertyChanged(nameof(ResultOutputDataPointName));
+            OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
         }
 
         private void RuntimeDevice_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -444,6 +711,47 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        private void ResultOutputRuntimeDevice_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PlcDevice.DeviceName))
+            {
+                OnPropertyChanged(nameof(ResultOutputPlcDeviceName));
+            }
+
+            if (e.PropertyName == nameof(PlcDevice.IsEnabled) && sender is PlcDevice device)
+            {
+                if (!device.IsEnabled)
+                {
+                    ClearResultOutputBindings();
+                    return;
+                }
+
+                RefreshAvailableResultOutputDataPoints();
+                OnPropertyChanged(nameof(ResultOutputPlcDeviceName));
+            }
+        }
+
+        private void ResultOutputRuntimeDataPoint_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(DataPoint.PointId) or nameof(DataPoint.PointName) or nameof(DataPoint.Address) or nameof(DataPoint.DataType))
+            {
+                if (sender is DataPoint point)
+                {
+                    ResultOutputDataPointId = point.PointId;
+                    ResultOutputAddress = point.Address;
+                }
+
+                if (IsResultOutputBoolDataPoint)
+                {
+                    ResultOutputOkValue = bool.TrueString;
+                    ResultOutputNgValue = bool.FalseString;
+                }
+
+                OnPropertyChanged(nameof(ResultOutputDataPointName));
+                OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
+            }
+        }
+
         /// <summary>
         /// 根据当前绑定设备刷新可用点位列表，并回填运行时点位引用。
         /// </summary>
@@ -460,6 +768,25 @@ namespace MeasurementSoftware.Models
             }
 
             OnPropertyChanged(nameof(DataPointName));
+        }
+
+        /// <summary>
+        /// 根据当前结果输出设备刷新可用输出点位列表，并回填运行时输出点位引用。
+        /// </summary>
+        public void RefreshAvailableResultOutputDataPoints()
+        {
+            AvailableResultOutputDataPoints = ResultOutputRuntimeDevice == null ? [] : new ObservableCollection<DataPoint>(ResultOutputRuntimeDevice.DataPoints
+                    .Where(dp => dp.IsEnabled)
+                    .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
+
+            ResultOutputRuntimeDataPoint = AvailableResultOutputDataPoints.FirstOrDefault(dp => dp.PointId == ResultOutputDataPointId);
+            if (ResultOutputRuntimeDataPoint != null)
+            {
+                ResultOutputAddress = ResultOutputRuntimeDataPoint.Address;
+            }
+
+            OnPropertyChanged(nameof(ResultOutputDataPointName));
+            OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
         }
 
         /// <summary>

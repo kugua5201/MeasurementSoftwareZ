@@ -40,6 +40,7 @@ namespace MeasurementSoftware.Models
         [
             new("RecipeName", "配方名称"),
             new("MeasurementTime", "测量时间"),
+            new("Barcode", "二维码"),
             new("IsStepMeasurement", "是否工步测量"),
             new("CurrentStepNumber", "当前工步编号"),
             new("TotalSteps", "总工步数"),

@@ -396,7 +396,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                            <StackPanel Grid.Column="0" HorizontalAlignment="Left">
                                 <TextBlock
                                     HorizontalAlignment="Center"
                                     FontSize="11"
@@ -421,7 +421,7 @@
                                     Foreground="{StaticResource StatusSuccessBrush}"
                                     Text="{Binding PassCount}" />
                             </StackPanel>
-                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Right">
                                 <TextBlock
                                     HorizontalAlignment="Center"
                                     FontSize="11"
@@ -434,6 +434,42 @@
                                     Foreground="{StaticResource StatusErrorBrush}"
                                     Text="{Binding FailCount}" />
                             </StackPanel>
+
+                        </Grid>
+                        <Separator Margin="0,0,0,5" />
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="11"
+                                    Foreground="{StaticResource StatusSuccessBrush}"
+                                    Text="合格率" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="16"
+                                    FontWeight="Bold"
+                                    Foreground="{StaticResource StatusSuccessBrush}"
+                                    Text="{Binding PassRate}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="11"
+                                    Foreground="{StaticResource StatusErrorBrush}"
+                                    Text="不合格率" />
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    FontSize="16"
+                                    FontWeight="Bold"
+                                    Foreground="{StaticResource StatusErrorBrush}"
+                                    Text="{Binding FailRate}" />
+                            </StackPanel>
+
                         </Grid>
 
                         <Separator Margin="0,0,0,5" />

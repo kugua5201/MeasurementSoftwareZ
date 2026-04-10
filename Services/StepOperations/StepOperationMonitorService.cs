@@ -10,21 +10,18 @@ namespace MeasurementSoftware.Services.StepOperations
 {
     /// <summary>
     /// 工步操作监听服务。
-    /// 负责监听配方中的点位绑定，并在满足触发条件时抛出统一动作事件。
+    /// 负责监听配方中的点位绑定，并在点位事件更新后满足触发条件时抛出统一动作事件。
     /// </summary>
     public class StepOperationMonitorService : IStepOperationMonitorService
     {
-        private readonly Lock _syncRoot = new();
         private readonly ILog _log;
+        private readonly Dictionary<StepOperationBindingConfig, PropertyChangedEventHandler> _bindingPointHandlers = [];
 
         private MeasurementRecipe? _recipe;
         private RecipeOtherSettingsConfig? _observedSettings;
         private ObservableCollection<StepOperationBindingConfig>? _observedBindings;
         private ObservableCollection<PlcDevice>? _observedDevices;
-        private CancellationTokenSource? _monitorCts;
         private bool _isRefreshingBindings;
-
-        private int _delayTime => _recipe?.OtherSettings.AcquisitionDelayMs ?? 100;
 
         public StepOperationMonitorService(ILog log)
         {
@@ -44,13 +41,16 @@ namespace MeasurementSoftware.Services.StepOperations
             }
 
             UnsubscribeRecipe();
-            StopMonitor();
+            UnsubscribeBindingPointEvents();
+            ResetObservedStepOperations(_recipe?.OtherSettings?.StepOperationBindings);
 
             _recipe = recipe;
 
             SubscribeRecipe();
             ApplyMonitorState();
         }
+
+        #region 配方与配置监听
 
         private void SubscribeRecipe()
         {
@@ -91,7 +91,7 @@ namespace MeasurementSoftware.Services.StepOperations
             {
                 UnsubscribeDevices();
                 SubscribeDevices(_recipe.Devices);
-                InitializeConfiguredStepOperations();
+                RefreshBindingsAndEvents();
             }
         }
 
@@ -127,7 +127,7 @@ namespace MeasurementSoftware.Services.StepOperations
             {
                 UnsubscribeStepOperationBindings();
                 SubscribeStepOperationBindings(_observedSettings.StepOperationBindings);
-                InitializeConfiguredStepOperations();
+                RefreshBindingsAndEvents();
             }
         }
 
@@ -180,14 +180,19 @@ namespace MeasurementSoftware.Services.StepOperations
                 }
             }
 
-            InitializeConfiguredStepOperations();
+            RefreshBindingsAndEvents();
         }
 
         private void StepOperationBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is nameof(StepOperationBindingConfig.PlcDeviceId) or nameof(StepOperationBindingConfig.DataPointId))
+            if (e.PropertyName is nameof(StepOperationBindingConfig.PlcDeviceId)
+                or nameof(StepOperationBindingConfig.DataPointId)
+                or nameof(StepOperationBindingConfig.IsEnabled)
+                or nameof(StepOperationBindingConfig.TriggerMode)
+                or nameof(StepOperationBindingConfig.TriggerValue))
             {
                 InitializeConfiguredStepOperations();
+                RebindValueEvents();
             }
         }
 
@@ -241,6 +246,44 @@ namespace MeasurementSoftware.Services.StepOperations
             }
 
             InitializeConfiguredStepOperations();
+            RebindValueEvents();
+        }
+
+        private void Device_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(PlcDevice.IsEnabled) or nameof(PlcDevice.DeviceId))
+            {
+                RefreshBindingsAndEvents();
+            }
+        }
+
+        private void DataPoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (DataPoint dataPoint in e.OldItems)
+                {
+                    dataPoint.PropertyChanged -= DataPoint_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (DataPoint dataPoint in e.NewItems)
+                {
+                    dataPoint.PropertyChanged += DataPoint_PropertyChanged;
+                }
+            }
+
+            RefreshBindingsAndEvents();
+        }
+
+        private void DataPoint_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(DataPoint.IsEnabled) or nameof(DataPoint.PointId) or nameof(DataPoint.PointName))
+            {
+                RefreshBindingsAndEvents();
+            }
         }
 
         private void SubscribeDevice(PlcDevice device)
@@ -265,143 +308,105 @@ namespace MeasurementSoftware.Services.StepOperations
             }
         }
 
-        private void Device_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName is nameof(PlcDevice.IsEnabled) or nameof(PlcDevice.DeviceId))
-            {
-                InitializeConfiguredStepOperations();
-            }
-        }
+        #endregion
 
-        private void DataPoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        {
-            if (e.OldItems != null)
-            {
-                foreach (DataPoint dataPoint in e.OldItems)
-                {
-                    dataPoint.PropertyChanged -= DataPoint_PropertyChanged;
-                }
-            }
-
-            if (e.NewItems != null)
-            {
-                foreach (DataPoint dataPoint in e.NewItems)
-                {
-                    dataPoint.PropertyChanged += DataPoint_PropertyChanged;
-                }
-            }
-
-            InitializeConfiguredStepOperations();
-        }
-
-        private void DataPoint_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName is nameof(DataPoint.IsEnabled) or nameof(DataPoint.PointId))
-            {
-                InitializeConfiguredStepOperations();
-            }
-        }
+        #region 绑定值事件监听
 
         private void ApplyMonitorState()
         {
             if (_recipe?.OtherSettings.EnableStepOperationBinding == true)
             {
-                InitializeConfiguredStepOperations();
-                StartMonitor();
+                RefreshBindingsAndEvents();
             }
             else
             {
-                StopMonitor();
+                UnsubscribeBindingPointEvents();
+                ResetObservedStepOperations(_recipe?.OtherSettings?.StepOperationBindings);
             }
         }
 
-        private void StartMonitor()
+  
+        private void RefreshBindingsAndEvents()
         {
-            lock (_syncRoot)
-            {
-                if (_monitorCts != null || _recipe == null)
-                {
-                    return;
-                }
-
-                _monitorCts = new CancellationTokenSource();
-                _ = MonitorStepOperationsAsync(_monitorCts.Token);
-            }
+            InitializeConfiguredStepOperations();
+            RebindValueEvents();
         }
 
-        private void StopMonitor()
+        private void RebindValueEvents()
         {
-            CancellationTokenSource? monitorCts;
-            lock (_syncRoot)
-            {
-                monitorCts = _monitorCts;
-                _monitorCts = null;
-            }
+            UnsubscribeBindingPointEvents();
 
-            if (monitorCts == null)
-            {
-                return;
-            }
-
-            monitorCts.Cancel();
-            monitorCts.Dispose();
-            ResetObservedStepOperations(_recipe?.OtherSettings?.StepOperationBindings);
-        }
-
-        private async Task MonitorStepOperationsAsync(CancellationToken cancellationToken)
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    CheckConfiguredStepOperations();
-                    await Task.Delay(_delayTime, cancellationToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"工步操作监听异常: {ex.Message}");
-                    await Task.Delay(_delayTime, cancellationToken);
-                }
-            }
-        }
-
-        private void CheckConfiguredStepOperations()
-        {
             var recipe = _recipe;
             if (recipe?.OtherSettings == null || !recipe.OtherSettings.EnableStepOperationBinding)
             {
-                ResetObservedStepOperations(recipe?.OtherSettings?.StepOperationBindings);
                 return;
             }
 
-            foreach (var binding in recipe.OtherSettings.StepOperationBindings
-                .Where(b => b.IsEnabled)
-                .OrderBy(GetStepOperationPriority))
+            foreach (var binding in recipe.OtherSettings.StepOperationBindings.Where(b => b.IsEnabled))
             {
-                if (!TryGetStepOperationValue(binding, out var currentValue))
+                if (!TryGetStepOperationValue(binding, out var currentValue) || binding.RuntimeDataPoint == null)
                 {
                     binding.ResetObservedValue();
                     continue;
                 }
 
-                if (!ShouldTriggerStepOperation(binding, currentValue))
-                {
-                    continue;
-                }
+                binding.LastObservedValue = currentValue;
+                binding.HasObservedValue = true;
 
-                _log.Info($"点位触发工步操作：{binding.OperationType.GetDescription()}");
-                OperationTriggered?.Invoke(this, new StepOperationTriggeredEventArgs(binding.OperationType));
-                break;
+                PropertyChangedEventHandler handler = (_, e) =>
+                {
+                    if (e.PropertyName is nameof(DataPoint.CurrentValue) or nameof(DataPoint.IsSuccess) or nameof(DataPoint.LastUpdateTime))
+                    {
+                        HandleBindingValueChanged(binding);
+                    }
+                };
+
+                binding.RuntimeDataPoint.PropertyChanged += handler;
+                _bindingPointHandlers[binding] = handler;
             }
         }
 
+        private void UnsubscribeBindingPointEvents()
+        {
+            foreach (var item in _bindingPointHandlers)
+            {
+                if (item.Key.RuntimeDataPoint != null)
+                {
+                    item.Key.RuntimeDataPoint.PropertyChanged -= item.Value;
+                }
+            }
+
+            _bindingPointHandlers.Clear();
+        }
+
+        private void HandleBindingValueChanged(StepOperationBindingConfig binding)
+        {
+            var recipe = _recipe;
+            if (recipe?.OtherSettings == null || !recipe.OtherSettings.EnableStepOperationBinding || !binding.IsEnabled)
+            {
+                return;
+            }
+
+            if (!TryGetStepOperationValue(binding, out var currentValue))
+            {
+                binding.ResetObservedValue();
+                return;
+            }
+
+            if (!ShouldTriggerStepOperation(binding, currentValue))
+            {
+                return;
+            }
+
+            _log.Info($"点位事件触发工步操作：{binding.OperationType.GetDescription()}");
+            OperationTriggered?.Invoke(this, new StepOperationTriggeredEventArgs(binding.OperationType));
+        }
+
+        #endregion
+
         /// <summary>
-        /// 监听启动前按当前配方初始化一次工步绑定运行时引用。
-        /// 轮询阶段只读点位值，不再反复刷新绑定源，避免界面编辑时闪烁。
+        /// 点位绑定或设备集合变化时，按当前配方初始化一次工步绑定运行时引用。
+        /// 运行期通过点位事件直接驱动触发判断，不再依赖轮询。
         /// </summary>
         private void InitializeConfiguredStepOperations()
         {

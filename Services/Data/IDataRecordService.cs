@@ -20,7 +20,7 @@ namespace MeasurementSoftware.Services
         /// <summary>
         /// 查询测量记录
         /// </summary>
-        Task<List<MeasurementRecord>> QueryRecordsAsync(DateTime startDate, DateTime endDate);
+        Task<List<MeasurementRecord>> QueryRecordsAsync(DateTime startDate, DateTime endDate, string? recipeName = null, string? barcode = null);
 
         /// <summary>
         /// 按年查询

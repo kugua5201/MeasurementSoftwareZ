@@ -109,12 +109,14 @@ namespace MeasurementSoftware.ViewModels
                     foreach (var channel in CurrentRecipe.Channels)
                     {
                         LoadDataPointsForChannel(channel);
+                        LoadResultOutputDataPointsForChannel(channel);
                     }
                 }
 
                 if (EditingChannel != null)
                 {
                     LoadDataPointsForChannel(EditingChannel);
+                    LoadResultOutputDataPointsForChannel(EditingChannel);
                 }
 
             };
@@ -138,6 +140,11 @@ namespace MeasurementSoftware.ViewModels
                     if (channel.PlcDeviceId != 0)
                     {
                         LoadDataPointsForChannel(channel);
+                    }
+
+                    if (channel.ResultOutputPlcDeviceId != 0)
+                    {
+                        LoadResultOutputDataPointsForChannel(channel);
                     }
                 }
             }
@@ -242,6 +249,69 @@ namespace MeasurementSoftware.ViewModels
             {
                 LoadDataPointsForChannel(channel);
             }
+
+            if (channel.ResultOutputRuntimeDevice != null)
+            {
+                channel.ResultOutputPlcDeviceId = channel.ResultOutputRuntimeDevice.DeviceId;
+            }
+
+            if (channel.ResultOutputRuntimeDataPoint != null)
+            {
+                channel.ResultOutputDataPointId = channel.ResultOutputRuntimeDataPoint.PointId;
+                channel.ResultOutputAddress = channel.ResultOutputRuntimeDataPoint.Address;
+            }
+            else if (channel.ResultOutputPlcDeviceId == 0)
+            {
+                channel.ResultOutputDataPointId = string.Empty;
+                channel.ResultOutputAddress = string.Empty;
+            }
+
+            if (channel.ResultOutputPlcDeviceId != 0)
+            {
+                LoadResultOutputDataPointsForChannel(channel);
+            }
+        }
+
+        private void LoadResultOutputDataPointsForChannel(MeasurementChannel channel)
+        {
+            var device = channel.ResultOutputRuntimeDevice;
+
+            if (channel.ResultOutputPlcDeviceId == 0)
+            {
+                device = null;
+            }
+            else if (device == null || device.DeviceId != channel.ResultOutputPlcDeviceId)
+            {
+                device = _deviceConfigService.Devices.FirstOrDefault(d => d.DeviceId == channel.ResultOutputPlcDeviceId);
+            }
+
+            if (device != null && !device.IsEnabled)
+            {
+                channel.ClearResultOutputBindings();
+                return;
+            }
+
+            if (!ReferenceEquals(channel.ResultOutputRuntimeDevice, device))
+            {
+                if (channel.ResultOutputPlcDeviceId == 0)
+                {
+                    channel.ClearResultOutputBindings();
+                }
+                else
+                {
+                    channel.HydrateResultOutputBindings(device);
+                }
+            }
+
+            if (device == null)
+            {
+                return;
+            }
+
+            if (channel.ResultOutputRuntimeDataPoint == null || channel.ResultOutputRuntimeDataPoint.PointId != channel.ResultOutputDataPointId)
+            {
+                channel.HydrateResultOutputBindings(device);
+            }
         }
 
         /// <summary>
@@ -331,7 +401,13 @@ namespace MeasurementSoftware.ViewModels
                 PlcDeviceId = channel.PlcDeviceId,
                 DataPointId = channel.DataPointId,
                 DataSourceAddress = channel.DataSourceAddress,
-                UseCacheValue = channel.UseCacheValue
+                UseCacheValue = channel.UseCacheValue,
+                EnableResultOutput = channel.EnableResultOutput,
+                ResultOutputPlcDeviceId = channel.ResultOutputPlcDeviceId,
+                ResultOutputDataPointId = channel.ResultOutputDataPointId,
+                ResultOutputAddress = channel.ResultOutputAddress,
+                ResultOutputOkValue = channel.ResultOutputOkValue,
+                ResultOutputNgValue = channel.ResultOutputNgValue
             };
 
             // 如果有设备ID，确保数据点列表已加载
@@ -349,6 +425,11 @@ namespace MeasurementSoftware.ViewModels
                 {
                     EditingChannel.UseCacheValue = false;
                 }
+
+            if (EditingChannel.ResultOutputPlcDeviceId != 0)
+            {
+                LoadResultOutputDataPointsForChannel(EditingChannel);
+            }
             }
 
             // 监听设备 ID 变化，响应式加载数据点
@@ -413,6 +494,27 @@ namespace MeasurementSoftware.ViewModels
                     channel.UseCacheValue = false;
                 }
             }
+            else if (e.PropertyName == nameof(MeasurementChannel.ResultOutputRuntimeDevice))
+            {
+                if (channel.ResultOutputRuntimeDevice != null)
+                {
+                    if (channel.ResultOutputRuntimeDataPoint == null && channel.AvailableResultOutputDataPoints.Any())
+                    {
+                        channel.ResultOutputRuntimeDataPoint = channel.AvailableResultOutputDataPoints.First();
+                    }
+                }
+                else
+                {
+                    channel.ClearResultOutputBindings();
+                }
+            }
+            else if (e.PropertyName == nameof(MeasurementChannel.ResultOutputRuntimeDataPoint))
+            {
+                if (channel.ResultOutputRuntimeDataPoint != null)
+                {
+                    _log.Info($"已设置通道结果输出地址: {channel.ResultOutputRuntimeDataPoint.Address}");
+                }
+            }
         }
 
         [RelayCommand]
@@ -469,6 +571,12 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.DataPointId = EditingChannel.DataPointId;
                     originalChannel.DataSourceAddress = EditingChannel.DataSourceAddress;
                     originalChannel.SampleCount = EditingChannel.SampleCount;
+                     originalChannel.EnableResultOutput = EditingChannel.EnableResultOutput;
+                     originalChannel.ResultOutputPlcDeviceId = EditingChannel.ResultOutputPlcDeviceId;
+                     originalChannel.ResultOutputDataPointId = EditingChannel.ResultOutputDataPointId;
+                     originalChannel.ResultOutputAddress = EditingChannel.ResultOutputAddress;
+                     originalChannel.ResultOutputOkValue = EditingChannel.ResultOutputOkValue;
+                     originalChannel.ResultOutputNgValue = EditingChannel.ResultOutputNgValue;
                   
                     if (EditingChannel.PlcDeviceId == 0)
                     {
@@ -479,6 +587,15 @@ namespace MeasurementSoftware.ViewModels
                         LoadDataPointsForChannel(originalChannel);
                         originalChannel.UseCacheValue = EditingChannel.UseCacheValue;
                     }
+
+                     if (!EditingChannel.EnableResultOutput || EditingChannel.ResultOutputPlcDeviceId == 0)
+                     {
+                         originalChannel.ClearResultOutputBindings();
+                     }
+                     else
+                     {
+                         LoadResultOutputDataPointsForChannel(originalChannel);
+                     }
 
                     // 重新订阅属性变化事件（如果之前没订阅）
                     originalChannel.PropertyChanged -= Channel_PropertyChanged;

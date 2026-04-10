@@ -321,7 +321,7 @@
                             </StackPanel>
                         </Button>
 
-                        <!--<Button
+                        <Button
                             x:Name="DataManagementButton"
                             Click="MenuButton_Click"
                             Command="{Binding NavigateToDataManagementCommand}"
@@ -332,11 +332,11 @@
                                     FontFamily="Segoe MDL2 Assets"
                                     FontSize="16"
                                     Text="&#xE8F1;" />
-                                <TextBlock FontSize="14" Text="数据管理" />
+                                <TextBlock FontSize="14" Text="检测记录" />
                             </StackPanel>
-                        </Button>-->
+                        </Button>
 
-                        <!--<Button
+                        <Button
                             x:Name="SpcButton"
                             Click="MenuButton_Click"
                             Command="{Binding NavigateToSpcCommand}"
@@ -349,7 +349,7 @@
                                     Text="&#xE9D9;" />
                                 <TextBlock FontSize="14" Text="SPC分析" />
                             </StackPanel>
-                        </Button>-->
+                        </Button>
 
                         <Expander
                             x:Name="SettingsExpander"

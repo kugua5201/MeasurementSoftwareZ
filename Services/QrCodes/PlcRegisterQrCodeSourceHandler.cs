@@ -1,59 +1,14 @@
 ﻿using MeasurementSoftware.Models;
+using System.ComponentModel;
 
 namespace MeasurementSoftware.Services.QrCodes
 {
     /// <summary>
     /// PLC寄存器扫码数据源处理器。
-    /// 通过轮询当前绑定点位的值，等待本次测量启动后的新扫码数据。
+    /// 通过点位更新事件等待本次测量启动后的新扫码数据。
     /// </summary>
     public class PlcRegisterQrCodeSourceHandler : IQrCodeSourceHandler
     {
-        //private string _lastValue = string.Empty;
-
-        //public QrCodeSourceType SourceType => QrCodeSourceType.PlcRegister;
-
-        //public async Task<string?> WaitForRawDataAsync(QrCodeConfig config, CancellationToken cancellationToken)
-        //{
-        //    try
-        //    {
-        //        cancellationToken.ThrowIfCancellationRequested();
-
-        //        var device = config.SelectedPlcDevice ?? throw new InvalidOperationException("当前PLC扫码设备未绑定或不存在");
-        //        var point = config.SelectedPoint ?? throw new InvalidOperationException("当前PLC扫码点位未绑定或不存在");
-
-        //        while (true)
-        //        {
-        //            cancellationToken.ThrowIfCancellationRequested();
-
-        //            var currentValue = Normalize(point.CurrentValue);
-        //            var normalizedValue = currentValue.Length <= config.PlcReadLength
-        //                ? currentValue
-        //                : currentValue[..config.PlcReadLength];
-
-        //            if (point.IsSuccess && !string.IsNullOrWhiteSpace(normalizedValue))
-        //            {
-        //                if (string.IsNullOrWhiteSpace(_lastValue))
-        //                {
-        //                    _lastValue = normalizedValue;
-        //                    return normalizedValue;
-        //                }
-
-        //                if (!string.Equals(normalizedValue, _lastValue, StringComparison.Ordinal))
-        //                {
-        //                    _lastValue = normalizedValue;
-        //                    return normalizedValue;
-        //                }
-        //            }
-
-        //            await Task.Delay(200, cancellationToken);
-        //        }
-        //    }
-        //    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        //    {
-        //        _lastValue = string.Empty;
-        //        throw;
-        //    }
-        //}
         public QrCodeSourceType SourceType => QrCodeSourceType.PlcRegister;
 
         public async Task<string?> WaitForRawDataAsync(QrCodeConfig config, CancellationToken cancellationToken)
@@ -62,30 +17,75 @@ namespace MeasurementSoftware.Services.QrCodes
             _ = config.SelectedPlcDevice ?? throw new InvalidOperationException("当前PLC扫码设备未绑定或不存在");
             var point = config.SelectedPoint ?? throw new InvalidOperationException("当前PLC扫码点位未绑定或不存在");
 
-            // 先获取一次初始值
             var currentValue = Normalize(point.CurrentValue);
             var baselineValue = currentValue.Length <= config.QrCodeLength
                 ? currentValue
                 : currentValue[..config.QrCodeLength];
 
-            while (true)
+            var completionSource = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            PropertyChangedEventHandler? handler = null;
+            CancellationTokenRegistration cancellationRegistration = default;
+
+            bool TryResolveUpdatedQrCode()
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                var latestValue = Normalize(point.CurrentValue);
+                var normalizedValue = latestValue.Length <= config.QrCodeLength
+                    ? latestValue
+                    : latestValue[..config.QrCodeLength];
 
-                currentValue = Normalize(point.CurrentValue);
-                var normalizedValue = currentValue.Length <= config.QrCodeLength
-                    ? currentValue
-                    : currentValue[..config.QrCodeLength];
-
-                if (point.IsSuccess && !string.IsNullOrWhiteSpace(normalizedValue)
-                    && !string.Equals(normalizedValue, baselineValue, StringComparison.Ordinal))
+                if (!point.IsSuccess || string.IsNullOrWhiteSpace(normalizedValue))
                 {
-                    return normalizedValue;
+                    return false;
                 }
 
-                await Task.Delay(200, cancellationToken);
+                if (string.Equals(normalizedValue, baselineValue, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
+                completionSource.TrySetResult(normalizedValue);
+                return true;
+            }
+
+            handler = (_, e) =>
+            {
+                if (e.PropertyName is nameof(DataPoint.CurrentValue)
+                    or nameof(DataPoint.IsSuccess)
+                    or nameof(DataPoint.LastUpdateTime))
+                {
+                    if (TryResolveUpdatedQrCode())
+                    {
+                        point.PropertyChanged -= handler;
+                        cancellationRegistration.Dispose();
+                    }
+                }
+            };
+
+            point.PropertyChanged += handler;
+            cancellationRegistration = cancellationToken.Register(() =>
+            {
+                point.PropertyChanged -= handler;
+                completionSource.TrySetCanceled(cancellationToken);
+            });
+
+            if (TryResolveUpdatedQrCode())
+            {
+                point.PropertyChanged -= handler;
+                cancellationRegistration.Dispose();
+            }
+
+            try
+            {
+                return await completionSource.Task;
+            }
+            finally
+            {
+                point.PropertyChanged -= handler;
+                cancellationRegistration.Dispose();
             }
         }
+
         private static string Normalize(object? value)
         {
             return value?.ToString()?.Trim() ?? string.Empty;

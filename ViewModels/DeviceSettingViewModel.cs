@@ -70,18 +70,24 @@ namespace MeasurementSoftware.ViewModels
 
                 if (!value.Value)
                 {
-                    var boundChannels = GetChannelsBoundToDevice(SelectedDevice);
-                    if (boundChannels.Count > 0)
-                    {
-                        var prompt = BuildBoundChannelPrompt(boundChannels, "禁用设备");
-                        var result = HandyControl.Controls.MessageBox.Show(prompt, "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                        if (result != MessageBoxResult.Yes)
-                        {
-                            OnPropertyChanged(nameof(SelectedDeviceEnabled));
-                            return;
-                        }
+                    //var boundChannels = GetChannelsBoundToDevice(SelectedDevice);
+                    //if (boundChannels.Count > 0)
+                    //{
+                    //    var prompt = BuildBoundChannelPrompt(boundChannels, "禁用设备");
+                    //    var result = HandyControl.Controls.MessageBox.Show(prompt, "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    //    if (result != MessageBoxResult.Yes)
+                    //    {
+                    //        OnPropertyChanged(nameof(SelectedDeviceEnabled));
+                    //        return;
+                    //    }
 
-                        ClearChannelsBoundToDevice(SelectedDevice);
+                    //    ClearChannelsBoundToDevice(SelectedDevice);
+                    //}
+                    var result = HandyControl.Controls.MessageBox.Show("禁用设备会清除相关绑定点位，是否继续？", "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                    if (!(result == MessageBoxResult.Yes))
+                    {
+                        OnPropertyChanged(nameof(SelectedDeviceEnabled));
+                        return;
                     }
                 }
 
@@ -392,25 +398,29 @@ namespace MeasurementSoftware.ViewModels
             }
 
             var device = SelectedDevice;
-            var boundChannels = GetChannelsBoundToDevice(device);
-            if (boundChannels.Count > 0)
+            //var boundChannels = GetChannelsBoundToDevice(device);
+            //if (boundChannels.Count > 0)
+            //{
+            //    var prompt = BuildBoundChannelPrompt(boundChannels, "删除设备");
+            //    var result = HandyControl.Controls.MessageBox.Show(prompt, "提示", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            //    if (result != MessageBoxResult.Yes)
+            //    {
+            //        return;
+            //    }
+            //}
+            var result = HandyControl.Controls.MessageBox.Show("禁用设备会清除相关绑定点位，是否继续？", "警告", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (!(result == MessageBoxResult.Yes))
             {
-                var prompt = BuildBoundChannelPrompt(boundChannels, "删除设备");
-                var result = HandyControl.Controls.MessageBox.Show(prompt, "提示", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                if (result != MessageBoxResult.Yes)
-                {
-                    return;
-                }
+                OnPropertyChanged(nameof(SelectedDeviceEnabled));
+                return;
             }
-
             var deviceName = device.DeviceName;
 
             await ExecuteWithLoadingAsync($"正在删除设备 {deviceName}...", async () =>
             {
-                if (boundChannels.Count > 0)
-                {
-                    ClearChannelsBoundToDevice(device);
-                }
+
+                ClearChannelsBoundToDevice(device);
+
 
                 await _plcDeviceRuntimeService.DestroyAsync(device);
 
