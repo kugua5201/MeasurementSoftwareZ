@@ -275,7 +275,12 @@ namespace MeasurementSoftware.ViewModels
             }
             if (AvailableComPorts.Count > 0)
             {
-                SelectedDevice?.ComPort = AvailableComPorts[0];
+
+                //SelectedDevice?.ComPort = AvailableComPorts[0];
+                if (SelectedDevice != null)
+                {
+                    SelectedDevice.ComPort = AvailableComPorts[0];
+                }
             }
         }
 

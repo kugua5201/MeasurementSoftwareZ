@@ -198,9 +198,9 @@ namespace MeasurementSoftware.ViewModels
                         OnPropertyChanged(nameof(Channels));
                         OnPropertyChanged(nameof(Annotations));
                         OnPropertyChanged(nameof(PassCount));
-                         OnPropertyChanged(nameof(PassRate));
+                        OnPropertyChanged(nameof(PassRate));
                         OnPropertyChanged(nameof(FailCount));
-                         OnPropertyChanged(nameof(FailRate));
+                        OnPropertyChanged(nameof(FailRate));
                         OnPropertyChanged(nameof(TotalCount));
 
                         ProductImagePath = CurrentRecipe?.BasicInfo.ProductImagePath ?? string.Empty;
@@ -1095,6 +1095,7 @@ namespace MeasurementSoftware.ViewModels
             };
 
             await WriteChannelResultOutputsAsync(relevantChannels);
+            await WriteOverallResultOutputAsync();
             await _dataRecordService.SaveRecordAsync(record);
             await _dataRecordService.SaveRecordToConfiguredFileAsync(record, CurrentRecipe);
             _log.Info($"测量记录已保存: {OverallResult}");
@@ -1118,7 +1119,18 @@ namespace MeasurementSoftware.ViewModels
                     continue;
                 }
 
-                var rawValue = channel.Result == MeasurementResult.Pass ? channel.ResultOutputOkValue : channel.ResultOutputNgValue;
+                //var rawValue = channel.Result == MeasurementResult.Pass ? channel.ResultOutputOkValue : channel.ResultOutputNgValue;
+                string rawValue;
+                if (outputDataPoint.DataType == FieldType.Bool)
+                {
+                    rawValue = channel.Result.GetDescription();
+                }
+                else
+                {
+                    rawValue = channel.Result == MeasurementResult.Pass
+                        ? channel.ResultOutputOkValue
+                        : channel.ResultOutputNgValue;
+                }
                 if (!TryConvertResultOutputValue(rawValue, outputDataPoint.DataType, out var writeValue, out var errorMessage))
                 {
                     _log.Warn($"通道 {channel.ChannelName} 结果输出值无效：{errorMessage}");
@@ -1130,6 +1142,61 @@ namespace MeasurementSoftware.ViewModels
                 {
                     _log.Warn($"通道 {channel.ChannelName} 结果输出失败：{message}");
                 }
+            }
+        }
+
+        /// <summary>
+        /// 将总测量结果 OK/NG 状态写入其他设置中配置的 PLC 点位。
+        /// </summary>
+        private async Task WriteOverallResultOutputAsync()
+        {
+            if (CurrentRecipe == null)
+            {
+                return;
+            }
+
+            var overallResultOutput = CurrentRecipe.OtherSettings.OverallResultOutput;
+            if (!overallResultOutput.IsEnabled)
+            {
+                return;
+            }
+
+            var outputDevice = overallResultOutput.RuntimeDevice
+                ?? CurrentRecipe.Devices.FirstOrDefault(d => d.DeviceId == overallResultOutput.PlcDeviceId && d.IsEnabled);
+            var outputDataPoint = overallResultOutput.RuntimeDataPoint
+                ?? outputDevice?.DataPoints.FirstOrDefault(dp => dp.PointId == overallResultOutput.DataPointId && dp.IsEnabled);
+
+            if (outputDevice == null || outputDataPoint == null)
+            {
+                _log.Warn("总测量结果输出已启用，但未找到输出设备或点位");
+                return;
+            }
+
+            //var rawValue = OverallResult == MeasurementResult.Pass
+            //    ? overallResultOutput.OkValue
+            //    : overallResultOutput.NgValue;
+            string rawValue;
+            if (outputDataPoint.DataType == FieldType.Bool)
+            {
+                rawValue = OverallResult.GetDescription();
+            }
+            else
+            {
+                rawValue = OverallResult == MeasurementResult.Pass
+                    ? overallResultOutput.OkValue
+                    : overallResultOutput.NgValue;
+            }
+
+            if (!TryConvertResultOutputValue(rawValue, outputDataPoint.DataType, out var writeValue, out var errorMessage))
+            {
+                _log.Warn($"总测量结果输出值无效：{errorMessage}");
+                return;
+            }
+
+            var (success, message) = await _plcDeviceRuntimeService.WriteDataPointValueAsync(outputDevice, outputDataPoint, writeValue!);
+            if (!success)
+            {
+                _log.Warn($"总测量结果输出失败：{message}");
             }
         }
 
@@ -1553,7 +1620,9 @@ namespace MeasurementSoftware.ViewModels
             bool isStepMode = IsStepModeEnabled();
             foreach (var channel in Channels)
             {
-                channel.Annotation?.IsActiveInCurrentStep = !isStepMode || channel.StepNumber == CurrentStep;
+                if (channel.Annotation != null) { channel.Annotation.IsActiveInCurrentStep = !isStepMode || channel.StepNumber == CurrentStep; }
+
+
             }
         }
 

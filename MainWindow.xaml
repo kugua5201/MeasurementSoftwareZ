@@ -321,20 +321,7 @@
                             </StackPanel>
                         </Button>
 
-                        <Button
-                            x:Name="DataManagementButton"
-                            Click="MenuButton_Click"
-                            Command="{Binding NavigateToDataManagementCommand}"
-                            Style="{StaticResource MainMenuButtonStyle}">
-                            <StackPanel Margin="10,0,0,0" Orientation="Horizontal">
-                                <TextBlock
-                                    Margin="0,0,12,0"
-                                    FontFamily="Segoe MDL2 Assets"
-                                    FontSize="16"
-                                    Text="&#xE8F1;" />
-                                <TextBlock FontSize="14" Text="检测记录" />
-                            </StackPanel>
-                        </Button>
+
 
                         <Button
                             x:Name="SpcButton"
@@ -464,6 +451,20 @@
                                     FontSize="16"
                                     Text="&#xE7C3;" />
                                 <TextBlock FontSize="14" Text="配方管理" />
+                            </StackPanel>
+                        </Button>
+                        <Button
+                            x:Name="DataManagementButton"
+                            Click="MenuButton_Click"
+                            Command="{Binding NavigateToDataManagementCommand}"
+                            Style="{StaticResource MainMenuButtonStyle}">
+                            <StackPanel Margin="10,0,0,0" Orientation="Horizontal">
+                                <TextBlock
+                                    Margin="0,0,12,0"
+                                    FontFamily="Segoe MDL2 Assets"
+                                    FontSize="16"
+                                    Text="&#xE8F1;" />
+                                <TextBlock FontSize="14" Text="检测记录" />
                             </StackPanel>
                         </Button>
                         <Button

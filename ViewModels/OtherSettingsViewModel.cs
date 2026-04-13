@@ -22,6 +22,7 @@ namespace MeasurementSoftware.ViewModels
         private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
 
         private ObservableCollection<StepOperationBindingConfig>? _observedStepOperationBindings;
+        private OverallMeasurementResultOutputConfig? _observedOverallResultOutput;
 
         [ObservableProperty]
         private AcquisitionCsvColumnDefinition? selectedAvailableCsvColumn;
@@ -80,6 +81,7 @@ namespace MeasurementSoftware.ViewModels
                     if (e.PropertyName == nameof(IRecipeConfigService.CurrentRecipe))
                     {
                         _enabledDevicesObserver.Rebind();
+                        RebindOverallResultOutputNotifications();
                         CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
                         RebindStepOperationBindingNotifications();
                         OnPropertyChanged(nameof(CurrentRecipe));
@@ -92,12 +94,34 @@ namespace MeasurementSoftware.ViewModels
 
             _enabledDevicesObserver.Changed += (s, e) =>
             {
+                CurrentRecipe?.OtherSettings.OverallResultOutput.AttachAvailableDevices(_enabledDevicesObserver.EnabledDevices);
                 CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
             };
 
             _enabledDevicesObserver.Rebind();
+            RebindOverallResultOutputNotifications();
             CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
             RebindStepOperationBindingNotifications();
+        }
+
+        /// <summary>
+        /// 重新绑定总测量结果输出配置的设备集合监听。
+        /// 保证其他设置页中的设备与点位列表随启用设备实时联动。
+        /// </summary>
+        private void RebindOverallResultOutputNotifications()
+        {
+            if (_observedOverallResultOutput != null)
+            {
+                _observedOverallResultOutput.DetachAvailableDevices();
+            }
+
+            _observedOverallResultOutput = CurrentRecipe?.OtherSettings.OverallResultOutput;
+            if (_observedOverallResultOutput == null)
+            {
+                return;
+            }
+
+            _observedOverallResultOutput.AttachAvailableDevices(_enabledDevicesObserver.EnabledDevices);
         }
 
         /// <summary>

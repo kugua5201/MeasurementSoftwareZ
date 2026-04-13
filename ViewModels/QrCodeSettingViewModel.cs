@@ -150,7 +150,11 @@ namespace MeasurementSoftware.ViewModels
                 AvailableComPorts.Add(port);
                 if (AvailableComPorts.Count > 0)
                 {
-                    Config?.SerialPortName = AvailableComPorts[0];
+                    // Config?.SerialPortName = AvailableComPorts[0];
+                    if (Config != null)
+                    {
+                        Config.SerialPortName = AvailableComPorts[0];
+                    }
                 }
             }
         }

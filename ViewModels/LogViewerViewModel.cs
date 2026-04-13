@@ -31,7 +31,7 @@ namespace MeasurementSoftware.ViewModels
         private int totalPages = 1;
 
         [ObservableProperty]
-        private string selectedLevel = "全部";
+        private string selectedLevel = "INFO";
 
         [ObservableProperty]
         private DateTime selectedDate = DateTime.Today;
@@ -39,7 +39,7 @@ namespace MeasurementSoftware.ViewModels
         [ObservableProperty]
         private string statusMessage = "就绪";
 
-        public string[] LogLevels { get; } = { "全部", "DEBUG", "INFO", "WARN", "ERROR" };
+        public string[] LogLevels { get; } = { "DEBUG", "INFO", "WARN", "ERROR" };
 
         public LogViewerViewModel(ILog log)
         {

@@ -250,7 +250,9 @@
                                 </StackPanel>
                             </StackPanel>
 
-                            <Separator Margin="0,5,0,15" />
+                            <Separator Margin="0,0,0,15" />
+
+
 
 
 
@@ -685,6 +687,186 @@
                                     Style="{StaticResource TextBoxExtend}"
                                     Text="{Binding CurrentRecipe.OtherSettings.ChannelDisplayPrefix, UpdateSourceTrigger=PropertyChanged}" />
                             </Grid>
+                            <Separator Margin="0,5,0,15" />
+                            <TextBlock
+                                Margin="0,0,0,15"
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Foreground="{DynamicResource SuccessBrush}"
+                                Text="总测量结果输出" />
+
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="输出结果：" />
+                                <StackPanel
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Margin="0,0,0,8"
+                                    Orientation="Horizontal">
+                                    <ToggleButton
+                                        HorizontalAlignment="Left"
+                                        IsChecked="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled, Mode=TwoWay}"
+                                        Style="{StaticResource ToggleButtonSwitch}" />
+                                    <TextBlock
+                                        Margin="8,0,0,0"
+                                        VerticalAlignment="Center"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource SecondaryTextBrush}"
+                                        Text="启用后在整次测量完成时将总 OK/NG 结果写入指定 PLC 点位" />
+                                </StackPanel>
+
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="输出设备："
+                                    Visibility="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled, Converter={StaticResource Boolean2VisibilityConverter}}" />
+                                <hc:ComboBox
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    Margin="0,0,0,8"
+                                    HorizontalAlignment="Left"
+                                    hc:InfoElement.Placeholder="选择输出设备"
+                                    DisplayMemberPath="DeviceName"
+                                    ItemsSource="{Binding StepOperationDevices}"
+                                    SelectedItem="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Style="{StaticResource ComboBoxExtend}"
+                                    Visibility="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled, Converter={StaticResource Boolean2VisibilityConverter}}" />
+
+                                <TextBlock
+                                    Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,28"
+                                    VerticalAlignment="Center"
+                                    Text="输出点位："
+                                    Visibility="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled, Converter={StaticResource Boolean2VisibilityConverter}}" />
+                                <StackPanel
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Visibility="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                    <hc:ComboBox
+                                        Width="{StaticResource FormInputWidth}"
+                                        Margin="0,0,0,6"
+                                        HorizontalAlignment="Left"
+                                        hc:InfoElement.Placeholder="选择输出点位"
+                                        DisplayMemberPath="PointName"
+                                        ItemsSource="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.AvailableDataPoints, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        SelectedItem="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Style="{StaticResource ComboBoxExtend}" />
+                                    <TextBlock
+                                        Margin="0,0,0,6"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource SecondaryTextBrush}"
+                                        Text="Bool 点位默认写入 True / False；非 Bool 点位显示并可设置 OK / NG 值" />
+                                </StackPanel>
+
+                                <TextBlock
+                                    Grid.Row="3"
+                                    Grid.Column="0"
+                                    Margin="0,0,0,8"
+                                    VerticalAlignment="Center"
+                                    Text="OK值：">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled}" Value="True" />
+                                                        <Condition Binding="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsBoolDataPoint}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <hc:TextBox
+                                    Grid.Row="3"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    Margin="0,0,0,8"
+                                    HorizontalAlignment="Left"
+                                    hc:InfoElement.Placeholder="请输入OK值"
+                                    Text="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.OkValue, UpdateSourceTrigger=PropertyChanged}">
+                                    <hc:TextBox.Style>
+                                        <Style BasedOn="{StaticResource TextBoxExtend}" TargetType="hc:TextBox">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled}" Value="True" />
+                                                        <Condition Binding="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsBoolDataPoint}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </hc:TextBox.Style>
+                                </hc:TextBox>
+
+                                <TextBlock
+                                    Grid.Row="4"
+                                    Grid.Column="0"
+                                    VerticalAlignment="Center"
+                                    Text="NG值：">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled}" Value="True" />
+                                                        <Condition Binding="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsBoolDataPoint}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <hc:TextBox
+                                    Grid.Row="4"
+                                    Grid.Column="1"
+                                    Width="{StaticResource FormInputWidth}"
+                                    HorizontalAlignment="Left"
+                                    hc:InfoElement.Placeholder="请输入NG值"
+                                    Text="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.NgValue, UpdateSourceTrigger=PropertyChanged}">
+                                    <hc:TextBox.Style>
+                                        <Style BasedOn="{StaticResource TextBoxExtend}" TargetType="hc:TextBox">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsEnabled}" Value="True" />
+                                                        <Condition Binding="{Binding CurrentRecipe.OtherSettings.OverallResultOutput.IsBoolDataPoint}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </hc:TextBox.Style>
+                                </hc:TextBox>
+                            </Grid>
+
 
                         </StackPanel>
                     </Border>

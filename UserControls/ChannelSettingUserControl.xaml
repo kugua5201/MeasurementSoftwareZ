@@ -857,7 +857,7 @@
                                     <TextBlock
                                         Grid.Row="2"
                                         Grid.Column="0"
-                                        Margin="0,0,0,20"
+                                        Margin="0,0,0,28"
                                         VerticalAlignment="Center"
                                         Text="输出点位："
                                         Visibility="{Binding EditingChannel.EnableResultOutput, Converter={StaticResource Boolean2VisibilityConverter}}" />

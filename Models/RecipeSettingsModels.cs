@@ -105,6 +105,7 @@ namespace MeasurementSoftware.Models
         private double annotationFontSize = 10;
         private string annotationTextColor = "#FFFFFF";
         private AcquisitionStorageConfig acquisitionStorage = new();
+        private OverallMeasurementResultOutputConfig overallResultOutput = new();
         private ObservableCollection<StepOperationBindingConfig> stepOperationBindings = CreateDefaultStepOperationBindings();
 
         public RecipeOtherSettingsConfig()
@@ -246,6 +247,16 @@ namespace MeasurementSoftware.Models
         {
             get => acquisitionStorage;
             set => SetProperty(ref acquisitionStorage, value ?? new AcquisitionStorageConfig());
+        }
+
+        /// <summary>
+        /// 总测量结果输出配置。
+        /// 用于在整次测量完成时将总 OK/NG 结果写入指定 PLC 点位。
+        /// </summary>
+        public OverallMeasurementResultOutputConfig OverallResultOutput
+        {
+            get => overallResultOutput;
+            set => SetProperty(ref overallResultOutput, value ?? new OverallMeasurementResultOutputConfig());
         }
 
         /// <summary>

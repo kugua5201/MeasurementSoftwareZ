@@ -369,35 +369,44 @@ ORDER BY MeasurementTime DESC;";
 
         private async Task EnsureDatabaseAsync(int year)
         {
+            var databaseFilePath = GetDatabaseFilePath(year);
+            if (File.Exists(databaseFilePath))
+            {
+                return;
+            }
+
             Directory.CreateDirectory(_databaseFolder);
-            await using var connection = CreateConnection(year);
+            using var connection = CreateConnection(year);
             await connection.OpenAsync();
 
             await using var command = connection.CreateCommand();
             command.CommandText = $@"
-CREATE TABLE IF NOT EXISTS {TableName}
-(
-    Id INTEGER PRIMARY KEY AUTOINCREMENT,
-    RecipeName TEXT NOT NULL,
-    MeasurementTime TEXT NOT NULL,
-    Barcode TEXT NULL,
-    OperatorName TEXT NULL,
-    IsStepMeasurement INTEGER NOT NULL DEFAULT 0,
-    StepNumber INTEGER NOT NULL DEFAULT 1,
-    TotalSteps INTEGER NOT NULL DEFAULT 1,
-    OverallResultText TEXT NOT NULL,
-    Remarks TEXT NULL,
-    ChannelDataJson TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS IX_MeasurementRecords_RecipeName ON MeasurementRecords(RecipeName);
-CREATE INDEX IF NOT EXISTS IX_MeasurementRecords_MeasurementTime ON MeasurementRecords(MeasurementTime);
-CREATE INDEX IF NOT EXISTS IX_MeasurementRecords_Barcode ON MeasurementRecords(Barcode);";
+            CREATE TABLE IF NOT EXISTS {TableName}
+            (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                RecipeName TEXT NOT NULL,
+                MeasurementTime TEXT NOT NULL,
+                Barcode TEXT NULL,
+                OperatorName TEXT NULL,
+                IsStepMeasurement INTEGER NOT NULL DEFAULT 0,
+                StepNumber INTEGER NOT NULL DEFAULT 1,
+                TotalSteps INTEGER NOT NULL DEFAULT 1,
+                OverallResultText TEXT NOT NULL,
+                Remarks TEXT NULL,
+                ChannelDataJson TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS IX_MeasurementRecords_RecipeName ON MeasurementRecords(RecipeName);
+            CREATE INDEX IF NOT EXISTS IX_MeasurementRecords_MeasurementTime ON MeasurementRecords(MeasurementTime);
+            CREATE INDEX IF NOT EXISTS IX_MeasurementRecords_Barcode ON MeasurementRecords(Barcode);";
             await command.ExecuteNonQueryAsync();
 
             await EnsureColumnAsync(connection, "OperatorName", "TEXT NULL");
             await EnsureColumnAsync(connection, "IsStepMeasurement", "INTEGER NOT NULL DEFAULT 0");
             await EnsureColumnAsync(connection, "StepNumber", "INTEGER NOT NULL DEFAULT 1");
             await EnsureColumnAsync(connection, "TotalSteps", "INTEGER NOT NULL DEFAULT 1");
+            await connection.CloseAsync();
+            //Microsoft.Data.Sqlite.SqliteConnection.ClearPool(connection);
+            command?.Dispose();
         }
 
         private static async Task EnsureColumnAsync(SqliteConnection connection, string columnName, string columnDefinition)
@@ -417,7 +426,7 @@ CREATE INDEX IF NOT EXISTS IX_MeasurementRecords_Barcode ON MeasurementRecords(B
                     }
                 }
             }
-
+            command?.Dispose();
             if (exists)
             {
                 return;
@@ -426,6 +435,7 @@ CREATE INDEX IF NOT EXISTS IX_MeasurementRecords_Barcode ON MeasurementRecords(B
             await using var alterCommand = connection.CreateCommand();
             alterCommand.CommandText = $"ALTER TABLE {TableName} ADD COLUMN {columnName} {columnDefinition};";
             await alterCommand.ExecuteNonQueryAsync();
+            alterCommand?.Dispose();
         }
 
         private SqliteConnection CreateConnection(int year)
