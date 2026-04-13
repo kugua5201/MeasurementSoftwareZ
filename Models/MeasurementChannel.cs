@@ -4,7 +4,6 @@ using MultiProtocol.Model;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
-
 namespace MeasurementSoftware.Models
 {
     /// <summary>
@@ -808,7 +807,7 @@ namespace MeasurementSoftware.Models
             }
         }
 
-        private readonly Lock _dataLock = new();
+        private readonly object _dataLock = new();
 
         /// <summary>
         /// 根据通道类型处理并更新测量值
@@ -816,7 +815,9 @@ namespace MeasurementSoftware.Models
         /// <param name="rawValue">原始值</param>
         public void UpdateMeasuredValue(double rawValue)
         {
+
             lock (_dataLock)
+
             {
                 IsMeasuredValueAvailable = true;
                 MeasuredValue = rawValue;

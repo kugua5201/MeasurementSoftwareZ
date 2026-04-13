@@ -1,4 +1,5 @@
 ﻿using MeasurementSoftware.Models;
+using MeasurementSoftware.Helpers;
 using System.IO.Ports;
 using System.Text;
 using System.Timers;
@@ -19,79 +20,91 @@ namespace MeasurementSoftware.Services.QrCodes
                 throw new InvalidOperationException(error);
             }
 
-            using var serialPort = new SerialPort(config.SerialPortName, (int)config.BaudRate, config.Parity, (int)config.DataBits, config.StopBits)
+            if (!SerialPortCompatibility.TryEnsureSupported(out var platformError))
             {
-                DtrEnable = true,
-                RtsEnable = true,
-                Encoding = Encoding.UTF8
-            };
+                throw new PlatformNotSupportedException(platformError);
+            }
 
-            var syncRoot = new object();
-            var buffer = new StringBuilder();
-            var completionSource = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            using var inactivityTimer = new System.Timers.Timer(120)
+            try
             {
-                AutoReset = false,
-                Enabled = false
-            };
-
-            inactivityTimer.Elapsed += (_, _) =>
-            {
-                lock (syncRoot)
+                using var serialPort = new SerialPort(config.SerialPortName, (int)config.BaudRate, config.Parity, (int)config.DataBits, config.StopBits)
                 {
-                    if (buffer.Length == 0)
-                    {
-                        return;
-                    }
+                    DtrEnable = true,
+                    RtsEnable = true,
+                    Encoding = Encoding.UTF8
+                };
 
-                    completionSource.TrySetResult(ConsumeAll(buffer));
-                }
-            };
+                var syncRoot = new object();
+                var buffer = new StringBuilder();
+                var completionSource = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            SerialDataReceivedEventHandler? dataReceivedHandler = null;
-            dataReceivedHandler = (_, _) =>
-            {
-                try
+                using var inactivityTimer = new System.Timers.Timer(120)
                 {
-                    var chunk = serialPort.ReadExisting();
-                    if (string.IsNullOrEmpty(chunk))
-                    {
-                        return;
-                    }
+                    AutoReset = false,
+                    Enabled = false
+                };
 
+                inactivityTimer.Elapsed += (_, _) =>
+                {
                     lock (syncRoot)
                     {
-                        buffer.Append(chunk);
-                        if (QrCodeRawDataRuleHelper.TryConsume(buffer, config, out var line))
+                        if (buffer.Length == 0)
                         {
-                            completionSource.TrySetResult(line);
                             return;
                         }
 
-                        inactivityTimer.Stop();
-                        inactivityTimer.Start();
+                        completionSource.TrySetResult(ConsumeAll(buffer));
                     }
-                }
-                catch (Exception ex)
+                };
+
+                SerialDataReceivedEventHandler? dataReceivedHandler = null;
+                dataReceivedHandler = (_, _) =>
                 {
-                    completionSource.TrySetException(ex);
+                    try
+                    {
+                        var chunk = serialPort.ReadExisting();
+                        if (string.IsNullOrEmpty(chunk))
+                        {
+                            return;
+                        }
+
+                        lock (syncRoot)
+                        {
+                            buffer.Append(chunk);
+                            if (QrCodeRawDataRuleHelper.TryConsume(buffer, config, out var line))
+                            {
+                                completionSource.TrySetResult(line);
+                                return;
+                            }
+
+                            inactivityTimer.Stop();
+                            inactivityTimer.Start();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        completionSource.TrySetException(ex);
+                    }
+                };
+
+                serialPort.DataReceived += dataReceivedHandler;
+
+                using var registration = cancellationToken.Register(() => completionSource.TrySetCanceled(cancellationToken));
+                try
+                {
+                    serialPort.Open();
+                    var rawData = await completionSource.Task;
+                    return rawData;
                 }
-            };
-
-            serialPort.DataReceived += dataReceivedHandler;
-
-            using var registration = cancellationToken.Register(() => completionSource.TrySetCanceled(cancellationToken));
-            try
-            {
-                serialPort.Open();
-                var rawData = await completionSource.Task;
-                return rawData;
+                finally
+                {
+                    serialPort.DataReceived -= dataReceivedHandler;
+                    inactivityTimer.Stop();
+                }
             }
-            finally
+            catch (PlatformNotSupportedException ex)
             {
-                serialPort.DataReceived -= dataReceivedHandler;
-                inactivityTimer.Stop();
+                throw new PlatformNotSupportedException("当前目标框架下串口扫码不可用，请切换到 net8.0-windows7.0 或更高版本。", ex);
             }
         }
 

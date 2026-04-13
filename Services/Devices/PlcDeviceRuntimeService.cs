@@ -8,7 +8,7 @@ namespace MeasurementSoftware.Services.Devices
     /// </summary>
     public class PlcDeviceRuntimeService : IPlcDeviceRuntimeService
     {
-        private readonly Lock _syncRoot = new();
+        private readonly object _syncRoot = new();
         private readonly IPlcDeviceRuntimeFactory _runtimeFactory;
         private readonly Dictionary<PlcDevice, IPlcDeviceRuntime> _runtimes = [];
 

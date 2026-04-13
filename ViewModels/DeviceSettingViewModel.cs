@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using HandyControl.Controls;
 using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Helpers;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
@@ -269,10 +270,18 @@ namespace MeasurementSoftware.ViewModels
         private void RefreshComPorts()
         {
             AvailableComPorts.Clear();
-            foreach (var port in SerialPort.GetPortNames())
+
+            if (!SerialPortCompatibility.TryGetPortNames(out var portNames, out var error))
+            {
+                _log.Warn(error);
+                return;
+            }
+
+            foreach (var port in portNames)
             {
                 AvailableComPorts.Add(port);
             }
+
             if (AvailableComPorts.Count > 0)
             {
 

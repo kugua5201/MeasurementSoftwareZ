@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using MeasurementSoftware.Helpers;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Logs;
 using System.Text;
@@ -39,6 +40,11 @@ namespace MeasurementSoftware.Services.QrCodes
                     if (string.IsNullOrWhiteSpace(config.SerialPortName))
                     {
                         error = "请选择串口";
+                        return false;
+                    }
+
+                    if (!SerialPortCompatibility.TryEnsureSupported(out error))
+                    {
                         return false;
                     }
                     break;

@@ -39,3 +39,5 @@
 - 用户要求检测记录页分页应优先使用 HandyControl 的 hc:Pagination。
 - 用户要求通道详情必须使用用户控件并通过 HandyControl PopupWindow 弹出，不使用 MessageBox 或简单文本弹窗。
 - 用户要求数据库初始化不要按运行期年份缓存判断，而应优先按实际数据库文件是否存在来决定是否创建或检查。
+- 用户要求 MeasurementSoftware 项目版本号需在生成时自动生成，格式为 Major.Minor.yy.MMdd，例如 1.0.26.0413。
+- 用户要求在多目标框架兼容时，net6/net7 这类低版本框架遇到库能力差异不能直接屏蔽功能；应使用替代实现单独适配，例如串口列表改用 Windows 注册表等方式继续支持。
