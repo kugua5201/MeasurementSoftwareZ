@@ -9,6 +9,7 @@ using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Events;
 using MeasurementSoftware.Services.Licensing;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.Measurements;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
 using MeasurementSoftware.Services.UserSetting;
@@ -52,6 +53,11 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<IPlcDeviceRuntimeFactory, PlcDeviceRuntimeFactory>();
             builder.RegisterSingleton<IPlcDeviceRuntimeService, PlcDeviceRuntimeService>();
             builder.RegisterSingleton<IKeyboardQrCodeInputService, KeyboardQrCodeInputService>();
+            builder.RegisterSingleton<IMeasurementFormulaEvaluator, MeasurementFormulaEvaluator>();
+            builder.RegisterSingleton<IMeasurementFormulaScriptEvaluator, MeasurementFormulaScriptEvaluator>();
+            builder.RegisterSingleton<IMeasurementChannelHandler, DirectMeasurementChannelHandler>();
+            builder.RegisterSingleton<IMeasurementChannelHandler, IndirectMeasurementChannelHandler>();
+            builder.RegisterSingleton<IMeasurementChannelHandler, VirtualMeasurementChannelHandler>();
 
             builder.RegisterSingleton<IQrCodeScanService, QrCodeScanService>();
             builder.RegisterTransient<KeyboardInputQrCodeSourceHandler>();

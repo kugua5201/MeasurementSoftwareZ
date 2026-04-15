@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.Measurements;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
@@ -17,6 +18,8 @@ namespace MeasurementSoftware.ViewModels
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
+        private readonly IReadOnlyDictionary<MeasurementChannelMode, IMeasurementChannelHandler> _channelHandlers;
+        private readonly IMeasurementFormulaScriptEvaluator _formulaScriptEvaluator;
 
         // 直接引用全局配置
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
@@ -75,19 +78,31 @@ namespace MeasurementSoftware.ViewModels
         [ObservableProperty]
         private bool showCacheToggle;
 
+        private MeasurementChannelSourceBinding? selectedIndirectSourceBinding;
+
+        public MeasurementChannelSourceBinding? SelectedIndirectSourceBinding
+        {
+            get => selectedIndirectSourceBinding;
+            set => SetProperty(ref selectedIndirectSourceBinding, value);
+        }
+
         /// <summary>
         /// 抽屉标题（根据是添加还是编辑动态显示）
         /// </summary>
         public string DrawerTitle => IsEditMode ? "编辑通道" : "添加通道";
 
         public IEnumerable<ChannelType> ChannelTypes => Enum.GetValues<ChannelType>();
+        public IEnumerable<MeasurementChannelMode> MeasurementChannelModes => Enum.GetValues<MeasurementChannelMode>();
+        public IEnumerable<IndirectMeasurementTriggerMode> IndirectMeasurementTriggerModes => Enum.GetValues<IndirectMeasurementTriggerMode>();
 
-        public ChannelSettingViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService)
+        public ChannelSettingViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IMeasurementFormulaScriptEvaluator formulaScriptEvaluator, IEnumerable<IMeasurementChannelHandler> channelHandlers)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
             _deviceConfigService = deviceConfigService;
+            _formulaScriptEvaluator = formulaScriptEvaluator;
             _enabledDevicesObserver = new EnabledPlcDevicesObserver(_deviceConfigService);
+            _channelHandlers = channelHandlers.ToDictionary(handler => handler.Mode);
 
             // 监听配方和设备变化
             if (_recipeConfigService is INotifyPropertyChanged npc)
@@ -108,14 +123,14 @@ namespace MeasurementSoftware.ViewModels
                 {
                     foreach (var channel in CurrentRecipe.Channels)
                     {
-                        LoadDataPointsForChannel(channel);
+                        LoadMeasurementBindingsForChannel(channel);
                         LoadResultOutputDataPointsForChannel(channel);
                     }
                 }
 
                 if (EditingChannel != null)
                 {
-                    LoadDataPointsForChannel(EditingChannel);
+                    LoadMeasurementBindingsForChannel(EditingChannel);
                     LoadResultOutputDataPointsForChannel(EditingChannel);
                 }
 
@@ -137,10 +152,7 @@ namespace MeasurementSoftware.ViewModels
                 {
                     channel.PropertyChanged -= Channel_PropertyChanged;
                     channel.PropertyChanged += Channel_PropertyChanged;
-                    if (channel.PlcDeviceId != 0)
-                    {
-                        LoadDataPointsForChannel(channel);
-                    }
+                    LoadMeasurementBindingsForChannel(channel);
 
                     if (channel.ResultOutputPlcDeviceId != 0)
                     {
@@ -190,6 +202,28 @@ namespace MeasurementSoftware.ViewModels
             }
         }
 
+        private IMeasurementChannelHandler GetChannelHandler(MeasurementChannel channel)
+        {
+            return _channelHandlers.TryGetValue(channel.MeasurementMode, out var handler)
+                ? handler
+                : _channelHandlers[MeasurementChannelMode.Direct];
+        }
+
+        private void LoadMeasurementBindingsForChannel(MeasurementChannel channel)
+        {
+            GetChannelHandler(channel).HydrateBindings(channel, _deviceConfigService);
+        }
+
+        private void SyncMeasurementBindingState(MeasurementChannel channel)
+        {
+            GetChannelHandler(channel).SyncBindings(channel, _deviceConfigService);
+        }
+
+        private bool ValidateMeasurementConfiguration(MeasurementChannel channel, out string errorMessage)
+        {
+            return GetChannelHandler(channel).ValidateConfiguration(channel, out errorMessage);
+        }
+
         private void LoadDataPointsForChannel(MeasurementChannel channel)
         {
             var device = channel.RuntimeDevice;
@@ -201,6 +235,12 @@ namespace MeasurementSoftware.ViewModels
             else if (device == null || device.DeviceId != channel.PlcDeviceId)
             {
                 device = _deviceConfigService.Devices.FirstOrDefault(d => d.DeviceId == channel.PlcDeviceId);
+            }
+
+            if (device != null && !device.IsEnabled)
+            {
+                channel.ClearRuntimeBindings();
+                return;
             }
 
             if (!ReferenceEquals(channel.RuntimeDevice, device))
@@ -228,24 +268,31 @@ namespace MeasurementSoftware.ViewModels
 
         private void SyncChannelBindingState(MeasurementChannel channel)
         {
-            if (channel.RuntimeDevice != null)
+            if (channel.IsDirectMeasurementMode && channel.RuntimeDevice != null)
             {
                 channel.PlcDeviceId = channel.RuntimeDevice.DeviceId;
             }
 
-            if (channel.RuntimeDataPoint != null)
+            if (channel.IsDirectMeasurementMode && channel.RuntimeDataPoint != null)
             {
                 channel.DataPointId = channel.RuntimeDataPoint.PointId;
                 channel.DataSourceAddress = channel.RuntimeDataPoint.Address;
             }
-            else if (channel.PlcDeviceId == 0)
+            else if (channel.IsDirectMeasurementMode && channel.PlcDeviceId == 0)
             {
                 channel.DataPointId = string.Empty;
                 channel.DataSourceAddress = string.Empty;
                 channel.UseCacheValue = false;
             }
+            else if (!channel.IsDirectMeasurementMode)
+            {
+                channel.PlcDeviceId = 0;
+                channel.DataPointId = string.Empty;
+                channel.DataSourceAddress = string.Empty;
+                channel.UseCacheValue = false;
+            }
 
-            if (channel.PlcDeviceId != 0)
+            if (channel.IsDirectMeasurementMode && channel.PlcDeviceId != 0)
             {
                 LoadDataPointsForChannel(channel);
             }
@@ -348,22 +395,20 @@ namespace MeasurementSoftware.ViewModels
                 UpperTolerance = 0.1,
                 LowerTolerance = 0.1,
                 ChannelType = ChannelTypes.FirstOrDefault(),
+                MeasurementMode = MeasurementChannelMode.Direct
             };
 
-            EditingChannel.BindDevice(EnabledPlcDevices.FirstOrDefault());
+            GetChannelHandler(EditingChannel).InitializeNewChannel(EditingChannel, EnabledPlcDevices.ToList());
+            LoadMeasurementBindingsForChannel(EditingChannel);
 
-            // 加载数据点并设置默认值（如果有设备）
-            if (EditingChannel.RuntimeDevice != null)
+            if (EditingChannel.IsDirectMeasurementMode && EditingChannel.RuntimeDevice != null && EditingChannel.AvailableDataPoints.Any())
             {
-                LoadDataPointsForChannel(EditingChannel);
-                if (EditingChannel.AvailableDataPoints.Any())
-                {
-                    EditingChannel.RuntimeDataPoint = EditingChannel.AvailableDataPoints.First();
-                }
+                EditingChannel.RuntimeDataPoint ??= EditingChannel.AvailableDataPoints.First();
             }
 
             // 监听设备 ID 变化，响应式加载数据点
             EditingChannel.PropertyChanged += EditingChannel_PropertyChanged;
+            RegisterIndirectBindingEvents(EditingChannel);
 
             IsEditMode = false;
             OnPropertyChanged(nameof(DrawerTitle));
@@ -392,6 +437,7 @@ namespace MeasurementSoftware.ViewModels
                 UpperTolerance = channel.UpperTolerance,
                 LowerTolerance = channel.LowerTolerance,
                 ChannelType = channel.ChannelType,
+                MeasurementMode = channel.MeasurementMode,
                 Unit = channel.Unit,
                 DecimalPlaces = channel.DecimalPlaces,
                 SampleCount = channel.SampleCount,
@@ -407,15 +453,17 @@ namespace MeasurementSoftware.ViewModels
                 ResultOutputDataPointId = channel.ResultOutputDataPointId,
                 ResultOutputAddress = channel.ResultOutputAddress,
                 ResultOutputOkValue = channel.ResultOutputOkValue,
-                ResultOutputNgValue = channel.ResultOutputNgValue
+                ResultOutputNgValue = channel.ResultOutputNgValue,
+                IndirectFormula = channel.IndirectFormula,
+                IndirectTriggerMode = channel.IndirectTriggerMode
             };
 
-            // 如果有设备ID，确保数据点列表已加载
-            if (EditingChannel.PlcDeviceId != 0)
-            {
-                LoadDataPointsForChannel(EditingChannel);
+            EditingChannel.ReplaceIndirectSourceBindings(channel.IndirectSourceBindings.Select(binding => binding.Clone()));
 
-                // 判断是否显示缓存开关
+            LoadMeasurementBindingsForChannel(EditingChannel);
+
+            if (EditingChannel.IsDirectMeasurementMode)
+            {
                 var dp = EditingChannel.RuntimeDataPoint;
                 ShowCacheToggle = dp?.IsCacheGenerated == true
                     && !string.IsNullOrEmpty(dp.CacheFieldKey)
@@ -425,15 +473,16 @@ namespace MeasurementSoftware.ViewModels
                 {
                     EditingChannel.UseCacheValue = false;
                 }
+            }
 
             if (EditingChannel.ResultOutputPlcDeviceId != 0)
             {
                 LoadResultOutputDataPointsForChannel(EditingChannel);
             }
-            }
 
             // 监听设备 ID 变化，响应式加载数据点
             EditingChannel.PropertyChanged += EditingChannel_PropertyChanged;
+            RegisterIndirectBindingEvents(EditingChannel);
 
             IsEditMode = true;
             OnPropertyChanged(nameof(DrawerTitle));
@@ -450,8 +499,26 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            if (e.PropertyName == nameof(MeasurementChannel.RuntimeDevice))
+            if (e.PropertyName == nameof(MeasurementChannel.MeasurementMode))
             {
+                GetChannelHandler(channel).InitializeNewChannel(channel, EnabledPlcDevices.ToList());
+                LoadMeasurementBindingsForChannel(channel);
+                ShowCacheToggle = channel.IsDirectMeasurementMode
+                    && channel.RuntimeDataPoint?.IsCacheGenerated == true
+                    && !string.IsNullOrEmpty(channel.RuntimeDataPoint.CacheFieldKey)
+                    && IsCacheEnabledForDevice(channel.RuntimeDevice?.DeviceId ?? 0);
+                if (!ShowCacheToggle)
+                {
+                    channel.UseCacheValue = false;
+                }
+            }
+            else if (e.PropertyName == nameof(MeasurementChannel.RuntimeDevice))
+            {
+                if (!channel.IsDirectMeasurementMode)
+                {
+                    return;
+                }
+
                 if (channel.RuntimeDevice != null)
                 {
                     if (channel.RuntimeDataPoint == null && channel.AvailableDataPoints.Any())
@@ -474,6 +541,11 @@ namespace MeasurementSoftware.ViewModels
             }
             else if (e.PropertyName == nameof(MeasurementChannel.RuntimeDataPoint))
             {
+                if (!channel.IsDirectMeasurementMode)
+                {
+                    return;
+                }
+
                 if (channel.RuntimeDataPoint != null)
                 {
                     var dataPoint = channel.RuntimeDataPoint;
@@ -517,6 +589,147 @@ namespace MeasurementSoftware.ViewModels
             }
         }
 
+        private void RegisterIndirectBindingEvents(MeasurementChannel channel)
+        {
+            channel.IndirectSourceBindings.CollectionChanged -= IndirectSourceBindings_CollectionChanged;
+            channel.IndirectSourceBindings.CollectionChanged += IndirectSourceBindings_CollectionChanged;
+
+            foreach (var binding in channel.IndirectSourceBindings)
+            {
+                binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+                binding.PropertyChanged += IndirectSourceBinding_PropertyChanged;
+            }
+        }
+
+        private void UnregisterIndirectBindingEvents(MeasurementChannel? channel)
+        {
+            if (channel == null)
+            {
+                return;
+            }
+
+            channel.IndirectSourceBindings.CollectionChanged -= IndirectSourceBindings_CollectionChanged;
+            foreach (var binding in channel.IndirectSourceBindings)
+            {
+                binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+            }
+        }
+
+        private void IndirectSourceBindings_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems != null)
+            {
+                foreach (MeasurementChannelSourceBinding binding in e.NewItems)
+                {
+                    binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+                    binding.PropertyChanged += IndirectSourceBinding_PropertyChanged;
+                }
+            }
+
+            if (e.OldItems != null)
+            {
+                foreach (MeasurementChannelSourceBinding binding in e.OldItems)
+                {
+                    binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+                }
+            }
+        }
+
+        private void IndirectSourceBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not MeasurementChannelSourceBinding binding)
+            {
+                return;
+            }
+
+            if (e.PropertyName == nameof(MeasurementChannelSourceBinding.RuntimeDevice))
+            {
+                if (binding.RuntimeDevice == null)
+                {
+                    binding.ClearRuntimeBindings();
+                    return;
+                }
+
+                if (binding.RuntimeDataPoint == null && binding.AvailableDataPoints.Any())
+                {
+                    binding.RuntimeDataPoint = binding.AvailableDataPoints.First();
+                }
+            }
+        }
+
+        [RelayCommand]
+        private void AddIndirectSourceBinding()
+        {
+            if (EditingChannel == null)
+            {
+                return;
+            }
+
+            var nextIndex = EditingChannel.IndirectSourceBindings.Count + 1;
+            var binding = new MeasurementChannelSourceBinding
+            {
+                SourceKey = $"X{nextIndex}"
+            };
+
+            binding.PropertyChanged += IndirectSourceBinding_PropertyChanged;
+            binding.RuntimeDevice = EnabledPlcDevices.FirstOrDefault();
+            EditingChannel.IndirectSourceBindings.Add(binding);
+            SelectedIndirectSourceBinding = binding;
+        }
+
+        [RelayCommand]
+        private void RemoveIndirectSourceBinding(MeasurementChannelSourceBinding? binding)
+        {
+            if (EditingChannel == null || binding == null)
+            {
+                return;
+            }
+
+            if (EditingChannel.IndirectSourceBindings.Count <= 1)
+            {
+                Growl.Warning("间接测量至少需要保留一个数据源");
+                return;
+            }
+
+            binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+            EditingChannel.IndirectSourceBindings.Remove(binding);
+            SelectedIndirectSourceBinding = EditingChannel.IndirectSourceBindings.FirstOrDefault();
+        }
+
+        [RelayCommand]
+        private void CheckIndirectFormula()
+        {
+            if (EditingChannel == null)
+            {
+                return;
+            }
+
+            if (!EditingChannel.IsIndirectMeasurementMode)
+            {
+                Growl.Warning("当前不是间接测量模式");
+                return;
+            }
+
+            if (!TryBuildIndirectFormulaVariables(EditingChannel, out var variables, out var errorMessage))
+            {
+                Growl.Warning(errorMessage);
+                _log.Warn(errorMessage);
+                return;
+            }
+
+            if (!_formulaScriptEvaluator.TryEvaluateScript(EditingChannel.IndirectFormula, variables, out var result, out var calculatedVariables, out var executionSteps, out errorMessage))
+            {
+                Growl.Warning($"脚本检查失败：{errorMessage}");
+                _log.Warn($"脚本检查失败：{errorMessage}");
+                return;
+            }
+
+            var intermediateVariableCount = Math.Max(0, calculatedVariables.Count - variables.Count - 1);
+            //Growl.Success($"脚本检查通过，RESULT = {result:F6}，中间变量 {intermediateVariableCount} 个");
+            Growl.Success($"脚本检查通过，中间变量 {intermediateVariableCount} 个");
+            _log.Info($"脚本检查通过，中间变量 {intermediateVariableCount} 个");
+        }
+
         [RelayCommand]
         private void SaveChannel()
         {
@@ -545,6 +758,14 @@ namespace MeasurementSoftware.ViewModels
             }
 
 
+            SyncMeasurementBindingState(EditingChannel);
+
+            if (!ValidateMeasurementConfiguration(EditingChannel, out var errorMessage))
+            {
+                MessageBox.Show(errorMessage, "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             SyncChannelBindingState(EditingChannel);
 
             if (IsEditMode)
@@ -562,6 +783,7 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.UpperTolerance = EditingChannel.UpperTolerance;
                     originalChannel.LowerTolerance = EditingChannel.LowerTolerance;
                     originalChannel.ChannelType = EditingChannel.ChannelType;
+                    originalChannel.MeasurementMode = EditingChannel.MeasurementMode;
                     originalChannel.Unit = EditingChannel.Unit;
                     originalChannel.DecimalPlaces = EditingChannel.DecimalPlaces;
                     originalChannel.RequiresCalibration = EditingChannel.RequiresCalibration;
@@ -571,21 +793,33 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.DataPointId = EditingChannel.DataPointId;
                     originalChannel.DataSourceAddress = EditingChannel.DataSourceAddress;
                     originalChannel.SampleCount = EditingChannel.SampleCount;
+                    originalChannel.IndirectFormula = EditingChannel.IndirectFormula;
+                    originalChannel.IndirectTriggerMode = EditingChannel.IndirectTriggerMode;
                      originalChannel.EnableResultOutput = EditingChannel.EnableResultOutput;
                      originalChannel.ResultOutputPlcDeviceId = EditingChannel.ResultOutputPlcDeviceId;
                      originalChannel.ResultOutputDataPointId = EditingChannel.ResultOutputDataPointId;
                      originalChannel.ResultOutputAddress = EditingChannel.ResultOutputAddress;
                      originalChannel.ResultOutputOkValue = EditingChannel.ResultOutputOkValue;
                      originalChannel.ResultOutputNgValue = EditingChannel.ResultOutputNgValue;
+                    originalChannel.ReplaceIndirectSourceBindings(EditingChannel.IndirectSourceBindings.Select(binding => binding.Clone()));
                   
-                    if (EditingChannel.PlcDeviceId == 0)
+                    if (EditingChannel.IsDirectMeasurementMode)
                     {
-                        originalChannel.ClearRuntimeBindings();
+                        if (EditingChannel.PlcDeviceId == 0)
+                        {
+                            originalChannel.ClearRuntimeBindings();
+                        }
+                        else
+                        {
+                            LoadMeasurementBindingsForChannel(originalChannel);
+                            originalChannel.UseCacheValue = EditingChannel.UseCacheValue;
+                        }
                     }
                     else
                     {
-                        LoadDataPointsForChannel(originalChannel);
-                        originalChannel.UseCacheValue = EditingChannel.UseCacheValue;
+                        originalChannel.ClearRuntimeBindings();
+                        originalChannel.UseCacheValue = false;
+                        LoadMeasurementBindingsForChannel(originalChannel);
                     }
 
                      if (!EditingChannel.EnableResultOutput || EditingChannel.ResultOutputPlcDeviceId == 0)
@@ -621,12 +855,49 @@ namespace MeasurementSoftware.ViewModels
             if (EditingChannel != null)
             {
                 EditingChannel.PropertyChanged -= EditingChannel_PropertyChanged;
+                UnregisterIndirectBindingEvents(EditingChannel);
             }
 
             IsChannelEditorOpen = false;
 
             // 触发 UI 刷新
             OnPropertyChanged(nameof(Channels));
+        }
+
+        private static bool TryBuildIndirectFormulaVariables(MeasurementChannel channel, out Dictionary<string, double> variables, out string errorMessage)
+        {
+            variables = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            errorMessage = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(channel.IndirectFormula))
+            {
+                errorMessage = "请先输入公式";
+                return false;
+            }
+
+            foreach (var binding in channel.IndirectSourceBindings)
+            {
+                var sourceKey = binding.SourceKey?.Trim();
+                if (string.IsNullOrWhiteSpace(sourceKey))
+                {
+                    errorMessage = "变量名不能为空";
+                    return false;
+                }
+
+                if (!(char.IsLetter(sourceKey[0]) || sourceKey[0] == '_') || sourceKey.Any(ch => !char.IsLetterOrDigit(ch) && ch != '_'))
+                {
+                    errorMessage = $"变量名 {sourceKey} 只能包含字母、数字和下划线，且必须以字母或下划线开头";
+                    return false;
+                }
+
+                if (!variables.TryAdd(sourceKey, 1d))
+                {
+                    errorMessage = $"变量名 {sourceKey} 重复，请修改后重试";
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         [RelayCommand]
@@ -636,6 +907,7 @@ namespace MeasurementSoftware.ViewModels
             if (EditingChannel != null)
             {
                 EditingChannel.PropertyChanged -= EditingChannel_PropertyChanged;
+                UnregisterIndirectBindingEvents(EditingChannel);
             }
 
             IsChannelEditorOpen = false;

@@ -1,7 +1,9 @@
 ﻿using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Helpers;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.UserSetting;
 using MeasurementSoftware.ViewModels;
+using ICSharpCode.AvalonEdit;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -23,6 +25,24 @@ namespace MeasurementSoftware.UserControls
         {
             InitializeComponent();
             RestoreLayout();
+        }
+
+        /// <summary>
+        /// 公式脚本编辑器加载时初始化到第一行。
+        /// </summary>
+        private void IndirectFormulaEditorTextBox_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is not TextEditor textEditor)
+            {
+                return;
+            }
+
+            Dispatcher.BeginInvoke(() =>
+            {
+                textEditor.SyntaxHighlighting = FormulaScriptHighlightingManager.GetOrCreate();
+                textEditor.ScrollToHome();
+                textEditor.TextArea.Caret.Offset = 0;
+            }, DispatcherPriority.Background);
         }
 
         private void DataGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)

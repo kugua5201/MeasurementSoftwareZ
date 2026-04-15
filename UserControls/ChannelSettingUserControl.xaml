@@ -2,12 +2,16 @@
     x:Class="MeasurementSoftware.UserControls.ChannelSettingUserControl"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:avalonedit="clr-namespace:ICSharpCode.AvalonEdit;assembly=ICSharpCode.AvalonEdit"
+    xmlns:behaviors="clr-namespace:MeasurementSoftware.Behaviors"
     xmlns:converters="clr-namespace:MeasurementSoftware.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:hc="https://handyorg.github.io/handycontrol"
     xmlns:helpers="clr-namespace:MeasurementSoftware.Helpers"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:local="clr-namespace:MeasurementSoftware.UserControls"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="clr-namespace:MeasurementSoftware.Models"
     x:Name="ChannelSettingControl"
     d:DesignHeight="700"
     d:DesignWidth="1200"
@@ -303,6 +307,11 @@
                                     Header="工步"
                                     IsReadOnly="True" />
                                 <DataGridTextColumn
+                                    Width="90"
+                                    Binding="{Binding MeasurementMode, Converter={StaticResource EnumToDisplayTextConverter}}"
+                                    Header="测量模式"
+                                    IsReadOnly="True" />
+                                <DataGridTextColumn
                                     Width="110"
                                     Binding="{Binding ChannelType}"
                                     Header="取值类型"
@@ -314,17 +323,17 @@
                                     IsReadOnly="True" />
                                 <DataGridTextColumn
                                     Width="100"
-                                    Binding="{Binding PlcDeviceName}"
+                                    Binding="{Binding DisplayPlcDeviceName}"
                                     Header="PLC设备"
                                     IsReadOnly="True" />
                                 <DataGridTextColumn
                                     Width="100"
-                                    Binding="{Binding DataPointName}"
+                                    Binding="{Binding DisplayDataPointName}"
                                     Header="数据点位"
                                     IsReadOnly="True" />
                                 <DataGridTextColumn
-                                    Width="100"
-                                    Binding="{Binding DataSourceAddress}"
+                                    Width="160"
+                                    Binding="{Binding DisplayDataSourceAddress}"
                                     Header="点位地址"
                                     IsReadOnly="True" />
                                 <DataGridTextColumn
@@ -733,9 +742,48 @@
                                         Grid.Column="0"
                                         Margin="0,0,0,8"
                                         VerticalAlignment="Center"
-                                        Text="PLC设备：" />
-                                    <hc:ComboBox
+                                        Text="测量模式：" />
+                                    <ComboBox
                                         Grid.Row="0"
+                                        Grid.Column="1"
+                                        Width="{StaticResource FormInputWidth}"
+                                        Margin="0,0,0,8"
+                                        HorizontalAlignment="Left"
+                                        ItemsSource="{Binding MeasurementChannelModes}"
+                                        SelectedItem="{Binding EditingChannel.MeasurementMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Style="{StaticResource ComboBoxExtend}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayTextConverter}}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Grid.Column="0"
+                                        Margin="0,0,0,8"
+                                        VerticalAlignment="Center"
+                                        Text="PLC设备：">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Direct}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Indirect}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Virtual}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <hc:ComboBox
+                                        Grid.Row="1"
                                         Grid.Column="1"
                                         Width="{StaticResource FormInputWidth}"
                                         Margin="0,0,0,8"
@@ -743,35 +791,84 @@
                                         hc:InfoElement.Placeholder="选择设备"
                                         DisplayMemberPath="DeviceName"
                                         ItemsSource="{Binding EnabledPlcDevices}"
-                                        SelectedItem="{Binding EditingChannel.RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        Style="{StaticResource ComboBoxExtend}" />
+                                        SelectedItem="{Binding EditingChannel.RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        <hc:ComboBox.Style>
+                                            <Style BasedOn="{StaticResource ComboBoxExtend}" TargetType="hc:ComboBox">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Direct}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Indirect}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Virtual}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </hc:ComboBox.Style>
+                                    </hc:ComboBox>
 
                                     <TextBlock
-                                        Grid.Row="1"
+                                        Grid.Row="2"
                                         Grid.Column="0"
                                         VerticalAlignment="Center"
-                                        Text="数据点位：" />
+                                        Text="数据点位：">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Direct}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Indirect}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Virtual}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                     <hc:ComboBox
-                                        Grid.Row="1"
+                                        Grid.Row="2"
                                         Grid.Column="1"
                                         Width="{StaticResource FormInputWidth}"
                                         HorizontalAlignment="Left"
                                         hc:InfoElement.Placeholder="选择数据点"
                                         DisplayMemberPath="PointName"
                                         ItemsSource="{Binding EditingChannel.AvailableDataPoints, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        SelectedItem="{Binding EditingChannel.RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        Style="{StaticResource ComboBoxExtend}" />
+                                        SelectedItem="{Binding EditingChannel.RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        <hc:ComboBox.Style>
+                                            <Style BasedOn="{StaticResource ComboBoxExtend}" TargetType="hc:ComboBox">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Direct}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Indirect}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Virtual}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </hc:ComboBox.Style>
+                                    </hc:ComboBox>
 
                                     <!--  使用缓存值开关：仅当选中的点位是缓存生成的时候显示  -->
                                     <TextBlock
-                                        Grid.Row="2"
+                                        Grid.Row="3"
                                         Grid.Column="0"
                                         Margin="0,8,0,0"
                                         VerticalAlignment="Center"
                                         Text="启用硬件缓存："
                                         Visibility="{Binding ShowCacheToggle, Converter={StaticResource Boolean2VisibilityConverter}}" />
                                     <StackPanel
-                                        Grid.Row="2"
+                                        Grid.Row="3"
                                         Grid.Column="1"
                                         Margin="0,8,0,0"
                                         Orientation="Horizontal"
@@ -787,6 +884,264 @@
                                             Foreground="{DynamicResource SecondaryTextBrush}"
                                             Text="开启后测量使用缓存解析值，关闭使用寄存器实时值" />
                                     </StackPanel>
+
+                                    <Grid
+                                        Grid.Row="4"
+                                        Grid.Column="0"
+                                        Grid.ColumnSpan="2">
+                                        <Grid.Style>
+                                            <Style TargetType="Grid">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Indirect}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Grid.Style>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="150" MinHeight="100" />
+                                            <RowDefinition Height="6" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="220" MinHeight="160" />
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="0.9*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid
+                                            Grid.Row="1"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="90" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                Margin="0,0,30,0"
+                                                VerticalAlignment="Center"
+                                                Text="公式脚本：" />
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <Button
+                                                    Width="95"
+                                                    Margin="0,0,8,3"
+                                                    HorizontalAlignment="Left"
+                                                    Command="{Binding AddIndirectSourceBindingCommand}"
+                                                    Content="添加数据源"
+                                                    Style="{StaticResource ButtonPrimary}" />
+                                                <Button
+                                                    Width="95"
+                                                    Margin="0,0,0,3"
+                                                    HorizontalAlignment="Left"
+                                                    Command="{Binding CheckIndirectFormulaCommand}"
+                                                    Content="检查脚本"
+                                                    Style="{StaticResource ButtonInfo}" />
+                                            </StackPanel>
+
+                                        </Grid>
+                                        <Border
+                                            Grid.Row="2"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Margin="0,0,10,0"
+                                            Background="{DynamicResource RegionBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1">
+                                            <avalonedit:TextEditor
+                                                x:Name="IndirectFormulaEditorTextBox"
+                                                Margin="0,0,0,0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                FontFamily="Consolas"
+                                                FontSize="13"
+                                                HorizontalScrollBarVisibility="Auto"
+                                                Loaded="IndirectFormulaEditorTextBox_Loaded"
+                                                ShowLineNumbers="True"
+                                                SyntaxHighlighting="{x:Null}"
+                                                VerticalScrollBarVisibility="Auto">
+                                                <i:Interaction.Behaviors>
+                                                    <behaviors:AvalonEditTextBindingBehavior Text="{Binding EditingChannel.IndirectFormula, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                </i:Interaction.Behaviors>
+                                            </avalonedit:TextEditor>
+                                        </Border>
+                                        <GridSplitter
+                                            Grid.Row="3"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Height="6"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Center"
+                                            Background="Transparent"
+                                            Cursor="SizeNS"
+                                            ResizeBehavior="PreviousAndNext"
+                                            ResizeDirection="Rows"
+                                            ShowsPreview="True" />
+                                        <TextBlock
+                                            Grid.Row="4"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Margin="0,6,0,8"
+                                            FontSize="11"
+                                            Foreground="{DynamicResource SecondaryTextBrush}"
+                                            Text="*返回结果 RESULT = 表达式。" />
+
+                                        <Grid
+                                            Grid.Row="0"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="90" />
+                                                <ColumnDefinition Width="260" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                Margin="0,0,30,0"
+                                                VerticalAlignment="Center"
+                                                Text="触发模式：" />
+                                            <ComboBox
+                                                Grid.Column="1"
+                                                Width="{StaticResource FormInputWidth}"
+                                                HorizontalAlignment="Left"
+                                                ItemsSource="{Binding IndirectMeasurementTriggerModes}"
+                                                SelectedItem="{Binding EditingChannel.IndirectTriggerMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource ComboBoxBaseStyle}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+
+                                        </Grid>
+
+                                        <DataGrid
+                                            Grid.Row="5"
+                                            Grid.Column="0"
+                                            Grid.ColumnSpan="2"
+                                            MinHeight="160"
+                                            Margin="0,0,0,4"
+                                            HorizontalAlignment="Stretch"
+                                            AutoGenerateColumns="False"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            CanUserAddRows="False"
+                                            CanUserResizeColumns="False"
+                                            HeadersVisibility="Column"
+                                            ItemsSource="{Binding EditingChannel.IndirectSourceBindings}"
+                                            RowHeaderWidth="0"
+                                            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                            SelectedItem="{Binding SelectedIndirectSourceBinding, Mode=TwoWay}"
+                                            SelectionMode="Single"
+                                            SelectionUnit="FullRow">
+                                            <i:Interaction.Behaviors>
+                                                <behaviors:SelectAndFocusNewDataGridItemBehavior />
+                                            </i:Interaction.Behaviors>
+                                            <DataGrid.RowStyle>
+                                                <Style BasedOn="{StaticResource MeasurementDataGridRowStyle}" TargetType="DataGridRow">
+                                                    <Setter Property="ContextMenu">
+                                                        <Setter.Value>
+                                                            <ContextMenu>
+                                                                <ContextMenu.DataContext>
+                                                                    <Binding Path="PlacementTarget.DataContext" RelativeSource="{RelativeSource Self}" />
+                                                                </ContextMenu.DataContext>
+                                                                <MenuItem
+                                                                    Command="{Binding Data.AddIndirectSourceBindingCommand, Source={StaticResource VmProxy}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Header="添加数据源" />
+                                                                <MenuItem
+                                                                    Command="{Binding Data.CheckIndirectFormulaCommand, Source={StaticResource VmProxy}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Header="检查脚本" />
+                                                                <MenuItem
+                                                                    Command="{Binding Data.RemoveIndirectSourceBindingCommand, Source={StaticResource VmProxy}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Header="删除" />
+
+                                                            </ContextMenu>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </Style>
+                                            </DataGrid.RowStyle>
+                                            <DataGrid.Columns>
+                                                <DataGridTextColumn
+                                                    Width="130"
+                                                    Binding="{Binding SourceKey, UpdateSourceTrigger=PropertyChanged}"
+                                                    Header="变量名" />
+                                                <DataGridTemplateColumn Width="200" Header="PLC设备">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <hc:ComboBox
+                                                                MinWidth="0"
+                                                                HorizontalAlignment="Stretch"
+                                                                DisplayMemberPath="DeviceName"
+                                                                ItemsSource="{Binding Data.EnabledPlcDevices, Source={StaticResource VmProxy}}"
+                                                                SelectedItem="{Binding RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                Style="{StaticResource ComboBoxBaseStyle}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+                                            
+                                                <DataGridTemplateColumn Width="200" Header="数据点位">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <hc:ComboBox
+                                                                MinWidth="0"
+                                                                HorizontalAlignment="Stretch"
+                                                                DisplayMemberPath="PointName"
+                                                                ItemsSource="{Binding AvailableDataPoints}"
+                                                                SelectedItem="{Binding RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                Style="{StaticResource ComboBoxBaseStyle}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
+
+                                                <!--<DataGridTemplateColumn Width="90" Header="操作">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Button
+                                                                HorizontalAlignment="Left"
+                                                                Command="{Binding Data.RemoveIndirectSourceBindingCommand, Source={StaticResource VmProxy}}"
+                                                                CommandParameter="{Binding}"
+                                                                Content="删除"
+                                                                Style="{StaticResource ButtonDanger.Small}" />
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>-->
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+
+                                    </Grid>
+
+                                    <Border
+                                        Grid.Row="4"
+                                        Grid.Column="0"
+                                        Grid.ColumnSpan="2"
+                                        Padding="12"
+                                        Background="{DynamicResource SecondaryRegionBrush}"
+                                        BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="4">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EditingChannel.MeasurementMode}" Value="{x:Static models:MeasurementChannelMode.Virtual}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="虚拟通道当前仅提供模式展示，采集与计算逻辑暂未实现。" TextWrapping="Wrap" />
+                                    </Border>
                                 </Grid>
 
                                 <Separator Margin="0,25,0,15" />

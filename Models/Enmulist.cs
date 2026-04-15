@@ -73,6 +73,48 @@ namespace MeasurementSoftware.Models
     }
 
     /// <summary>
+    /// 测量通道模式。
+    /// </summary>
+    public enum MeasurementChannelMode
+    {
+        [Description("直接测量")]
+        Direct,
+
+        [Description("间接测量")]
+        Indirect,
+
+        [Description("虚拟通道")]
+        Virtual
+    }
+
+    /// <summary>
+    /// 间接测量触发模式。
+    /// 用于控制公式在运行时按什么规则触发一次计算与存储。
+    /// </summary>
+    public enum IndirectMeasurementTriggerMode
+    {
+        /// <summary>
+        /// 绑定点位值事件一到就计算一次。
+        /// 不区分公式变量值是否真的发生变化。
+        /// </summary>
+        [Description("事件触发")]
+        EventReceived,
+
+        /// <summary>
+        /// 公式中任意一个变量值变化就触发计算。
+        /// </summary>
+        [Description("任意变化触发")]
+        AnyValueChanged,
+
+        /// <summary>
+        /// 公式中所有变量至少都发生过一次变化后才触发计算。
+        /// 每完成一轮后重新开始累计。
+        /// </summary>
+        [Description("全部变化触发")]
+        AllValuesChanged
+    }
+
+    /// <summary>
     /// 测量结果枚举
     /// </summary>
     public enum MeasurementResult

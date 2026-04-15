@@ -8,6 +8,7 @@ using MeasurementSoftware.Services.Config;
 using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Licensing;
 using MeasurementSoftware.Services.Logs;
+using MeasurementSoftware.Services.Measurements;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
 using MultiProtocol.Model;
@@ -28,11 +29,13 @@ namespace MeasurementSoftware.ViewModels
     {
         private readonly ILog _log;
         private readonly IRecipeConfigService _recipeConfigService;
+        private readonly IDeviceConfigService _deviceConfigService;
         private readonly IDataRecordService _dataRecordService;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
         private readonly IKeyboardQrCodeInputService _keyboardQrCodeInputService;
         private readonly IQrCodeScanService _qrCodeScanService;
         private readonly IStepOperationMonitorService _stepOperationMonitorService;
+        private readonly IReadOnlyDictionary<MeasurementChannelMode, IMeasurementChannelHandler> _channelHandlers;
         private MeasurementRecipe? _subscribedRecipe;
         private QrCodeConfig? _subscribedQrCodeConfig;
         private bool _isWaitingForRequiredQrCode;
@@ -166,15 +169,17 @@ namespace MeasurementSoftware.ViewModels
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
 
-        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService)
+        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService, IEnumerable<IMeasurementChannelHandler> channelHandlers)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
+            _deviceConfigService = deviceConfigService;
             _dataRecordService = dataRecordService;
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
             _stepOperationMonitorService = stepOperationMonitorService;
             _qrCodeScanService = qrCodeScanService;
             _keyboardQrCodeInputService = keyboardQrCodeInputService;
+            _channelHandlers = channelHandlers.ToDictionary(handler => handler.Mode);
             _stepOperationMonitorService.OperationTriggered += StepOperationMonitorService_OperationTriggered;
 
 
@@ -205,6 +210,7 @@ namespace MeasurementSoftware.ViewModels
 
                         ProductImagePath = CurrentRecipe?.BasicInfo.ProductImagePath ?? string.Empty;
                         CurrentStep = 1;
+                        HydrateMeasurementBindings();
                         CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(CurrentRecipe.Devices);
                         _stepOperationMonitorService.SetRecipe(CurrentRecipe);
                         ResetAllChannelStates();
@@ -223,10 +229,31 @@ namespace MeasurementSoftware.ViewModels
             // 初始化时也要绑定
             _channels = CurrentRecipe?.Channels;
             SubscribeRecipe();
+            HydrateMeasurementBindings();
             CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(CurrentRecipe.Devices);
             _stepOperationMonitorService.SetRecipe(CurrentRecipe);
             ResetAllChannelStates();
             RefreshCommandStates();
+        }
+
+        private IMeasurementChannelHandler GetChannelHandler(MeasurementChannel channel)
+        {
+            return _channelHandlers.TryGetValue(channel.MeasurementMode, out var handler)
+                ? handler
+                : _channelHandlers[MeasurementChannelMode.Direct];
+        }
+
+        private void HydrateMeasurementBindings()
+        {
+            if (CurrentRecipe == null)
+            {
+                return;
+            }
+
+            foreach (var channel in CurrentRecipe.Channels)
+            {
+                GetChannelHandler(channel).HydrateBindings(channel, _deviceConfigService);
+            }
         }
 
 
@@ -665,6 +692,7 @@ namespace MeasurementSoftware.ViewModels
             // 每次重新启动测量，都按一次新的测量流程处理：
             // 清空全部表格状态，并把工步强制回到第 1 步，避免继续上次残留状态。
             ResetAllChannelStates();
+            ResetMeasurementHandlerRuntimeStates();
             UpdateAnnotationActiveState();
 
             if (CurrentRecipe.QrCodeConfig.RequireQrCodeBeforeMeasurement)
@@ -806,33 +834,11 @@ namespace MeasurementSoftware.ViewModels
             {
                 return;
             }
-            //Interlocked.Increment(ref _dataReadCount);
-            //Debug.WriteLine($"DataReadCount: {_dataReadCount}");
+
             bool hasUpdatedChannel = false;
             foreach (var channel in GetActiveChannels())
             {
-                if (channel.UseCacheValue || !ReferenceEquals(channel.RuntimeDevice, e.Device))
-                {
-                    //Debug.WriteLine($"跳过通道 {channel.ChannelName}，UseCacheValue={channel.UseCacheValue}，RuntimeDevice={channel.RuntimeDevice?.DeviceName}，EventDevice={e.Device.DeviceName}");
-                    continue;
-                }
-
-                var dataPoint = channel.RuntimeDataPoint;
-                if (dataPoint == null || !e.DataPoints.Contains(dataPoint))
-                {
-                    //Debug.WriteLine($"跳过通道 {channel.ChannelName}，RuntimeDataPoint={dataPoint?.PointName}，EventDataPoints={string.Join(",", e.DataPoints.Select(dp => dp.PointName))}");
-                    continue;
-                }
-
-                if (!TryGetChannelCurrentValue(channel, dataPoint, out var rawValue))
-                {
-                    //Debug.WriteLine($"通道 {channel.ChannelName} 当前值不可用，提示文本已更新为: {channel.ChannelDescription}");
-                    continue;
-                }
-
-                channel.UpdateMeasuredValue(rawValue);
-                channel.DisplayState = MeasurementResult.Acquiring;
-                hasUpdatedChannel = true;
+                hasUpdatedChannel |= GetChannelHandler(channel).TryHandleDataPointUpdates(channel, e);
             }
 
             if (hasUpdatedChannel)
@@ -852,7 +858,9 @@ namespace MeasurementSoftware.ViewModels
             }
 
             var affectedChannels = GetActiveChannels()
-                .Where(c => ReferenceEquals(c.RuntimeDevice, e.Device))
+                .Where(c => c.IsDirectMeasurementMode
+                    ? ReferenceEquals(c.RuntimeDevice, e.Device)
+                    : c.IndirectSourceBindings.Any(binding => ReferenceEquals(binding.RuntimeDevice, e.Device)))
                 .ToList();
 
             if (affectedChannels.Count == 0)
@@ -862,23 +870,7 @@ namespace MeasurementSoftware.ViewModels
 
             foreach (var channel in affectedChannels)
             {
-                if (!e.IsConnected)
-                {
-                    channel.ChannelDescription = $"设备 {e.Device.DeviceName} 未连接";
-                    channel.DisplayState = MeasurementResult.Waiting;
-                    continue;
-                }
-
-                if (channel.RuntimeDataPoint?.IsSuccess == true && channel.RuntimeDataPoint.CurrentValue != null)
-                {
-                    channel.ChannelDescription = string.Empty;
-                    channel.DisplayState = MeasurementResult.Acquiring;
-                }
-                else
-                {
-                    channel.ChannelDescription = "设备已重连，等待数据更新...";
-                    channel.DisplayState = MeasurementResult.Acquiring;
-                }
+                GetChannelHandler(channel).TryHandleConnectionStateChanged(channel, e);
             }
 
             SyncAnnotationResults();
@@ -894,89 +886,15 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            var updatesByKey = e.Updates
-                .Where(u => !string.IsNullOrWhiteSpace(u.CacheFieldKey))
-                .ToDictionary(u => u.CacheFieldKey, StringComparer.OrdinalIgnoreCase);
-
             bool hasUpdatedChannel = false;
             foreach (var channel in GetActiveChannels())
             {
-                if (!channel.UseCacheValue || !ReferenceEquals(channel.RuntimeDevice, e.Device))
-                {
-                    continue;
-                }
-
-                var dataPoint = channel.RuntimeDataPoint;
-                var cacheFieldKey = dataPoint?.CacheFieldKey;
-                if (dataPoint == null || string.IsNullOrWhiteSpace(cacheFieldKey) || !updatesByKey.TryGetValue(cacheFieldKey, out var update))
-                {
-                    continue;
-                }
-
-                if (!TryGetChannelCurrentValue(channel, dataPoint, out var rawValue))
-                {
-                    channel.ChannelDescription = update.ErrorMessage ?? channel.ChannelDescription;
-                    continue;
-                }
-
-                if (update.NumericValues.Count <= 0)
-                {
-                    continue;
-                }
-
-                channel.AppendMeasuredValues(update.NumericValues, rawValue);
-                channel.DisplayState = MeasurementResult.Acquiring;
-                hasUpdatedChannel = true;
+                hasUpdatedChannel |= GetChannelHandler(channel).TryHandleCacheFieldUpdates(channel, e);
             }
 
             if (hasUpdatedChannel)
             {
                 SyncAnnotationResults();
-            }
-        }
-
-        /// <summary>
-        /// 从当前绑定点位提取可参与计算的数值，并同步通道提示文本。
-        /// </summary>
-        private bool TryGetChannelCurrentValue(MeasurementChannel channel, DataPoint dataPoint, out double rawValue)
-        {
-            rawValue = default;
-            var device = channel.RuntimeDevice;
-
-            if (device == null)
-            {
-                channel.ChannelDescription = "未绑定设备或点位";
-                return false;
-            }
-
-            if (!device.IsEnabled)
-            {
-                channel.ChannelDescription = $"设备 {device.DeviceName} 未启用";
-                return false;
-            }
-
-            if (!device.IsConnected)
-            {
-                channel.ChannelDescription = $"设备 {device.DeviceName} 未连接";
-                return false;
-            }
-
-            if (dataPoint.CurrentValue == null || !dataPoint.IsSuccess)
-            {
-                channel.ChannelDescription = dataPoint.ErrorMessage ?? "读取中...";
-                return false;
-            }
-
-            try
-            {
-                rawValue = Convert.ToDouble(dataPoint.CurrentValue);
-                channel.ChannelDescription = string.Empty;
-                return true;
-            }
-            catch
-            {
-                channel.ChannelDescription = "当前值无法转换为数值";
-                return false;
             }
         }
 
@@ -1000,6 +918,7 @@ namespace MeasurementSoftware.ViewModels
 
             UnsubscribeRuntimeEvents();
             _cts?.Cancel();
+            ResetMeasurementHandlerRuntimeStates();
             var optionalQrCodeListeningTask = _optionalQrCodeListeningTask;
             if (optionalQrCodeListeningTask != null)
             {
@@ -1288,6 +1207,7 @@ namespace MeasurementSoftware.ViewModels
 
             UnsubscribeRuntimeEvents();
             _cts?.Cancel();
+            ResetMeasurementHandlerRuntimeStates();
             var optionalQrCodeListeningTask = _optionalQrCodeListeningTask;
             if (optionalQrCodeListeningTask != null)
             {
@@ -1556,6 +1476,23 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
+        /// 清理当前通道处理器持有的运行期缓存状态。
+        /// 主要用于间接测量的触发模式在开始、完成、终止或清空数据后，避免沿用上一轮的变化累计结果。
+        /// </summary>
+        private void ResetMeasurementHandlerRuntimeStates()
+        {
+            if (CurrentRecipe == null)
+            {
+                return;
+            }
+
+            foreach (var channel in Channels)
+            {
+                GetChannelHandler(channel).ResetRuntimeState(channel);
+            }
+        }
+
+        /// <summary>
         /// 重置指定工步的通道及标注结果为未测量
         /// </summary>
         private void ResetStepChannels(int stepNumber)
@@ -1657,6 +1594,7 @@ namespace MeasurementSoftware.ViewModels
         private void ClearData()
         {
             ResetAllChannelStates();
+            ResetMeasurementHandlerRuntimeStates();
             _recipeConfigService.ResetRecipeStatistics(CurrentRecipe);
             CurrentStep = 1;
             UpdateAnnotationActiveState();

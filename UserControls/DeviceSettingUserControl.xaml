@@ -912,7 +912,7 @@
                                     </DataGridTextColumn.Binding>
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="TextBlock">
-                                            <Setter Property="HorizontalAlignment" Value="Center" />
+                                            <Setter Property="HorizontalAlignment" Value="Left" />
                                             <Setter Property="VerticalAlignment" Value="Center" />
                                             <Setter Property="TextAlignment" Value="Center" />
                                         </Style>

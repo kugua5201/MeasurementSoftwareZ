@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using MeasurementSoftware.Extensions;
 using MeasurementSoftware.ViewModels;
 using MultiProtocol.Model;
+using System.Collections.Specialized;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
@@ -11,6 +13,11 @@ namespace MeasurementSoftware.Models
     /// </summary>
     public partial class MeasurementChannel : ObservableViewModel
     {
+        public MeasurementChannel()
+        {
+            AttachIndirectSourceBindings(IndirectSourceBindings);
+        }
+
         /// <summary>
         /// 通道编号
         /// </summary>
@@ -34,6 +41,19 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private ChannelType channelType = ChannelType.结果值;
+
+        /// <summary>
+        /// 通道模式。
+        /// 用于区分直接测量、间接测量和虚拟通道。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsDirectMeasurementMode))]
+        [NotifyPropertyChangedFor(nameof(IsIndirectMeasurementMode))]
+        [NotifyPropertyChangedFor(nameof(IsVirtualMeasurementMode))]
+        [NotifyPropertyChangedFor(nameof(DisplayPlcDeviceName))]
+        [NotifyPropertyChangedFor(nameof(DisplayDataPointName))]
+        [NotifyPropertyChangedFor(nameof(DisplayDataSourceAddress))]
+        private MeasurementChannelMode measurementMode = MeasurementChannelMode.Direct;
 
         /// <summary>
         /// 测量类型
@@ -104,6 +124,31 @@ namespace MeasurementSoftware.Models
         private ObservableCollection<DataPoint> availableDataPoints = new();
 
         /// <summary>
+        /// 间接测量公式脚本。
+        /// 支持单行表达式，也支持多行“变量 = 表达式”的脚本写法。
+        /// 多行脚本建议最后一行输出 RESULT。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayDataSourceAddress))]
+        private string indirectFormula = string.Empty;
+
+        /// <summary>
+        /// 间接测量数据源列表。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayPlcDeviceName))]
+        [NotifyPropertyChangedFor(nameof(DisplayDataPointName))]
+        [NotifyPropertyChangedFor(nameof(DisplayDataSourceAddress))]
+        private ObservableCollection<MeasurementChannelSourceBinding> indirectSourceBindings = [];
+
+        /// <summary>
+        /// 间接测量触发模式。
+        /// 默认要求所有公式变量相对上一次已计算快照都发生变化后，才再次计算并存储。
+        /// </summary>
+        [ObservableProperty]
+        private IndirectMeasurementTriggerMode indirectTriggerMode = IndirectMeasurementTriggerMode.AllValuesChanged;
+
+        /// <summary>
         /// 是否启用测量结果输出。
         /// 启用后会在测量完成时将当前通道 OK/NG 结果写入指定 PLC 点位。
         /// </summary>
@@ -158,6 +203,7 @@ namespace MeasurementSoftware.Models
         /// </summary>
         private PlcDevice? runtimeDevice;
         private PropertyChangedEventHandler? runtimeDevicePropertyChangedHandler;
+        private NotifyCollectionChangedEventHandler? runtimeDeviceDataPointsCollectionChangedHandler;
 
         [JsonIgnore]
         public PlcDevice? RuntimeDevice
@@ -175,6 +221,13 @@ namespace MeasurementSoftware.Models
                 {
                     oldDevice.PropertyChanged -= runtimeDevicePropertyChangedHandler;
                 }
+
+                if (oldDevice?.DataPoints is INotifyCollectionChanged oldDataPointsCollection && runtimeDeviceDataPointsCollectionChangedHandler != null)
+                {
+                    oldDataPointsCollection.CollectionChanged -= runtimeDeviceDataPointsCollectionChangedHandler;
+                }
+
+                UnsubscribeFromAvailableDataPoints(AvailableDataPoints);
 
                 runtimeDevice = value;
 
@@ -196,13 +249,37 @@ namespace MeasurementSoftware.Models
                 {
                     runtimeDevicePropertyChangedHandler = RuntimeDevice_PropertyChanged;
                     runtimeDevice.PropertyChanged += runtimeDevicePropertyChangedHandler;
+
+                    runtimeDeviceDataPointsCollectionChangedHandler = RuntimeDeviceDataPoints_CollectionChanged;
+                    if (runtimeDevice.DataPoints is INotifyCollectionChanged dataPointsCollection)
+                    {
+                        dataPointsCollection.CollectionChanged += runtimeDeviceDataPointsCollectionChangedHandler;
+                    }
                 }
 
                 OnPropertyChanged(nameof(RuntimeDevice));
                 OnPropertyChanged(nameof(PlcDeviceName));
                 OnPropertyChanged(nameof(DataPointName));
+                OnPropertyChanged(nameof(DisplayPlcDeviceName));
+                OnPropertyChanged(nameof(DisplayDataPointName));
+                OnPropertyChanged(nameof(DisplayDataSourceAddress));
             }
         }
+
+        /// <summary>
+        /// 数据源显示用 PLC 设备名称。
+        /// 直接测量显示单个设备，间接测量显示已绑定设备摘要。
+        /// </summary>
+        [JsonIgnore]
+        public string DisplayPlcDeviceName => MeasurementMode switch
+        {
+            MeasurementChannelMode.Direct => PlcDeviceName,
+            MeasurementChannelMode.Indirect => IndirectSourceBindings.Count == 0
+                ? string.Empty
+                : $"多设备/点位({IndirectSourceBindings.Count})",
+            MeasurementChannelMode.Virtual => "虚拟通道",
+            _ => string.Empty
+        };
 
         /// <summary>
         /// 运行时绑定的结果输出 PLC 设备实例。
@@ -254,6 +331,54 @@ namespace MeasurementSoftware.Models
                 OnPropertyChanged(nameof(ResultOutputDataPointName));
             }
         }
+
+        /// <summary>
+        /// 数据源显示用点位名称。
+        /// </summary>
+        [JsonIgnore]
+        public string DisplayDataPointName => MeasurementMode switch
+        {
+            MeasurementChannelMode.Direct => DataPointName,
+            MeasurementChannelMode.Indirect => string.Join("、", IndirectSourceBindings
+                .Where(binding => !string.IsNullOrWhiteSpace(binding.SourceKey))
+                .Select(binding => binding.SourceKey.Trim())),
+            MeasurementChannelMode.Virtual => "未实现",
+            _ => string.Empty
+        };
+
+        /// <summary>
+        /// 数据源显示用地址信息。
+        /// </summary>
+        [JsonIgnore]
+        public string DisplayDataSourceAddress => MeasurementMode switch
+        {
+            MeasurementChannelMode.Direct => DataSourceAddress,
+            MeasurementChannelMode.Indirect => string.Join("；", IndirectSourceBindings
+                .Where(binding => !string.IsNullOrWhiteSpace(binding.DataSourceAddress))
+                .Select(binding => string.IsNullOrWhiteSpace(binding.SourceKey)
+                    ? binding.DataSourceAddress
+                    : $"{binding.SourceKey}:{binding.DataSourceAddress}")),
+            MeasurementChannelMode.Virtual => string.Empty,
+            _ => string.Empty
+        };
+
+        /// <summary>
+        /// 是否为直接测量模式。
+        /// </summary>
+        [JsonIgnore]
+        public bool IsDirectMeasurementMode => MeasurementMode == MeasurementChannelMode.Direct;
+
+        /// <summary>
+        /// 是否为间接测量模式。
+        /// </summary>
+        [JsonIgnore]
+        public bool IsIndirectMeasurementMode => MeasurementMode == MeasurementChannelMode.Indirect;
+
+        /// <summary>
+        /// 是否为虚拟通道模式。
+        /// </summary>
+        [JsonIgnore]
+        public bool IsVirtualMeasurementMode => MeasurementMode == MeasurementChannelMode.Virtual;
 
         /// <summary>
         /// 运行时绑定的结果输出点位实例。
@@ -341,6 +466,8 @@ namespace MeasurementSoftware.Models
 
                 OnPropertyChanged(nameof(RuntimeDataPoint));
                 OnPropertyChanged(nameof(DataPointName));
+                OnPropertyChanged(nameof(DisplayDataPointName));
+                OnPropertyChanged(nameof(DisplayDataSourceAddress));
             }
         }
 
@@ -406,10 +533,17 @@ namespace MeasurementSoftware.Models
                 runtimeDevice.PropertyChanged -= runtimeDevicePropertyChangedHandler;
             }
 
+            if (runtimeDevice?.DataPoints is INotifyCollectionChanged oldDataPointsCollection && runtimeDeviceDataPointsCollectionChangedHandler != null)
+            {
+                oldDataPointsCollection.CollectionChanged -= runtimeDeviceDataPointsCollectionChangedHandler;
+            }
+
             if (runtimeDataPoint != null && runtimeDataPointPropertyChangedHandler != null)
             {
                 runtimeDataPoint.PropertyChanged -= runtimeDataPointPropertyChangedHandler;
             }
+
+            UnsubscribeFromAvailableDataPoints(AvailableDataPoints);
 
             runtimeDevice = device;
 
@@ -418,6 +552,7 @@ namespace MeasurementSoftware.Models
                 : new ObservableCollection<DataPoint>(runtimeDevice.DataPoints
                     .Where(dp => dp.IsEnabled)
                     .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
+            SubscribeToAvailableDataPoints(AvailableDataPoints);
 
             runtimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
 
@@ -425,6 +560,12 @@ namespace MeasurementSoftware.Models
             {
                 runtimeDevicePropertyChangedHandler = RuntimeDevice_PropertyChanged;
                 runtimeDevice.PropertyChanged += runtimeDevicePropertyChangedHandler;
+
+                runtimeDeviceDataPointsCollectionChangedHandler = RuntimeDeviceDataPoints_CollectionChanged;
+                if (runtimeDevice.DataPoints is INotifyCollectionChanged dataPointsCollection)
+                {
+                    dataPointsCollection.CollectionChanged += runtimeDeviceDataPointsCollectionChangedHandler;
+                }
             }
 
             if (runtimeDataPoint != null)
@@ -438,6 +579,9 @@ namespace MeasurementSoftware.Models
             OnPropertyChanged(nameof(RuntimeDataPoint));
             OnPropertyChanged(nameof(PlcDeviceName));
             OnPropertyChanged(nameof(DataPointName));
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
         }
 
         /// <summary>
@@ -666,10 +810,14 @@ namespace MeasurementSoftware.Models
             PlcDeviceId = 0;
             DataPointId = string.Empty;
             DataSourceAddress = string.Empty;
+            UnsubscribeFromAvailableDataPoints(AvailableDataPoints);
             AvailableDataPoints = [];
             UseCacheValue = false;
             OnPropertyChanged(nameof(PlcDeviceName));
             OnPropertyChanged(nameof(DataPointName));
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
         }
 
         /// <summary>
@@ -690,9 +838,62 @@ namespace MeasurementSoftware.Models
 
         private void RuntimeDevice_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(PlcDevice.DeviceName))
+            if (e.PropertyName == nameof(PlcDevice.IsEnabled) && runtimeDevice?.IsEnabled != true)
             {
+                HydrateRuntimeBindings(null);
+                return;
+            }
+
+            if (e.PropertyName is nameof(PlcDevice.DeviceName) or nameof(PlcDevice.DeviceId) or nameof(PlcDevice.IsEnabled))
+            {
+                RefreshAvailableDataPoints();
+                OnPropertyChanged(nameof(RuntimeDevice));
                 OnPropertyChanged(nameof(PlcDeviceName));
+            }
+        }
+
+        private void RuntimeDeviceDataPoints_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (DataPoint dataPoint in e.OldItems)
+                {
+                    dataPoint.PropertyChanged -= RuntimeDataPointSource_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (DataPoint dataPoint in e.NewItems)
+                {
+                    dataPoint.PropertyChanged -= RuntimeDataPointSource_PropertyChanged;
+                    dataPoint.PropertyChanged += RuntimeDataPointSource_PropertyChanged;
+                }
+            }
+
+            RefreshAvailableDataPoints();
+        }
+
+        private void RuntimeDataPointSource_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not DataPoint dataPoint)
+            {
+                return;
+            }
+
+            if (ReferenceEquals(runtimeDataPoint, dataPoint) && e.PropertyName == nameof(DataPoint.PointId))
+            {
+                DataPointId = dataPoint.PointId;
+            }
+
+            if (ReferenceEquals(runtimeDataPoint, dataPoint) && e.PropertyName == nameof(DataPoint.Address))
+            {
+                DataSourceAddress = dataPoint.Address;
+            }
+
+            if (e.PropertyName is nameof(DataPoint.IsEnabled) or nameof(DataPoint.PointId) or nameof(DataPoint.PointName) or nameof(DataPoint.Address))
+            {
+                RefreshAvailableDataPoints();
             }
         }
 
@@ -707,6 +908,150 @@ namespace MeasurementSoftware.Models
                 }
 
                 OnPropertyChanged(nameof(DataPointName));
+                OnPropertyChanged(nameof(DisplayPlcDeviceName));
+                OnPropertyChanged(nameof(DisplayDataPointName));
+                OnPropertyChanged(nameof(DisplayDataSourceAddress));
+            }
+        }
+
+        public void RefreshAvailableDataPoints()
+        {
+            UnsubscribeFromAvailableDataPoints(AvailableDataPoints);
+            AvailableDataPoints = RuntimeDevice == null
+                ? []
+                : new ObservableCollection<DataPoint>(RuntimeDevice.DataPoints
+                    .Where(dp => dp.IsEnabled)
+                    .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
+            SubscribeToAvailableDataPoints(AvailableDataPoints);
+
+            RuntimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
+            if (RuntimeDataPoint != null)
+            {
+                DataSourceAddress = RuntimeDataPoint.Address;
+            }
+
+            OnPropertyChanged(nameof(DataPointName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
+        }
+
+        /// <summary>
+        /// 确保间接测量数据源至少存在指定数量。
+        /// </summary>
+        public void EnsureIndirectSourceBindings(int minimumCount)
+        {
+            minimumCount = Math.Max(0, minimumCount);
+            while (IndirectSourceBindings.Count < minimumCount)
+            {
+                var nextIndex = IndirectSourceBindings.Count + 1;
+                IndirectSourceBindings.Add(new MeasurementChannelSourceBinding
+                {
+                    SourceKey = $"X{nextIndex}"
+                });
+            }
+
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
+        }
+
+        /// <summary>
+        /// 用新的间接测量数据源集合替换当前集合。
+        /// </summary>
+        public void ReplaceIndirectSourceBindings(IEnumerable<MeasurementChannelSourceBinding> bindings)
+        {
+            DetachIndirectSourceBindings(IndirectSourceBindings);
+            IndirectSourceBindings = new ObservableCollection<MeasurementChannelSourceBinding>(bindings ?? []);
+            AttachIndirectSourceBindings(IndirectSourceBindings);
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
+        }
+
+        private void AttachIndirectSourceBindings(ObservableCollection<MeasurementChannelSourceBinding>? bindings)
+        {
+            if (bindings == null)
+            {
+                return;
+            }
+
+            bindings.CollectionChanged -= IndirectSourceBindings_CollectionChanged;
+            bindings.CollectionChanged += IndirectSourceBindings_CollectionChanged;
+
+            foreach (var binding in bindings)
+            {
+                binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+                binding.PropertyChanged += IndirectSourceBinding_PropertyChanged;
+            }
+        }
+
+        private void DetachIndirectSourceBindings(ObservableCollection<MeasurementChannelSourceBinding>? bindings)
+        {
+            if (bindings == null)
+            {
+                return;
+            }
+
+            bindings.CollectionChanged -= IndirectSourceBindings_CollectionChanged;
+
+            foreach (var binding in bindings)
+            {
+                binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+            }
+        }
+
+        private void IndirectSourceBindings_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (MeasurementChannelSourceBinding binding in e.OldItems)
+                {
+                    binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (MeasurementChannelSourceBinding binding in e.NewItems)
+                {
+                    binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
+                    binding.PropertyChanged += IndirectSourceBinding_PropertyChanged;
+                }
+            }
+
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
+        }
+
+        private void IndirectSourceBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(MeasurementChannelSourceBinding.SourceKey)
+                or nameof(MeasurementChannelSourceBinding.DataSourceAddress)
+                or nameof(MeasurementChannelSourceBinding.DataPointId)
+                or nameof(MeasurementChannelSourceBinding.RuntimeDataPoint)
+                or nameof(MeasurementChannelSourceBinding.RuntimeDevice))
+            {
+                OnPropertyChanged(nameof(DisplayPlcDeviceName));
+                OnPropertyChanged(nameof(DisplayDataPointName));
+                OnPropertyChanged(nameof(DisplayDataSourceAddress));
+            }
+        }
+
+        private void SubscribeToAvailableDataPoints(IEnumerable<DataPoint> dataPoints)
+        {
+            foreach (var dataPoint in dataPoints)
+            {
+                dataPoint.PropertyChanged -= RuntimeDataPointSource_PropertyChanged;
+                dataPoint.PropertyChanged += RuntimeDataPointSource_PropertyChanged;
+            }
+        }
+
+        private void UnsubscribeFromAvailableDataPoints(IEnumerable<DataPoint> dataPoints)
+        {
+            foreach (var dataPoint in dataPoints)
+            {
+                dataPoint.PropertyChanged -= RuntimeDataPointSource_PropertyChanged;
             }
         }
 
@@ -749,24 +1094,6 @@ namespace MeasurementSoftware.Models
                 OnPropertyChanged(nameof(ResultOutputDataPointName));
                 OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
             }
-        }
-
-        /// <summary>
-        /// 根据当前绑定设备刷新可用点位列表，并回填运行时点位引用。
-        /// </summary>
-        public void RefreshAvailableDataPoints()
-        {
-            AvailableDataPoints = RuntimeDevice == null ? [] : new ObservableCollection<DataPoint>(RuntimeDevice.DataPoints
-                    .Where(dp => dp.IsEnabled)
-                    .OrderBy(dp => int.TryParse(dp.PointId, out var id) ? id : int.MaxValue));
-
-            RuntimeDataPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId);
-            if (RuntimeDataPoint != null)
-            {
-                DataSourceAddress = RuntimeDataPoint.Address;
-            }
-
-            OnPropertyChanged(nameof(DataPointName));
         }
 
         /// <summary>
@@ -991,6 +1318,16 @@ namespace MeasurementSoftware.Models
             IsResultValueAvailable = false;
             ChannelDescription = string.Empty;
             HistoricalData.Clear();
+        }
+
+        partial void OnMeasurementModeChanged(MeasurementChannelMode value)
+        {
+            OnPropertyChanged(nameof(IsDirectMeasurementMode));
+            OnPropertyChanged(nameof(IsIndirectMeasurementMode));
+            OnPropertyChanged(nameof(IsVirtualMeasurementMode));
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
         }
 
         public void SetDisplayStateFromResult()
