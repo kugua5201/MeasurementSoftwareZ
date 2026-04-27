@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using MeasurementSoftware.Converters;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Devices;
 using MeasurementSoftware.Services.Logs;
@@ -18,10 +19,17 @@ namespace MeasurementSoftware.Services.Config
     public partial class AppConfig : ObservableViewModel, IRecipeConfigService, IDeviceConfigService, IQrCodeConfigService
     {
 
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
+        //json配置
+        private static JsonSerializerOptions settings = new JsonSerializerOptions()
+        {
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter(), new CustomDateTimeConverter("yyyy-MM-dd HH:mm:ss") },
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
 
-        public AppConfig(ILog log, IPlcDeviceRuntimeService plcDeviceRuntimeService)
+        public AppConfig(ILogService log, IPlcDeviceRuntimeService plcDeviceRuntimeService)
         {
             _log = log;
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
@@ -314,7 +322,7 @@ namespace MeasurementSoftware.Services.Config
                 }
 
 
-                var json = JsonSerializer.Serialize(CurrentRecipe, new JsonSerializerOptions { WriteIndented = true });
+                var json = JsonSerializer.Serialize(CurrentRecipe, settings);
                 Directory.CreateDirectory(Path.GetDirectoryName(CurrentRecipePath)!);
                 await File.WriteAllTextAsync(CurrentRecipePath, json);
                 _log.Info($"配方已保存: {CurrentRecipePath}（含 {Devices.Count} 个设备）");
@@ -341,7 +349,7 @@ namespace MeasurementSoftware.Services.Config
                 }
 
                 var json = await File.ReadAllTextAsync(path);
-                var recipe = JsonSerializer.Deserialize<MeasurementRecipe>(json);
+                var recipe = JsonSerializer.Deserialize<MeasurementRecipe>(json, settings);
                 EnsureRecipeStatistics(recipe);
                 _log.Info($"配方已加载: {path}");
                 return recipe;

@@ -12,7 +12,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class SpcViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDataRecordService _dataRecordService;
         private readonly ISpcService _spcService;
@@ -66,7 +66,7 @@ namespace MeasurementSoftware.ViewModels
         private ObservableCollection<MeasurementChannel>? _channels;
 
         public SpcViewModel(
-            ILog log,
+            ILogService log,
             IRecipeConfigService recipeConfigService,
             IDataRecordService dataRecordService,
             ISpcService spcService)

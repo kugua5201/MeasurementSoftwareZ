@@ -13,7 +13,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class RecipeManagementViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly IUserSettingsService _userSettingsService;
@@ -53,7 +53,7 @@ namespace MeasurementSoftware.ViewModels
             }
         }
 
-        public RecipeManagementViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IUserSettingsService userSettingsService)
+        public RecipeManagementViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IUserSettingsService userSettingsService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;

@@ -588,8 +588,14 @@
                                 Header="名称" />
                             <DataGridTextColumn
                                 Width="50"
-                                Binding="{Binding StepNumber}"
+                                Binding="{Binding DisplayStepText}"
+                                IsReadOnly="True"
                                 Header="工步" />
+                            <DataGridTextColumn
+                                Width="90"
+                                Binding="{Binding MeasurementMode, Converter={StaticResource EnumToDisplayTextConverter}}"
+                                IsReadOnly="True"
+                                Header="测量模式" />
                             <DataGridTextColumn
                                 Width="120"
                                 Binding="{Binding MeasurementType}"
@@ -637,6 +643,7 @@
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Foreground" Value="White" />
+
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding DisplayState}" Value="Waiting">
                                                                 <Setter Property="Foreground" Value="#FF666666" />
@@ -652,6 +659,8 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Width="*" Header="" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

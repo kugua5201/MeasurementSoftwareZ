@@ -302,8 +302,8 @@
                                     Header="通道名称"
                                     IsReadOnly="True" />
                                 <DataGridTextColumn
-                                    Width="50"
-                                    Binding="{Binding StepNumber}"
+                                    Width="60"
+                                    Binding="{Binding DisplayStepText}"
                                     Header="工步"
                                     IsReadOnly="True" />
                                 <DataGridTextColumn
@@ -354,13 +354,12 @@
                                 <DataGridCheckBoxColumn
                                     Width="65"
                                     Binding="{Binding RequiresCalibration}"
-                                    Header="校准"
-                                    IsReadOnly="True" />
+                                    Header="校准" />
                                 <DataGridCheckBoxColumn
                                     Width="50"
                                     Binding="{Binding IsEnabled}"
-                                    Header="启用"
-                                    IsReadOnly="True" />
+                                    Header="启用" />
+
                             </DataGrid.Columns>
                         </DataGrid>
                     </Grid>
@@ -544,7 +543,8 @@
                                     Foreground="{DynamicResource WarningBrush}"
                                     Text="工步配置" />
 
-                                <Grid Margin="0,0,0,20">
+                                <Grid Margin="0,0,0,20"
+                                      IsEnabled="{Binding EditingChannel.CanEditStepConfiguration}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="90" />
                                         <ColumnDefinition Width="*" />
@@ -902,10 +902,10 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="150" MinHeight="100" />
+                                            <RowDefinition Height="200" MinHeight="100" />
                                             <RowDefinition Height="6" />
                                             <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="220" MinHeight="160" />
+                                            <RowDefinition Height="200" MinHeight="160" />
                                         </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="0.9*" />
@@ -936,11 +936,19 @@
                                                     Style="{StaticResource ButtonPrimary}" />
                                                 <Button
                                                     Width="95"
-                                                    Margin="0,0,0,3"
+                                                    Margin="0,0,8,3"
                                                     HorizontalAlignment="Left"
                                                     Command="{Binding CheckIndirectFormulaCommand}"
                                                     Content="检查脚本"
                                                     Style="{StaticResource ButtonInfo}" />
+                                                <Button
+                                                    Width="95"
+                                                    Margin="0,0,0,3"
+                                                    HorizontalAlignment="Left"
+                                                    Click="OpenFormulaHelp_Click"
+                                                    Content="函数说明"
+                                                    Style="{StaticResource ButtonPrimary}"
+                                                    Tag="Indirect" />
                                             </StackPanel>
 
                                         </Grid>
@@ -952,6 +960,7 @@
                                             Background="{DynamicResource RegionBrush}"
                                             BorderBrush="{DynamicResource BorderBrush}"
                                             BorderThickness="1">
+
                                             <avalonedit:TextEditor
                                                 x:Name="IndirectFormulaEditorTextBox"
                                                 Margin="0,0,0,0"
@@ -969,7 +978,7 @@
                                                 </i:Interaction.Behaviors>
                                             </avalonedit:TextEditor>
                                         </Border>
-                                        <GridSplitter
+                                        <!--<GridSplitter
                                             Grid.Row="3"
                                             Grid.Column="0"
                                             Grid.ColumnSpan="2"
@@ -980,7 +989,7 @@
                                             Cursor="SizeNS"
                                             ResizeBehavior="PreviousAndNext"
                                             ResizeDirection="Rows"
-                                            ShowsPreview="True" />
+                                            ShowsPreview="True" />-->
                                         <TextBlock
                                             Grid.Row="4"
                                             Grid.Column="0"
@@ -1026,7 +1035,7 @@
                                             Grid.Column="0"
                                             Grid.ColumnSpan="2"
                                             MinHeight="160"
-                                            Margin="0,0,0,4"
+                                            Margin="0,0,10,4"
                                             HorizontalAlignment="Stretch"
                                             AutoGenerateColumns="False"
                                             BorderBrush="{DynamicResource BorderBrush}"
@@ -1088,7 +1097,7 @@
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
-                                            
+
                                                 <DataGridTemplateColumn Width="200" Header="数据点位">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
@@ -1125,11 +1134,7 @@
                                         Grid.Row="4"
                                         Grid.Column="0"
                                         Grid.ColumnSpan="2"
-                                        Padding="12"
-                                        Background="{DynamicResource SecondaryRegionBrush}"
-                                        BorderBrush="{DynamicResource BorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="4">
+                                        BorderBrush="{DynamicResource BorderBrush}">
                                         <Border.Style>
                                             <Style TargetType="Border">
                                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -1140,7 +1145,311 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <TextBlock Text="虚拟通道当前仅提供模式展示，采集与计算逻辑暂未实现。" TextWrapping="Wrap" />
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="90" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock
+                                                Grid.Row="0"
+                                                Grid.Column="0"
+                                                Margin="0,0,0,8"
+                                                VerticalAlignment="Center"
+                                                Text="来源模式：" />
+                                            <StackPanel
+                                                Grid.Row="0"
+                                                Grid.Column="1"
+                                                Margin="0,0,0,8"
+                                                Orientation="Horizontal">
+                                                <ComboBox
+                                                    Width="{StaticResource FormInputWidth}"
+                                                    HorizontalAlignment="Left"
+                                                    ItemsSource="{Binding VirtualMeasurementSourceModes}"
+                                                    SelectedItem="{Binding EditingChannel.VirtualSourceMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    Style="{StaticResource ComboBoxBaseStyle}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+
+                                            </StackPanel>
+
+                                            <Grid
+                                                Grid.Row="1"
+                                                Grid.Column="0"
+                                                Grid.ColumnSpan="2"
+                                                Margin="0,0,0,8">
+                                                <Grid.Style>
+                                                    <Style TargetType="Grid">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding EditingChannel.VirtualSourceMode}" Value="{x:Static models:VirtualMeasurementSourceMode.SoftwareSimulation}">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Grid.Style>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="auto" />
+
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto" />
+                                                    <RowDefinition Height="auto" />
+                                                    <RowDefinition Height="auto" />
+                                                    <RowDefinition Height="auto" />
+                                                </Grid.RowDefinitions>
+                                                <TextBlock
+                                                    Grid.Row="0"
+                                                    Grid.Column="0"
+                                                    Margin="0,0,0,8"
+                                                    VerticalAlignment="Center"
+                                                    Text="波形类型：" />
+                                                <ComboBox
+                                                    Grid.Row="0"
+                                                    Grid.Column="1"
+                                                    Width="{StaticResource FormInputWidth}"
+                                                    Margin="0,0,0,8"
+                                                    HorizontalAlignment="Left"
+                                                    ItemsSource="{Binding VirtualMeasurementWaveformTypes}"
+                                                    SelectedItem="{Binding EditingChannel.VirtualWaveformType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                    Style="{StaticResource ComboBoxBaseStyle}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <TextBlock
+                                                    Grid.Row="1"
+                                                    Grid.Column="0"
+                                                    Margin="0,0,0,8"
+                                                    VerticalAlignment="Center"
+                                                    Text="幅值：" />
+                                                <hc:NumericUpDown
+                                                    Grid.Row="1"
+                                                    Grid.Column="1"
+                                                    Width="{StaticResource FormInputWidth}"
+                                                    Margin="0,0,0,8"
+                                                    HorizontalAlignment="Left"
+                                                    Increment="1"
+                                                    Minimum="0"
+                                                    Value="{Binding EditingChannel.VirtualWaveformAmplitude, Mode=TwoWay}" />
+                                                <TextBlock
+                                                    Grid.Row="2"
+                                                    Grid.Column="0"
+                                                    Margin="0,0,0,8"
+                                                    VerticalAlignment="Center"
+                                                    Text="偏移：" />
+                                                <hc:NumericUpDown
+                                                    Grid.Row="2"
+                                                    Grid.Column="1"
+                                                    Width="{StaticResource FormInputWidth}"
+                                                    Margin="0,0,0,8"
+                                                    HorizontalAlignment="Left"
+                                                    Increment="1"
+                                                    Value="{Binding EditingChannel.VirtualWaveformOffset, Mode=TwoWay}" />
+                                                <TextBlock
+                                                    Grid.Row="3"
+                                                    Grid.Column="0"
+                                                    VerticalAlignment="Center"
+                                                    Text="周期(ms)：" />
+                                                <hc:NumericUpDown
+                                                    Grid.Row="3"
+                                                    Grid.Column="1"
+                                                    Width="{StaticResource FormInputWidth}"
+                                                    HorizontalAlignment="Left"
+                                                    Increment="10"
+                                                    Minimum="1"
+                                                    Value="{Binding EditingChannel.VirtualWaveformPeriodSeconds, Mode=TwoWay}" />
+                                            </Grid>
+
+                                            <Grid
+                                                Grid.Row="2"
+                                                Grid.Column="0"
+                                                Grid.ColumnSpan="2"
+                                                Margin="0,0,0,8">
+                                                <Grid.Style>
+                                                    <Style TargetType="Grid">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <MultiDataTrigger>
+                                                                <MultiDataTrigger.Conditions>
+                                                                    <Condition Binding="{Binding EditingChannel.VirtualSourceMode}" Value="{x:Static models:VirtualMeasurementSourceMode.SoftwareSimulation}" />
+                                                                    <Condition Binding="{Binding EditingChannel.VirtualWaveformType}" Value="{x:Static models:VirtualMeasurementWaveformType.Square}" />
+                                                                </MultiDataTrigger.Conditions>
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </MultiDataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Grid.Style>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="90" />
+                                                    <ColumnDefinition Width="auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock
+                                                    Grid.Column="0"
+                                                    VerticalAlignment="Center"
+                                                    Text="占空比：" />
+                                                <hc:NumericUpDown
+                                                    Grid.Column="1"
+                                                    Width="{StaticResource FormInputWidth}"
+                                                    HorizontalAlignment="Left"
+                                                    Increment="0.1"
+                                                    Maximum="0.999"
+                                                    Minimum="0.001"
+                                                    Value="{Binding EditingChannel.VirtualWaveformDutyCycle, Mode=TwoWay}" />
+                                            </Grid>
+
+                                            <Grid
+                                                Grid.Row="3"
+                                                Grid.Column="0"
+                                                Grid.ColumnSpan="2">
+                                                <Grid.Style>
+                                                    <Style TargetType="Grid">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding EditingChannel.VirtualSourceMode}" Value="{x:Static models:VirtualMeasurementSourceMode.ChannelFormula}">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Grid.Style>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="200" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="200" />
+                                                </Grid.RowDefinitions>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel
+                                                    Grid.Row="0"
+                                                    Margin="0,0,0,8"
+                                                    Orientation="Horizontal">
+                                                    <Button
+                                                        Width="95"
+                                                        Margin="0,0,8,0"
+                                                        Command="{Binding AddVirtualSourceBindingCommand}"
+                                                        Content="添加通道"
+                                                        Style="{StaticResource ButtonPrimary}" />
+                                                    <Button
+                                                        Width="95"
+                                                        Command="{Binding CheckVirtualFormulaCommand}"
+                                                        Content="检查脚本"
+                                                        Style="{StaticResource ButtonInfo}" />
+                                                    <Button
+                                                        Width="95"
+                                                        Margin="8,0,0,0"
+                                                        Click="OpenFormulaHelp_Click"
+                                                        Content="函数说明"
+                                                        Style="{StaticResource ButtonPrimary}"
+                                                        Tag="Virtual" />
+                                                </StackPanel>
+
+                                                <Border
+                                                    Grid.Row="1"
+                                                    Margin="0,0,10,0"
+                                                    Background="{DynamicResource RegionBrush}"
+                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                    BorderThickness="1">
+
+                                                    <avalonedit:TextEditor
+                                                        x:Name="VirtualFormulaEditorTextBox"
+                                                        Grid.Row="0"
+                                                        Background="Transparent"
+                                                        BorderThickness="0"
+                                                        FontFamily="Consolas"
+                                                        FontSize="13"
+                                                        HorizontalScrollBarVisibility="Auto"
+                                                        Loaded="IndirectFormulaEditorTextBox_Loaded"
+                                                        ShowLineNumbers="True"
+                                                        SyntaxHighlighting="{x:Null}"
+                                                        VerticalScrollBarVisibility="Auto">
+                                                        <i:Interaction.Behaviors>
+                                                            <behaviors:AvalonEditTextBindingBehavior Text="{Binding EditingChannel.VirtualFormula, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                        </i:Interaction.Behaviors>
+                                                    </avalonedit:TextEditor>
+
+
+                                                </Border>
+
+
+                                                <TextBlock
+                                                    Grid.Row="2"
+                                                    Margin="0,6,0,8"
+                                                    FontSize="11"
+                                                    Foreground="{DynamicResource SecondaryTextBrush}"
+                                                    Text="*返回结果 RESULT = 表达式。" />
+
+                                                <DataGrid
+                                                    Grid.Row="3"
+                                                    Margin="0,0,10,0"
+                                                    AutoGenerateColumns="False"
+                                                    CanUserAddRows="False"
+                                                    HeadersVisibility="Column"
+                                                    ItemsSource="{Binding EditingChannel.VirtualSourceBindings}"
+                                                    RowHeaderWidth="0"
+                                                    SelectedItem="{Binding SelectedVirtualSourceBinding, Mode=TwoWay}"
+                                                    SelectionMode="Single"
+                                                    SelectionUnit="FullRow">
+                                                    <DataGrid.RowStyle>
+                                                        <Style BasedOn="{StaticResource MeasurementDataGridRowStyle}" TargetType="DataGridRow">
+                                                            <Setter Property="ContextMenu">
+                                                                <Setter.Value>
+                                                                    <ContextMenu>
+                                                                        <ContextMenu.DataContext>
+                                                                            <Binding Path="PlacementTarget.DataContext" RelativeSource="{RelativeSource Self}" />
+                                                                        </ContextMenu.DataContext>
+                                                                        <MenuItem Command="{Binding Data.AddVirtualSourceBindingCommand, Source={StaticResource VmProxy}}" Header="添加通道" />
+                                                                        <MenuItem
+                                                                            Command="{Binding Data.RemoveVirtualSourceBindingCommand, Source={StaticResource VmProxy}}"
+                                                                            CommandParameter="{Binding}"
+                                                                            Header="删除" />
+                                                                    </ContextMenu>
+                                                                </Setter.Value>
+                                                            </Setter>
+                                                        </Style>
+                                                    </DataGrid.RowStyle>
+                                                    <DataGrid.Columns>
+                                                        <DataGridTextColumn
+                                                            Width="120"
+                                                            Binding="{Binding SourceKey, UpdateSourceTrigger=PropertyChanged}"
+                                                            Header="变量名" />
+                                                        <DataGridTemplateColumn Width="220" Header="通道">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <ComboBox
+                                                                        DisplayMemberPath="ChannelName"
+                                                                        ItemsSource="{Binding Data.AvailableVirtualSourceChannels, Source={StaticResource VmProxy}}"
+                                                                        SelectedItem="{Binding RuntimeChannel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                        Style="{StaticResource ComboBoxBaseStyle}" />
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
+                                                        <DataGridTextColumn
+                                                            Width="160"
+                                                            Binding="{Binding SourceChannelName}"
+                                                            Header="名称"
+                                                            IsReadOnly="True" />
+                                                    </DataGrid.Columns>
+                                                </DataGrid>
+                                            </Grid>
+                                        </Grid>
                                     </Border>
                                 </Grid>
 

@@ -262,7 +262,7 @@
                                         Header="通道说明" />
                                     <DataGridTextColumn
                                         Width="80"
-                                        Binding="{Binding StepNumber}"
+                                        Binding="{Binding StepNumberDisplay}"
                                         Header="工步编号" />
                                     <DataGridTextColumn
                                         Width="110"
@@ -272,6 +272,18 @@
                                         Width="100"
                                         Binding="{Binding ChannelType}"
                                         Header="通道类型" />
+                                    <DataGridTextColumn
+                                        Width="100"
+                                        Binding="{Binding MeasurementMode}"
+                                        Header="测量模式" />
+                                    <DataGridTextColumn
+                                        Width="220"
+                                        Binding="{Binding SourceSummary}"
+                                        Header="来源摘要" />
+                                    <DataGridTextColumn
+                                        Width="240"
+                                        Binding="{Binding FormulaScript}"
+                                        Header="公式脚本" />
                                     <DataGridTextColumn
                                         Width="100"
                                         Binding="{Binding MeasurementType}"

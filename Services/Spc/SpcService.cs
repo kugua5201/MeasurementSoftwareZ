@@ -8,7 +8,7 @@ namespace MeasurementSoftware.Services
     /// </summary>
     public class SpcService : ISpcService
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
 
         // Xbar-R控制图常数表 (subgroup size n -> A2, D3, D4)
         private static readonly Dictionary<int, (double A2, double D3, double D4)> ControlChartConstants = new()
@@ -31,7 +31,7 @@ namespace MeasurementSoftware.Services
             { 6, 2.534 }, { 7, 2.704 }, { 8, 2.847 }, { 9, 2.970 }, { 10, 3.078 }
         };
 
-        public SpcService(ILog log)
+        public SpcService(ILogService log)
         {
             _log = log;
         }

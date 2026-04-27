@@ -41,11 +41,11 @@ namespace MeasurementSoftware.ViewModels
             set => SetProperty(ref _appLoadingMessage, value);
         }
 
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IUserSettingsService _userSettingsService;
 
 
-        public MainWindowViewModel(ILog log, IUserSettingsService userSettingsService)
+        public MainWindowViewModel(ILogService log, IUserSettingsService userSettingsService)
         {
             _log = log;
             _userSettingsService = userSettingsService;

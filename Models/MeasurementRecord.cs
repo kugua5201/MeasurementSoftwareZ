@@ -181,6 +181,24 @@ namespace MeasurementSoftware.Models
         public string ChannelType { get; set; } = string.Empty;
 
         /// <summary>
+        /// 测量模式。
+        /// 例如直接测量、间接测量、虚拟通道。
+        /// </summary>
+        public string MeasurementMode { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 来源摘要。
+        /// 用于历史记录中快速区分直测、间接、虚拟及其具体来源类型。
+        /// </summary>
+        public string SourceSummary { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 公式脚本。
+        /// 间接测量和虚拟公式通道用于还原结果计算来源。
+        /// </summary>
+        public string FormulaScript { get; set; } = string.Empty;
+
+        /// <summary>
         /// 测量类型。
         /// </summary>
         public string MeasurementType { get; set; } = string.Empty;
@@ -277,6 +295,12 @@ namespace MeasurementSoftware.Models
         public int StepNumber { get; set; }
 
         /// <summary>
+        /// 通道工步显示文本。
+        /// 虚拟通道的测量通道计算模式统一显示为 --。
+        /// </summary>
+        public string StepDisplayText { get; set; } = string.Empty;
+
+        /// <summary>
         /// 通道所属工步名称。
         /// </summary>
         public string StepName { get; set; } = string.Empty;
@@ -318,5 +342,13 @@ namespace MeasurementSoftware.Models
         public string ChannelNumberDisplay => string.IsNullOrWhiteSpace(ChannelNumberText)
             ? ChannelNumber.ToString(CultureInfo.InvariantCulture)
             : ChannelNumberText;
+
+        /// <summary>
+        /// 工步编号显示文本。
+        /// 优先使用持久化显示值，兼容旧记录时回退为数字工步号。
+        /// </summary>
+        public string StepNumberDisplay => string.IsNullOrWhiteSpace(StepDisplayText)
+            ? StepNumber.ToString(CultureInfo.InvariantCulture)
+            : StepDisplayText;
     }
 }

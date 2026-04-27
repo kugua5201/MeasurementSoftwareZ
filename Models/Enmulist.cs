@@ -115,6 +115,42 @@ namespace MeasurementSoftware.Models
     }
 
     /// <summary>
+    /// 虚拟测量数据来源模式。
+    /// </summary>
+    public enum VirtualMeasurementSourceMode
+    {
+        /// <summary>
+        /// 软件模拟数据。
+        /// </summary>
+        [Description("软件模拟数据")]
+        SoftwareSimulation,
+
+        /// <summary>
+        /// 基于其他测量通道结果的公式计算。
+        /// </summary>
+        [Description("测量通道计算")]
+        ChannelFormula
+    }
+
+    /// <summary>
+    /// 软件模拟数据波形类型。
+    /// </summary>
+    public enum VirtualMeasurementWaveformType
+    {
+        /// <summary>
+        /// 正弦波。
+        /// </summary>
+        [Description("正弦波")]
+        Sine,
+
+        /// <summary>
+        /// 方波。
+        /// </summary>
+        [Description("方波")]
+        Square
+    }
+
+    /// <summary>
     /// 测量结果枚举
     /// </summary>
     public enum MeasurementResult

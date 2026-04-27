@@ -16,14 +16,14 @@ namespace MeasurementSoftware.Services
     public class DataRecordService : IDataRecordService
     {
         private const string TableName = "MeasurementRecords";
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly string _databaseFolder;
         private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
         {
             PropertyNameCaseInsensitive = true
         };
 
-        public DataRecordService(ILog log)
+        public DataRecordService(ILogService log)
         {
             _log = log;
             _databaseFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DataRecords");
@@ -271,7 +271,7 @@ ORDER BY MeasurementTime DESC;";
                                 QuoteCsv(channel.ChannelNumberDisplay),
                                 QuoteCsv(channel.ChannelName),
                                 QuoteCsv(channel.ChannelDescription),
-                                QuoteCsv(channel.StepNumber.ToString(CultureInfo.InvariantCulture)),
+                                QuoteCsv(channel.StepNumberDisplay),
                                 QuoteCsv(channel.StepName),
                                 QuoteCsv(channel.ChannelType),
                                 QuoteCsv(channel.MeasurementType),
@@ -705,9 +705,12 @@ ORDER BY MeasurementTime DESC;";
                 new CsvColumnDefinition("ChannelNumber", "通道编号", CsvColumnScope.Channel, (_, channel, _) => channel?.ChannelNumberDisplay ?? string.Empty),
                 new CsvColumnDefinition("ChannelName", "通道名称", CsvColumnScope.Channel, (_, channel, _) => channel?.ChannelName ?? string.Empty),
                 new CsvColumnDefinition("ChannelDescription", "通道说明", CsvColumnScope.Channel, (_, channel, _) => channel?.ChannelDescription ?? string.Empty),
-                new CsvColumnDefinition("ChannelStepNumber", "通道工步编号", CsvColumnScope.Channel, (_, channel, _) => channel?.StepNumber.ToString(CultureInfo.InvariantCulture) ?? string.Empty),
+                new CsvColumnDefinition("ChannelStepNumber", "通道工步编号", CsvColumnScope.Channel, (_, channel, _) => channel?.StepNumberDisplay ?? string.Empty),
                 new CsvColumnDefinition("ChannelStepName", "通道工步名称", CsvColumnScope.Channel, (_, channel, _) => channel?.StepName ?? string.Empty),
                 new CsvColumnDefinition("ChannelType", "通道类型", CsvColumnScope.Channel, (_, channel, _) => channel?.ChannelType ?? string.Empty),
+                new CsvColumnDefinition("MeasurementMode", "测量模式", CsvColumnScope.Channel, (_, channel, _) => channel?.MeasurementMode ?? string.Empty),
+                new CsvColumnDefinition("SourceSummary", "来源摘要", CsvColumnScope.Channel, (_, channel, _) => channel?.SourceSummary ?? string.Empty),
+                new CsvColumnDefinition("FormulaScript", "公式脚本", CsvColumnScope.Channel, (_, channel, _) => channel?.FormulaScript ?? string.Empty),
                 new CsvColumnDefinition("DataSourceAddress", "数据源地址", CsvColumnScope.Channel, (_, channel, _) => channel?.DataSourceAddress ?? string.Empty),
                 new CsvColumnDefinition("PlcDeviceName", "PLC设备", CsvColumnScope.Channel, (_, channel, _) => channel?.PlcDeviceName ?? string.Empty),
                 new CsvColumnDefinition("DataPointName", "数据点名称", CsvColumnScope.Channel, (_, channel, _) => channel?.DataPointName ?? string.Empty),

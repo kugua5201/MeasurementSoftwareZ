@@ -9,7 +9,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class LogViewerViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private List<string> _allLogLines = new(); // 存储所有日志行（字符串，轻量级）
         private List<string> _filteredLogLines = new(); // 过滤后的日志行
 
@@ -41,7 +41,7 @@ namespace MeasurementSoftware.ViewModels
 
         public string[] LogLevels { get; } = { "DEBUG", "INFO", "WARN", "ERROR" };
 
-        public LogViewerViewModel(ILog log)
+        public LogViewerViewModel(ILogService log)
         {
             _log = log;
             _ = LoadLogLinesAsync();

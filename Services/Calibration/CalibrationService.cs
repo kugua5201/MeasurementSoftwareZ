@@ -8,9 +8,9 @@ namespace MeasurementSoftware.Services
     /// </summary>
     public class CalibrationService : ICalibrationService
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
 
-        public CalibrationService(ILog log)
+        public CalibrationService(ILogService log)
         {
             _log = log;
         }

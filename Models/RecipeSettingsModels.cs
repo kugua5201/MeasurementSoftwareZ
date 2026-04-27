@@ -159,6 +159,7 @@ namespace MeasurementSoftware.Models
             set => SetProperty(ref annotationSize, value);
         }
 
+    
         /// <summary>
         /// 标注形状。
         /// </summary>

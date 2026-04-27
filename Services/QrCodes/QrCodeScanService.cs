@@ -13,9 +13,9 @@ namespace MeasurementSoftware.Services.QrCodes
     public class QrCodeScanService : IQrCodeScanService
     {
         private readonly IComponentContext _componentContext;
-        private readonly ILog _log;
+        private readonly ILogService _log;
 
-        public QrCodeScanService(IComponentContext componentContext, ILog log)
+        public QrCodeScanService(IComponentContext componentContext, ILogService log)
         {
             _componentContext = componentContext;
             _log = log;

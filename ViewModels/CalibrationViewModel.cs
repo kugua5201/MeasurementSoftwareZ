@@ -11,7 +11,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class CalibrationViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly ICalibrationService _calibrationService;
 
@@ -96,7 +96,7 @@ namespace MeasurementSoftware.ViewModels
 
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
 
-        public CalibrationViewModel(ILog log, IRecipeConfigService recipeConfigService, ICalibrationService calibrationService)
+        public CalibrationViewModel(ILogService log, IRecipeConfigService recipeConfigService, ICalibrationService calibrationService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;

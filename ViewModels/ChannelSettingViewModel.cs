@@ -14,7 +14,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class ChannelSettingViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
@@ -79,11 +79,18 @@ namespace MeasurementSoftware.ViewModels
         private bool showCacheToggle;
 
         private MeasurementChannelSourceBinding? selectedIndirectSourceBinding;
+        private VirtualMeasurementChannelBinding? selectedVirtualSourceBinding;
 
         public MeasurementChannelSourceBinding? SelectedIndirectSourceBinding
         {
             get => selectedIndirectSourceBinding;
             set => SetProperty(ref selectedIndirectSourceBinding, value);
+        }
+
+        public VirtualMeasurementChannelBinding? SelectedVirtualSourceBinding
+        {
+            get => selectedVirtualSourceBinding;
+            set => SetProperty(ref selectedVirtualSourceBinding, value);
         }
 
         /// <summary>
@@ -94,8 +101,16 @@ namespace MeasurementSoftware.ViewModels
         public IEnumerable<ChannelType> ChannelTypes => Enum.GetValues<ChannelType>();
         public IEnumerable<MeasurementChannelMode> MeasurementChannelModes => Enum.GetValues<MeasurementChannelMode>();
         public IEnumerable<IndirectMeasurementTriggerMode> IndirectMeasurementTriggerModes => Enum.GetValues<IndirectMeasurementTriggerMode>();
+        public IEnumerable<VirtualMeasurementSourceMode> VirtualMeasurementSourceModes => Enum.GetValues<VirtualMeasurementSourceMode>();
+        public IEnumerable<VirtualMeasurementWaveformType> VirtualMeasurementWaveformTypes => Enum.GetValues<VirtualMeasurementWaveformType>();
+        public IEnumerable<MeasurementChannel> AvailableVirtualSourceChannels => GetAvailableVirtualSourceChannels();
 
-        public ChannelSettingViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IMeasurementFormulaScriptEvaluator formulaScriptEvaluator, IEnumerable<IMeasurementChannelHandler> channelHandlers)
+        partial void OnEditingChannelChanged(MeasurementChannel? value)
+        {
+            OnPropertyChanged(nameof(AvailableVirtualSourceChannels));
+        }
+
+        public ChannelSettingViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IMeasurementFormulaScriptEvaluator formulaScriptEvaluator, IEnumerable<IMeasurementChannelHandler> channelHandlers)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
@@ -409,6 +424,7 @@ namespace MeasurementSoftware.ViewModels
             // 监听设备 ID 变化，响应式加载数据点
             EditingChannel.PropertyChanged += EditingChannel_PropertyChanged;
             RegisterIndirectBindingEvents(EditingChannel);
+            RegisterVirtualBindingEvents(EditingChannel);
 
             IsEditMode = false;
             OnPropertyChanged(nameof(DrawerTitle));
@@ -455,10 +471,18 @@ namespace MeasurementSoftware.ViewModels
                 ResultOutputOkValue = channel.ResultOutputOkValue,
                 ResultOutputNgValue = channel.ResultOutputNgValue,
                 IndirectFormula = channel.IndirectFormula,
-                IndirectTriggerMode = channel.IndirectTriggerMode
+                IndirectTriggerMode = channel.IndirectTriggerMode,
+                VirtualSourceMode = channel.VirtualSourceMode,
+                VirtualWaveformType = channel.VirtualWaveformType,
+                VirtualWaveformAmplitude = channel.VirtualWaveformAmplitude,
+                VirtualWaveformPeriodSeconds = channel.VirtualWaveformPeriodSeconds,
+                VirtualWaveformDutyCycle = channel.VirtualWaveformDutyCycle,
+                VirtualWaveformOffset = channel.VirtualWaveformOffset,
+                VirtualFormula = channel.VirtualFormula
             };
 
             EditingChannel.ReplaceIndirectSourceBindings(channel.IndirectSourceBindings.Select(binding => binding.Clone()));
+            EditingChannel.ReplaceVirtualSourceBindings(channel.VirtualSourceBindings.Select(binding => binding.Clone()));
 
             LoadMeasurementBindingsForChannel(EditingChannel);
 
@@ -483,10 +507,23 @@ namespace MeasurementSoftware.ViewModels
             // 监听设备 ID 变化，响应式加载数据点
             EditingChannel.PropertyChanged += EditingChannel_PropertyChanged;
             RegisterIndirectBindingEvents(EditingChannel);
+            RegisterVirtualBindingEvents(EditingChannel);
 
             IsEditMode = true;
             OnPropertyChanged(nameof(DrawerTitle));
             IsChannelEditorOpen = true;
+        }
+
+        private void RegisterVirtualBindingEvents(MeasurementChannel channel)
+        {
+            channel.VirtualSourceBindings.CollectionChanged -= VirtualSourceBindings_CollectionChanged;
+            channel.VirtualSourceBindings.CollectionChanged += VirtualSourceBindings_CollectionChanged;
+
+            foreach (var binding in channel.VirtualSourceBindings)
+            {
+                binding.PropertyChanged -= VirtualSourceBinding_PropertyChanged;
+                binding.PropertyChanged += VirtualSourceBinding_PropertyChanged;
+            }
         }
 
         /// <summary>
@@ -613,6 +650,12 @@ namespace MeasurementSoftware.ViewModels
             {
                 binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
             }
+
+            channel.VirtualSourceBindings.CollectionChanged -= VirtualSourceBindings_CollectionChanged;
+            foreach (var binding in channel.VirtualSourceBindings)
+            {
+                binding.PropertyChanged -= VirtualSourceBinding_PropertyChanged;
+            }
         }
 
         private void IndirectSourceBindings_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -632,6 +675,49 @@ namespace MeasurementSoftware.ViewModels
                 {
                     binding.PropertyChanged -= IndirectSourceBinding_PropertyChanged;
                 }
+            }
+        }
+
+        private void VirtualSourceBindings_CollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems != null)
+            {
+                foreach (VirtualMeasurementChannelBinding binding in e.NewItems)
+                {
+                    binding.PropertyChanged -= VirtualSourceBinding_PropertyChanged;
+                    binding.PropertyChanged += VirtualSourceBinding_PropertyChanged;
+                }
+            }
+
+            if (e.OldItems != null)
+            {
+                foreach (VirtualMeasurementChannelBinding binding in e.OldItems)
+                {
+                    binding.PropertyChanged -= VirtualSourceBinding_PropertyChanged;
+                }
+            }
+        }
+
+        private void VirtualSourceBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (sender is not VirtualMeasurementChannelBinding binding)
+            {
+                return;
+            }
+
+            if (e.PropertyName == nameof(VirtualMeasurementChannelBinding.RuntimeChannel) && binding.RuntimeChannel == EditingChannel)
+            {
+                binding.RuntimeChannel = null;
+            }
+
+            if (e.PropertyName == nameof(VirtualMeasurementChannelBinding.RuntimeChannel)
+                && binding.RuntimeChannel != null
+                && WouldCreateVirtualCycle(EditingChannel, binding.RuntimeChannel))
+            {
+                var sourceChannelName = binding.RuntimeChannel.ChannelName;
+                binding.RuntimeChannel = null;
+                Growl.Warning($"来源通道 {sourceChannelName} 会形成循环引用，已自动取消选择");
+                return;
             }
         }
 
@@ -731,6 +817,153 @@ namespace MeasurementSoftware.ViewModels
         }
 
         [RelayCommand]
+        private void AddVirtualSourceBinding()
+        {
+            if (EditingChannel == null)
+            {
+                return;
+            }
+
+            var nextIndex = EditingChannel.VirtualSourceBindings.Count + 1;
+            var binding = new VirtualMeasurementChannelBinding
+            {
+                SourceKey = $"X{nextIndex}",
+                RuntimeChannel = GetAvailableVirtualSourceChannels().FirstOrDefault()
+            };
+
+            binding.PropertyChanged += VirtualSourceBinding_PropertyChanged;
+            EditingChannel.VirtualSourceBindings.Add(binding);
+            SelectedVirtualSourceBinding = binding;
+        }
+
+        private IEnumerable<MeasurementChannel> GetAvailableVirtualSourceChannels()
+        {
+            if (EditingChannel == null)
+            {
+                return Channels;
+            }
+
+            return Channels.Where(channel => channel.IsEnabled && channel.ChannelNumber != EditingChannel.ChannelNumber && !WouldCreateVirtualCycle(EditingChannel, channel));
+        }
+
+        private bool WouldCreateVirtualCycle(MeasurementChannel? targetChannel, MeasurementChannel? candidateSourceChannel)
+        {
+            if (targetChannel == null || candidateSourceChannel == null)
+            {
+                return false;
+            }
+
+            if (candidateSourceChannel.ChannelNumber == targetChannel.ChannelNumber)
+            {
+                return true;
+            }
+
+            return DependsOnChannel(candidateSourceChannel, targetChannel.ChannelNumber, new HashSet<int>());
+        }
+
+        private static bool DependsOnChannel(MeasurementChannel channel, int targetChannelNumber, HashSet<int> visited)
+        {
+            if (!visited.Add(channel.ChannelNumber))
+            {
+                return false;
+            }
+
+            if (!channel.IsVirtualMeasurementMode || channel.VirtualSourceMode != VirtualMeasurementSourceMode.ChannelFormula)
+            {
+                return false;
+            }
+
+            foreach (var binding in channel.VirtualSourceBindings)
+            {
+                var sourceChannel = binding.RuntimeChannel;
+                if (sourceChannel == null)
+                {
+                    continue;
+                }
+
+                if (sourceChannel.ChannelNumber == targetChannelNumber)
+                {
+                    return true;
+                }
+
+                if (DependsOnChannel(sourceChannel, targetChannelNumber, visited))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        [RelayCommand]
+        private void RemoveVirtualSourceBinding(VirtualMeasurementChannelBinding? binding)
+        {
+            if (EditingChannel == null || binding == null)
+            {
+                return;
+            }
+
+            if (EditingChannel.VirtualSourceBindings.Count <= 1)
+            {
+                Growl.Warning("虚拟测量至少需要保留一个来源通道");
+                return;
+            }
+
+            binding.PropertyChanged -= VirtualSourceBinding_PropertyChanged;
+            EditingChannel.VirtualSourceBindings.Remove(binding);
+            SelectedVirtualSourceBinding = EditingChannel.VirtualSourceBindings.FirstOrDefault();
+        }
+
+        [RelayCommand]
+        private void CheckVirtualFormula()
+        {
+            if (EditingChannel == null)
+            {
+                return;
+            }
+
+            if (!EditingChannel.IsVirtualMeasurementMode || EditingChannel.VirtualSourceMode != VirtualMeasurementSourceMode.ChannelFormula)
+            {
+                Growl.Warning("当前不是基于测量通道公式的虚拟测量模式");
+                return;
+            }
+
+            var variables = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach (var binding in EditingChannel.VirtualSourceBindings)
+            {
+                var sourceKey = binding.SourceKey?.Trim();
+                if (string.IsNullOrWhiteSpace(sourceKey))
+                {
+                    Growl.Warning("变量名不能为空");
+                    return;
+                }
+
+                if (binding.RuntimeChannel == null)
+                {
+                    Growl.Warning($"变量 {sourceKey} 未绑定来源通道");
+                    return;
+                }
+
+                if (!variables.TryAdd(sourceKey, 1d))
+                {
+                    Growl.Warning($"变量名 {sourceKey} 重复，请修改后重试");
+                    return;
+                }
+            }
+
+            if (!_formulaScriptEvaluator.TryEvaluateScript(EditingChannel.VirtualFormula, variables, out _, out var calculatedVariables, out _, out var errorMessage))
+            {
+                Growl.Warning($"脚本检查失败：{errorMessage}");
+                _log.Warn($"虚拟测量脚本检查失败：{errorMessage}");
+                return;
+            }
+
+            var intermediateVariableCount = Math.Max(0, calculatedVariables.Count - variables.Count - 1);
+            Growl.Success($"脚本检查通过，中间变量 {intermediateVariableCount} 个");
+            _log.Info($"虚拟测量脚本检查通过，中间变量 {intermediateVariableCount} 个");
+        }
+
+        [RelayCommand]
         private void SaveChannel()
         {
             if (CurrentRecipe == null || EditingChannel == null)
@@ -795,6 +1028,13 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.SampleCount = EditingChannel.SampleCount;
                     originalChannel.IndirectFormula = EditingChannel.IndirectFormula;
                     originalChannel.IndirectTriggerMode = EditingChannel.IndirectTriggerMode;
+                    originalChannel.VirtualSourceMode = EditingChannel.VirtualSourceMode;
+                    originalChannel.VirtualWaveformType = EditingChannel.VirtualWaveformType;
+                    originalChannel.VirtualWaveformAmplitude = EditingChannel.VirtualWaveformAmplitude;
+                    originalChannel.VirtualWaveformPeriodSeconds = EditingChannel.VirtualWaveformPeriodSeconds;
+                    originalChannel.VirtualWaveformDutyCycle = EditingChannel.VirtualWaveformDutyCycle;
+                    originalChannel.VirtualWaveformOffset = EditingChannel.VirtualWaveformOffset;
+                    originalChannel.VirtualFormula = EditingChannel.VirtualFormula;
                      originalChannel.EnableResultOutput = EditingChannel.EnableResultOutput;
                      originalChannel.ResultOutputPlcDeviceId = EditingChannel.ResultOutputPlcDeviceId;
                      originalChannel.ResultOutputDataPointId = EditingChannel.ResultOutputDataPointId;
@@ -802,6 +1042,7 @@ namespace MeasurementSoftware.ViewModels
                      originalChannel.ResultOutputOkValue = EditingChannel.ResultOutputOkValue;
                      originalChannel.ResultOutputNgValue = EditingChannel.ResultOutputNgValue;
                     originalChannel.ReplaceIndirectSourceBindings(EditingChannel.IndirectSourceBindings.Select(binding => binding.Clone()));
+                    originalChannel.ReplaceVirtualSourceBindings(EditingChannel.VirtualSourceBindings.Select(binding => binding.Clone()));
                   
                     if (EditingChannel.IsDirectMeasurementMode)
                     {

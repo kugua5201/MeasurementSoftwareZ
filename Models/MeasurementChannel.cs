@@ -16,6 +16,8 @@ namespace MeasurementSoftware.Models
         public MeasurementChannel()
         {
             AttachIndirectSourceBindings(IndirectSourceBindings);
+            EnsureVirtualSourceBindings(1);
+            AttachVirtualSourceBindings(VirtualSourceBindings);
         }
 
         /// <summary>
@@ -50,6 +52,8 @@ namespace MeasurementSoftware.Models
         [NotifyPropertyChangedFor(nameof(IsDirectMeasurementMode))]
         [NotifyPropertyChangedFor(nameof(IsIndirectMeasurementMode))]
         [NotifyPropertyChangedFor(nameof(IsVirtualMeasurementMode))]
+        [NotifyPropertyChangedFor(nameof(CanEditStepConfiguration))]
+        [NotifyPropertyChangedFor(nameof(DisplayStepText))]
         [NotifyPropertyChangedFor(nameof(DisplayPlcDeviceName))]
         [NotifyPropertyChangedFor(nameof(DisplayDataPointName))]
         [NotifyPropertyChangedFor(nameof(DisplayDataSourceAddress))]
@@ -147,6 +151,83 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private IndirectMeasurementTriggerMode indirectTriggerMode = IndirectMeasurementTriggerMode.AllValuesChanged;
+
+        /// <summary>
+        /// 虚拟测量来源模式。
+        /// 用于在软件模拟数据与测量通道公式之间切换。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsChannelFormula))]
+        [NotifyPropertyChangedFor(nameof(DisplayStepText))]
+        [NotifyPropertyChangedFor(nameof(CanEditStepConfiguration))]
+        private VirtualMeasurementSourceMode virtualSourceMode = VirtualMeasurementSourceMode.SoftwareSimulation;
+
+        /// <summary>
+        /// 是否通道测量模式
+        /// </summary>
+        [JsonIgnore]
+        public bool IsChannelFormula => VirtualSourceMode == VirtualMeasurementSourceMode.ChannelFormula;
+
+        /// <summary>
+        /// 测量界面显示用工步文本。
+        /// 虚拟通道的测量通道计算模式不受工步控制，统一显示为 --。
+        /// </summary>
+        [JsonIgnore]
+        public string DisplayStepText => IsVirtualMeasurementMode && IsChannelFormula
+            ? "--"
+            : StepNumber.ToString();
+
+        /// <summary>
+        /// 是否允许编辑工步配置。
+        /// 虚拟通道的测量通道计算模式不允许编辑工步，软件模拟模式不受影响。
+        /// </summary>
+        [JsonIgnore]
+        public bool CanEditStepConfiguration => !(IsVirtualMeasurementMode && IsChannelFormula);
+
+        /// <summary>
+        /// 虚拟测量软件模拟波形类型。
+        /// </summary>
+        [ObservableProperty]
+        private VirtualMeasurementWaveformType virtualWaveformType = VirtualMeasurementWaveformType.Sine;
+
+        /// <summary>
+        /// 虚拟测量模拟波形幅值。
+        /// </summary>
+        [ObservableProperty]
+        private double virtualWaveformAmplitude = 1d;
+
+        /// <summary>
+        /// 虚拟测量模拟波形周期（秒）。
+        /// </summary>
+        [ObservableProperty]
+        private double virtualWaveformPeriodSeconds = 1d;
+
+        /// <summary>
+        /// 虚拟测量方波占空比。
+        /// 取值范围 0~1。
+        /// </summary>
+        [ObservableProperty]
+        private double virtualWaveformDutyCycle = 0.5d;
+
+        /// <summary>
+        /// 虚拟测量软件模拟偏移量。
+        /// 模拟值会在基础波形结果上叠加该偏移。
+        /// </summary>
+        [ObservableProperty]
+        private double virtualWaveformOffset;
+
+        /// <summary>
+        /// 虚拟测量公式脚本。
+        /// 用于基于其他测量通道结果进行公式计算。
+        /// </summary>
+        [ObservableProperty]
+        private string virtualFormula = string.Empty;
+
+        /// <summary>
+        /// 虚拟测量来源通道绑定列表。
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<VirtualMeasurementChannelBinding> virtualSourceBindings = [];
 
         /// <summary>
         /// 是否启用测量结果输出。
@@ -266,6 +347,93 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        private void AttachVirtualSourceBindings(ObservableCollection<VirtualMeasurementChannelBinding>? bindings)
+        {
+            if (bindings == null)
+            {
+                return;
+            }
+
+            bindings.CollectionChanged -= VirtualSourceBindings_CollectionChanged;
+            bindings.CollectionChanged += VirtualSourceBindings_CollectionChanged;
+
+            foreach (var binding in bindings)
+            {
+                binding.PropertyChanged -= VirtualSourceBinding_PropertyChanged;
+                binding.PropertyChanged += VirtualSourceBinding_PropertyChanged;
+            }
+        }
+
+        private void VirtualSourceBindings_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems != null)
+            {
+                foreach (VirtualMeasurementChannelBinding binding in e.OldItems)
+                {
+                    binding.PropertyChanged -= VirtualSourceBinding_PropertyChanged;
+                }
+            }
+
+            if (e.NewItems != null)
+            {
+                foreach (VirtualMeasurementChannelBinding binding in e.NewItems)
+                {
+                    binding.PropertyChanged -= VirtualSourceBinding_PropertyChanged;
+                    binding.PropertyChanged += VirtualSourceBinding_PropertyChanged;
+                }
+            }
+
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
+        }
+
+        private void VirtualSourceBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName is nameof(VirtualMeasurementChannelBinding.SourceKey)
+                or nameof(VirtualMeasurementChannelBinding.SourceChannelName)
+                or nameof(VirtualMeasurementChannelBinding.SourceChannelAddress)
+                or nameof(VirtualMeasurementChannelBinding.RuntimeChannel)
+                or nameof(VirtualMeasurementChannelBinding.SourceChannelNumber))
+            {
+                OnPropertyChanged(nameof(DisplayPlcDeviceName));
+                OnPropertyChanged(nameof(DisplayDataPointName));
+                OnPropertyChanged(nameof(DisplayDataSourceAddress));
+            }
+        }
+
+        /// <summary>
+        /// 确保虚拟测量来源通道至少存在指定数量。
+        /// </summary>
+        public void EnsureVirtualSourceBindings(int minimumCount)
+        {
+            minimumCount = Math.Max(0, minimumCount);
+            while (VirtualSourceBindings.Count < minimumCount)
+            {
+                var nextIndex = VirtualSourceBindings.Count + 1;
+                VirtualSourceBindings.Add(new VirtualMeasurementChannelBinding
+                {
+                    SourceKey = $"X{nextIndex}"
+                });
+            }
+
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
+        }
+
+        /// <summary>
+        /// 用新的虚拟测量来源通道集合替换当前集合。
+        /// </summary>
+        public void ReplaceVirtualSourceBindings(IEnumerable<VirtualMeasurementChannelBinding> bindings)
+        {
+            VirtualSourceBindings = new ObservableCollection<VirtualMeasurementChannelBinding>(bindings ?? []);
+            AttachVirtualSourceBindings(VirtualSourceBindings);
+            OnPropertyChanged(nameof(DisplayPlcDeviceName));
+            OnPropertyChanged(nameof(DisplayDataPointName));
+            OnPropertyChanged(nameof(DisplayDataSourceAddress));
+        }
+
         /// <summary>
         /// 数据源显示用 PLC 设备名称。
         /// 直接测量显示单个设备，间接测量显示已绑定设备摘要。
@@ -277,7 +445,11 @@ namespace MeasurementSoftware.Models
             MeasurementChannelMode.Indirect => IndirectSourceBindings.Count == 0
                 ? string.Empty
                 : $"多设备/点位({IndirectSourceBindings.Count})",
-            MeasurementChannelMode.Virtual => "虚拟通道",
+            MeasurementChannelMode.Virtual => VirtualSourceMode == VirtualMeasurementSourceMode.SoftwareSimulation
+                ? "软件模拟"
+                : VirtualSourceBindings.Count == 0
+                    ? string.Empty
+                    : $"测量通道({VirtualSourceBindings.Count})",
             _ => string.Empty
         };
 
@@ -342,7 +514,13 @@ namespace MeasurementSoftware.Models
             MeasurementChannelMode.Indirect => string.Join("、", IndirectSourceBindings
                 .Where(binding => !string.IsNullOrWhiteSpace(binding.SourceKey))
                 .Select(binding => binding.SourceKey.Trim())),
-            MeasurementChannelMode.Virtual => "未实现",
+            MeasurementChannelMode.Virtual => VirtualSourceMode == VirtualMeasurementSourceMode.SoftwareSimulation
+                ? VirtualWaveformType.GetDescription()
+                : string.Join("、", VirtualSourceBindings
+                    .Where(binding => !string.IsNullOrWhiteSpace(binding.SourceKey))
+                    .Select(binding => string.IsNullOrWhiteSpace(binding.SourceChannelName)
+                        ? binding.SourceKey.Trim()
+                        : $"{binding.SourceKey.Trim()}")),
             _ => string.Empty
         };
 
@@ -358,7 +536,15 @@ namespace MeasurementSoftware.Models
                 .Select(binding => string.IsNullOrWhiteSpace(binding.SourceKey)
                     ? binding.DataSourceAddress
                     : $"{binding.SourceKey}:{binding.DataSourceAddress}")),
-            MeasurementChannelMode.Virtual => string.Empty,
+            MeasurementChannelMode.Virtual => VirtualSourceMode == VirtualMeasurementSourceMode.SoftwareSimulation
+                ? VirtualWaveformType == VirtualMeasurementWaveformType.Square
+                    ? $"幅值:{VirtualWaveformAmplitude}；偏移:{VirtualWaveformOffset}；周期:{VirtualWaveformPeriodSeconds}ms；占空比:{VirtualWaveformDutyCycle:P0}"
+                    : $"幅值:{VirtualWaveformAmplitude}；偏移:{VirtualWaveformOffset}；周期:{VirtualWaveformPeriodSeconds}ms"
+                : string.Join("；", VirtualSourceBindings
+                    .Where(binding => !string.IsNullOrWhiteSpace(binding.SourceKey))
+                    .Select(binding => string.IsNullOrWhiteSpace(binding.SourceChannelAddress)
+                        ? binding.SourceKey.Trim()
+                        : $"{binding.SourceKey.Trim()}:{binding.SourceChannelName}")),
             _ => string.Empty
         };
 
@@ -728,6 +914,7 @@ namespace MeasurementSoftware.Models
         /// 工步编号（用于分步测量）
         /// </summary>
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayStepText))]
         private int stepNumber = 1;
 
         /// <summary>

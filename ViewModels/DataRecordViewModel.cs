@@ -13,7 +13,7 @@ namespace MeasurementSoftware.ViewModels
     public partial class DataRecordViewModel : ObservableViewModel
     {
         private readonly List<MeasurementRecord> _allRecords = [];
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IDataRecordService _dataRecordService;
 
         [ObservableProperty]
@@ -55,7 +55,7 @@ namespace MeasurementSoftware.ViewModels
 
         public string PageSummary => $"第 {CurrentPage}/{TotalPages} 页，共 {TotalCount} 条";
 
-        public DataRecordViewModel(ILog log, IDataRecordService dataRecordService)
+        public DataRecordViewModel(ILogService log, IDataRecordService dataRecordService)
         {
             _log = log;
             _dataRecordService = dataRecordService;

@@ -3,12 +3,14 @@ using MeasurementSoftware.Helpers;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.UserSetting;
 using MeasurementSoftware.ViewModels;
+using HandyControl.Controls;
 using ICSharpCode.AvalonEdit;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using HcWindow = HandyControl.Controls.Window;
 
 namespace MeasurementSoftware.UserControls
 {
@@ -51,6 +53,50 @@ namespace MeasurementSoftware.UserControls
             {
                 viewModel.EditChannelCommand.Execute(viewModel.SelectedChannel);
             }
+        }
+
+        private void OpenFormulaHelp_Click(object sender, RoutedEventArgs e)
+        {
+            var helpMode = (sender as FrameworkElement)?.Tag?.ToString() ?? "Formula";
+            var document = FormulaHelpContentProvider.CreateDocument(helpMode);
+            var window = new HcWindow
+            {
+                Title = helpMode == "Virtual" ? "虚拟测量函数说明" : "间接测量函数说明",
+                Width = 900,
+                Height = 680,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = System.Windows.Window.GetWindow(this),
+                Content = new Grid
+                {
+                    Margin = new Thickness(16),
+                    Children =
+                    {
+                        new Border
+                        {
+                            Background = System.Windows.Media.Brushes.White,
+                            BorderBrush = System.Windows.Media.Brushes.LightGray,
+                            BorderThickness = new Thickness(1),
+                            Child = new System.Windows.Controls.ScrollViewer
+                            {
+                                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                                Content = new RichTextBox
+                                {
+                                    IsReadOnly = true,
+                                    BorderThickness = new Thickness(0),
+                                    Background = System.Windows.Media.Brushes.Transparent,
+                                    FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                                    FontSize = 13,
+                                    Padding = new Thickness(12),
+                                    Document = document,
+                                    VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            window.ShowDialog();
         }
 
         /// <summary>

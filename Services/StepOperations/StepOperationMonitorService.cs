@@ -14,7 +14,7 @@ namespace MeasurementSoftware.Services.StepOperations
     /// </summary>
     public class StepOperationMonitorService : IStepOperationMonitorService
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly Dictionary<StepOperationBindingConfig, PropertyChangedEventHandler> _bindingPointHandlers = [];
 
         private MeasurementRecipe? _recipe;
@@ -23,7 +23,7 @@ namespace MeasurementSoftware.Services.StepOperations
         private ObservableCollection<PlcDevice>? _observedDevices;
         private bool _isRefreshingBindings;
 
-        public StepOperationMonitorService(ILog log)
+        public StepOperationMonitorService(ILogService log)
         {
             _log = log;
         }
@@ -48,6 +48,14 @@ namespace MeasurementSoftware.Services.StepOperations
 
             SubscribeRecipe();
             ApplyMonitorState();
+        }
+
+        /// <inheritdoc/>
+        public void ResetRuntimeState()
+        {
+            //UnsubscribeBindingPointEvents(); RebindValueEvents();
+            ResetObservedStepOperations(_recipe?.OtherSettings?.StepOperationBindings);
+        
         }
 
         #region 配方与配置监听

@@ -40,7 +40,7 @@ namespace MeasurementSoftware
 
             builder.RegisterType<AcquiringInterceptor>();
             // 注册服务
-            builder.RegisterSingleton<ILog, Log>();
+            builder.RegisterSingleton<ILogService, LogService>();
             builder.RegisterSingleton<IEventAggregator, EventAggregator>();
             builder.RegisterSingleton<IUserSettingsService, UserSettingsService>();
             //builder.RegisterSingleton<ILicenseService, LicenseService>();
@@ -120,7 +120,7 @@ namespace MeasurementSoftware
             {
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-                var log = _container!.Resolve<ILog>();
+                var log = _container!.Resolve<ILogService>();
                 var appConfig = _container!.Resolve<AppConfig>();
                 var userSettings = _container!.Resolve<IUserSettingsService>();
                 var dataRecordService = _container!.Resolve<IDataRecordService>();
@@ -150,7 +150,7 @@ namespace MeasurementSoftware
             }
             catch (Exception ex)
             {
-                var log = _container?.Resolve<ILog>();
+                var log = _container?.Resolve<ILogService>();
                 log?.Error($"加载配置失败: {ex.Message}");
             }
             finally

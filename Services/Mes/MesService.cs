@@ -9,13 +9,13 @@ namespace MeasurementSoftware.Services
     /// </summary>
     public class MesService : IMesService
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private MesUploadConfig? _config;
         private bool _isConnected;
 
         public bool IsConnected => _isConnected;
 
-        public MesService(ILog log)
+        public MesService(ILogService log)
         {
             _log = log;
         }

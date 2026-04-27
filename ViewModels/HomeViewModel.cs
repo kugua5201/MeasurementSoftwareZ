@@ -27,7 +27,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class HomeViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly IDataRecordService _dataRecordService;
@@ -169,7 +169,7 @@ namespace MeasurementSoftware.ViewModels
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
 
-        public HomeViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService, IEnumerable<IMeasurementChannelHandler> channelHandlers)
+        public HomeViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService, IEnumerable<IMeasurementChannelHandler> channelHandlers)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
@@ -214,6 +214,7 @@ namespace MeasurementSoftware.ViewModels
                         CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(CurrentRecipe.Devices);
                         _stepOperationMonitorService.SetRecipe(CurrentRecipe);
                         ResetAllChannelStates();
+                        ResetStepOperationRuntimeStates();
                         RefreshCommandStates();
 
                         _log.Info($"当前配方已更新: {CurrentRecipe?.BasicInfo.RecipeName}");
@@ -693,6 +694,7 @@ namespace MeasurementSoftware.ViewModels
             // 清空全部表格状态，并把工步强制回到第 1 步，避免继续上次残留状态。
             ResetAllChannelStates();
             ResetMeasurementHandlerRuntimeStates();
+            ResetStepOperationRuntimeStates();
             UpdateAnnotationActiveState();
 
             if (CurrentRecipe.QrCodeConfig.RequireQrCodeBeforeMeasurement)
@@ -856,14 +858,13 @@ namespace MeasurementSoftware.ViewModels
             {
                 return;
             }
-
             var affectedChannels = GetActiveChannels()
-                .Where(c => c.IsDirectMeasurementMode
+                    .Where(c => c.IsDirectMeasurementMode
                     ? ReferenceEquals(c.RuntimeDevice, e.Device)
                     : c.IndirectSourceBindings.Any(binding => ReferenceEquals(binding.RuntimeDevice, e.Device)))
-                .ToList();
+                ;
 
-            if (affectedChannels.Count == 0)
+            if (affectedChannels.Any())
             {
                 return;
             }
@@ -918,7 +919,6 @@ namespace MeasurementSoftware.ViewModels
 
             UnsubscribeRuntimeEvents();
             _cts?.Cancel();
-            ResetMeasurementHandlerRuntimeStates();
             var optionalQrCodeListeningTask = _optionalQrCodeListeningTask;
             if (optionalQrCodeListeningTask != null)
             {
@@ -938,8 +938,9 @@ namespace MeasurementSoftware.ViewModels
             _optionalQrCodeListeningTask = null;
             _recipeConfigService.SetCollect(false);
             RefreshCommandStates();
+            ResetStepOperationRuntimeStates();
 
-            var relevantChannels = Channels.Where(c => c.IsMeasuredValueAvailable || c.IsResultValueAvailable).ToList();
+            var relevantChannels = Channels.Where(c => c.IsMeasuredValueAvailable || c.IsResultValueAvailable || (c.IsVirtualMeasurementMode && c.IsChannelFormula)).ToList();
             if (!relevantChannels.Any())
             {
                 //查找通道备注不为空的
@@ -952,7 +953,8 @@ namespace MeasurementSoftware.ViewModels
             // 停止时只对当前需要参与判定的通道做最终结果结算。
             FinalizeChannelResults(relevantChannels);
             ApplyResultDisplayStates(relevantChannels);
-            SyncAnnotationResults();
+            //SyncAnnotationResults();
+            ResetMeasurementHandlerRuntimeStates();
 
             OverallResult = relevantChannels.All(c => c.Result == MeasurementResult.Pass) ? MeasurementResult.Pass : MeasurementResult.Fail;
 
@@ -988,10 +990,25 @@ namespace MeasurementSoftware.ViewModels
                     ChannelName = c.ChannelName,
                     ChannelDescription = c.ChannelDescription,
                     ChannelType = c.ChannelType.ToString(),
+                    MeasurementMode = c.MeasurementMode.GetDescription(),
+                    SourceSummary = c.MeasurementMode switch
+                    {
+                        MeasurementChannelMode.Direct => $"直测|{c.DisplayPlcDeviceName}|{c.DisplayDataPointName}|{c.DisplayDataSourceAddress}",
+                        MeasurementChannelMode.Indirect => $"间接|{string.Join(";", c.IndirectSourceBindings.Where(binding => !string.IsNullOrWhiteSpace(binding.SourceKey)).Select(binding => $"{binding.SourceKey}:{binding.PlcDeviceName}-{binding.DataPointName}"))}",
+                        MeasurementChannelMode.Virtual when c.VirtualSourceMode == VirtualMeasurementSourceMode.SoftwareSimulation => $"虚拟|软件模拟|{c.VirtualWaveformType.GetDescription()}|幅值={c.VirtualWaveformAmplitude.ToString(CultureInfo.InvariantCulture)}|周期={c.VirtualWaveformPeriodSeconds.ToString(CultureInfo.InvariantCulture)}ms",
+                        MeasurementChannelMode.Virtual => $"虚拟|通道公式|{string.Join(";", c.VirtualSourceBindings.Where(binding => !string.IsNullOrWhiteSpace(binding.SourceKey)).Select(binding => $"{binding.SourceKey}:{binding.SourceChannelName}"))}",
+                        _ => c.DisplayDataPointName
+                    },
+                    FormulaScript = c.MeasurementMode switch
+                    {
+                        MeasurementChannelMode.Indirect => c.IndirectFormula,
+                        MeasurementChannelMode.Virtual when c.VirtualSourceMode == VirtualMeasurementSourceMode.ChannelFormula => c.VirtualFormula,
+                        _ => string.Empty
+                    },
                     MeasurementType = c.MeasurementType,
-                    DataSourceAddress = c.DataSourceAddress,
-                    PlcDeviceName = c.PlcDeviceName,
-                    DataPointName = c.DataPointName,
+                    DataSourceAddress = c.DisplayDataSourceAddress,
+                    PlcDeviceName = c.DisplayPlcDeviceName,
+                    DataPointName = c.DisplayDataPointName,
                     IsEnabled = c.IsEnabled,
                     DecimalPlaces = c.DecimalPlaces,
                     RequiresCalibration = c.RequiresCalibration,
@@ -1006,6 +1023,7 @@ namespace MeasurementSoftware.ViewModels
                     MeasuredValue = c.MeasuredValue,
                     Unit = c.Unit,
                     StepNumber = c.StepNumber,
+                    StepDisplayText = c.DisplayStepText,
                     StepName = c.StepName,
                     Result = c.Result
                 })],
@@ -1225,6 +1243,7 @@ namespace MeasurementSoftware.ViewModels
             _optionalQrCodeListeningTask = null;
             _recipeConfigService.SetCollect(false);
             SetChannelDisplayState(GetActiveChannels(), MeasurementResult.Waiting);
+            ResetStepOperationRuntimeStates();
             SyncAnnotationResults();
             MeasurementStatus = "测量已终止";
             RefreshCommandStates();
@@ -1261,13 +1280,14 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private IEnumerable<MeasurementChannel> GetActiveChannels()
         {
+            var channels = Channels.Where(channel => !(channel.IsVirtualMeasurementMode && channel.IsChannelFormula));
 
             if (IsStepModeEnabled())
             {
-                return Channels.Where(c => c.StepNumber == CurrentStep);
+                return channels.Where(c => c.StepNumber == CurrentStep);
             }
 
-            return Channels;
+            return channels;
         }
 
 
@@ -1367,9 +1387,15 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         private void FinalizeCurrentStepBeforeSwitch()
         {
-            var currentStepChannels = Channels.Where(c => c.StepNumber == CurrentStep).ToList();
+            var currentStepChannels = Channels
+                .Where(c => c.StepNumber == CurrentStep && !(c.IsVirtualMeasurementMode && c.IsChannelFormula))
+                .ToList();
             FinalizeChannelResults(currentStepChannels);
-            ApplyResultDisplayStates(currentStepChannels);
+            var affectedChannels = currentStepChannels
+                .Concat(FinalizeReadyVirtualFormulaChannels())
+                .Distinct()
+                .ToList();
+            ApplyResultDisplayStates(affectedChannels);
             SyncAnnotationResults();
         }
 
@@ -1493,11 +1519,20 @@ namespace MeasurementSoftware.ViewModels
         }
 
         /// <summary>
+        /// 重置工步操作点位的边沿观测状态。
+        /// 清空数据、重新开始或终止后都要重新以当前值建立基线，避免残留上一轮的边沿历史。
+        /// </summary>
+        private void ResetStepOperationRuntimeStates()
+        {
+            _stepOperationMonitorService.ResetRuntimeState();
+        }
+
+        /// <summary>
         /// 重置指定工步的通道及标注结果为未测量
         /// </summary>
         private void ResetStepChannels(int stepNumber)
         {
-            ResetChannels(Channels.Where(c => c.StepNumber == stepNumber));
+            ResetChannels(Channels.Where(c => c.StepNumber == stepNumber && !(c.IsVirtualMeasurementMode && c.IsChannelFormula)));
         }
 
 
@@ -1507,7 +1542,86 @@ namespace MeasurementSoftware.ViewModels
         private void FinalizeChannelResults(IEnumerable<MeasurementChannel> channels)
         {
             foreach (var ch in channels)
+            {
+                if (ch.IsVirtualMeasurementMode
+                    && ch.VirtualSourceMode == VirtualMeasurementSourceMode.ChannelFormula
+                    && GetChannelHandler(ch) is VirtualMeasurementChannelHandler virtualHandler
+                    && !virtualHandler.TryEvaluateFinalResult(ch, out _))
+                {
+                    ch.Result = MeasurementResult.Fail;
+                    ch.IsResultValueAvailable = false;
+                    ch.DisplayState = MeasurementResult.Fail;
+                    continue;
+                }
+
                 ch.UpdateResultValue();
+            }
+        }
+
+        /// <summary>
+        /// 虚拟通道的公式模式不参与实时采集。
+        /// 当其依赖的测量通道都已经产生最终结果后，立即自动结算，不受当前工步限制。
+        /// </summary>
+        private IReadOnlyList<MeasurementChannel> FinalizeReadyVirtualFormulaChannels()
+        {
+            var finalizedChannels = new List<MeasurementChannel>();
+
+            foreach (var channel in Channels.Where(c => c.IsVirtualMeasurementMode && c.IsChannelFormula))
+            {
+                if (!AreVirtualFormulaSourceResultsReady(channel))
+                {
+                    continue;
+                }
+
+                if (GetChannelHandler(channel) is not VirtualMeasurementChannelHandler virtualHandler)
+                {
+                    continue;
+                }
+
+                if (!virtualHandler.TryEvaluateFinalResult(channel, out var errorMessage))
+                {
+                    channel.Result = MeasurementResult.Fail;
+                    channel.IsResultValueAvailable = false;
+                    channel.DisplayState = MeasurementResult.Fail;
+                    if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        channel.ChannelDescription = errorMessage;
+                    }
+
+                    finalizedChannels.Add(channel);
+                    continue;
+                }
+
+                channel.UpdateResultValue();
+                finalizedChannels.Add(channel);
+            }
+
+            return finalizedChannels;
+        }
+
+        /// <summary>
+        /// 判断虚拟公式通道的所有来源通道是否都已经有最终结果。
+        /// 只要来源结果未齐，就继续保持等待状态，避免被当前工步限制提前判失败。
+        /// </summary>
+        private static bool AreVirtualFormulaSourceResultsReady(MeasurementChannel channel)
+        {
+            if (!channel.IsVirtualMeasurementMode || !channel.IsChannelFormula)
+            {
+                return false;
+            }
+
+            var bindings = channel.VirtualSourceBindings
+                .Where(binding => !string.IsNullOrWhiteSpace(binding.SourceKey))
+                .ToList();
+
+            if (bindings.Count == 0)
+            {
+                return false;
+            }
+
+            return bindings.All(binding => binding.RuntimeChannel != null
+                && binding.RuntimeChannel.IsEnabled
+                && binding.RuntimeChannel.IsResultValueAvailable);
         }
 
         /// <summary>
@@ -1595,6 +1709,7 @@ namespace MeasurementSoftware.ViewModels
         {
             ResetAllChannelStates();
             ResetMeasurementHandlerRuntimeStates();
+            ResetStepOperationRuntimeStates();
             _recipeConfigService.ResetRecipeStatistics(CurrentRecipe);
             CurrentStep = 1;
             UpdateAnnotationActiveState();

@@ -15,7 +15,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class QrCodeSettingViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IQrCodeConfigService _qrCodeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
@@ -102,7 +102,7 @@ namespace MeasurementSoftware.ViewModels
         /// <summary>
         /// 创建二维码设置页面的视图模型。
         /// </summary>
-        public QrCodeSettingViewModel(ILog log, IQrCodeConfigService qrCodeConfigService, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService, IQrCodeScanService qrCodeScanService)
+        public QrCodeSettingViewModel(ILogService log, IQrCodeConfigService qrCodeConfigService, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService, IQrCodeScanService qrCodeScanService)
         {
             _log = log;
             _qrCodeConfigService = qrCodeConfigService;

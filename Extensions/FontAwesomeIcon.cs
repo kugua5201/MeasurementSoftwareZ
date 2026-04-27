@@ -147,6 +147,7 @@ namespace MeasurementSoftware.Extensions
 
         public FontAwesomeIcon()
         {
+            UpdateFontFamily();
             // 设置文本对齐方式，确保内容居中
             TextAlignment = TextAlignment.Center;
             VerticalAlignment = VerticalAlignment.Center;

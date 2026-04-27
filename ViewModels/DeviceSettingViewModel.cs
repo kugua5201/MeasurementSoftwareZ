@@ -19,7 +19,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class DeviceSettingViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
@@ -210,7 +210,7 @@ namespace MeasurementSoftware.ViewModels
 
         public ObservableCollection<PlcDeviceType> DeviceTypes { get; } = new ObservableCollection<PlcDeviceType>(Enum.GetValues<PlcDeviceType>().Cast<PlcDeviceType>());
 
-        public DeviceSettingViewModel(ILog log, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService, IPlcDeviceRuntimeService plcDeviceRuntimeService)
+        public DeviceSettingViewModel(ILogService log, IDeviceConfigService deviceConfigService, IRecipeConfigService recipeConfigService, IPlcDeviceRuntimeService plcDeviceRuntimeService)
         {
             _log = log;
             _deviceConfigService = deviceConfigService;

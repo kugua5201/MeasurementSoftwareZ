@@ -18,5 +18,11 @@ namespace MeasurementSoftware.Services.StepOperations
         /// 服务会自动监听配方启用状态，并按需绑定或解除点位事件监听。
         /// </summary>
         void SetRecipe(MeasurementRecipe? recipe);
+
+        /// <summary>
+        /// 重置当前工步触发运行时状态。
+        /// 清空边沿历史后，会按当前点位最新值重新建立观测基线，避免清空数据后沿用上一轮残留状态。
+        /// </summary>
+        void ResetRuntimeState();
     }
 }

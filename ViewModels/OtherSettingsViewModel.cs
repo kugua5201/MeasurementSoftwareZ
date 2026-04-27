@@ -16,7 +16,7 @@ namespace MeasurementSoftware.ViewModels
 {
     public partial class OtherSettingsViewModel : ObservableViewModel
     {
-        private readonly ILog _log;
+        private readonly ILogService _log;
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
@@ -67,7 +67,7 @@ namespace MeasurementSoftware.ViewModels
         /// <summary>
         /// 创建其他设置页面的视图模型。
         /// </summary>
-        public OtherSettingsViewModel(ILog log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService)
+        public OtherSettingsViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
