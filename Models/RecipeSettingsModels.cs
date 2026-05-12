@@ -107,6 +107,7 @@ namespace MeasurementSoftware.Models
         private AcquisitionStorageConfig acquisitionStorage = new();
         private OverallMeasurementResultOutputConfig overallResultOutput = new();
         private ObservableCollection<StepOperationBindingConfig> stepOperationBindings = CreateDefaultStepOperationBindings();
+        private ObservableCollection<WriteDataPointConfig> writeDataPoints = [];
 
         public RecipeOtherSettingsConfig()
         {
@@ -270,6 +271,15 @@ namespace MeasurementSoftware.Models
         }
 
         /// <summary>
+        /// 写入点位配置集合。
+        /// </summary>
+        public ObservableCollection<WriteDataPointConfig> WriteDataPoints
+        {
+            get => writeDataPoints;
+            set => SetProperty(ref writeDataPoints, value ?? []);
+        }
+
+        /// <summary>
         /// OK 颜色画刷。
         /// 仅用于界面绑定，不参与序列化。
         /// </summary>
@@ -361,6 +371,15 @@ namespace MeasurementSoftware.Models
 
                 binding.HydrateRuntimeBindings(device);
             }
+        }
+
+        /// <summary>
+        /// 写入点位配置反序列化后，确保集合已初始化。
+        /// 运行时设备与点位引用由上层服务负责重建。
+        /// </summary>
+        public void HydrateWriteDataPoints(IEnumerable<PlcDevice> devices)
+        {
+            writeDataPoints ??= [];
         }
         /// <summary>
         /// 用于确保工步操作绑定配置的完整性和正确性。

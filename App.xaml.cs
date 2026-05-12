@@ -13,6 +13,7 @@ using MeasurementSoftware.Services.Measurements;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
 using MeasurementSoftware.Services.UserSetting;
+using MeasurementSoftware.Services.WriteDataPoints;
 using MeasurementSoftware.UserControls;
 using MeasurementSoftware.ViewModels;
 using System.IO;
@@ -55,6 +56,8 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<IKeyboardQrCodeInputService, KeyboardQrCodeInputService>();
             builder.RegisterSingleton<IMeasurementFormulaEvaluator, MeasurementFormulaEvaluator>();
             builder.RegisterSingleton<IMeasurementFormulaScriptEvaluator, MeasurementFormulaScriptEvaluator>();
+            builder.RegisterSingleton<IWriteValueLabelRuleService, WriteValueLabelRuleService>();
+            builder.RegisterSingleton<IWriteDataPointBindingService, WriteDataPointBindingService>();
             builder.RegisterSingleton<IMeasurementChannelHandler, DirectMeasurementChannelHandler>();
             builder.RegisterSingleton<IMeasurementChannelHandler, IndirectMeasurementChannelHandler>();
             builder.RegisterSingleton<IMeasurementChannelHandler, VirtualMeasurementChannelHandler>();
@@ -84,6 +87,8 @@ namespace MeasurementSoftware
             builder.RegisterViewWithViewModel<DataRecordUserControl, DataRecordViewModel>("DataManagement");
             builder.RegisterViewWithViewModel<DataRecordUserControl, DataRecordViewModel>("DataRecord");
             builder.RegisterViewWithViewModel<DeviceSettingUserControl, DeviceSettingViewModel>("CommunicationSetting");
+            builder.RegisterViewWithViewModel<WriteDataPointDisplayUserControl, WriteDataPointViewModel>("WriteDataPoint");
+            builder.RegisterViewWithViewModel<WriteDataPointUserControl, WriteDataPointViewModel>("WriteDataPointConfig");
             builder.RegisterViewWithViewModel<LogViewerUserControl, LogViewerViewModel>("LogViewer");
             builder.RegisterViewWithViewModel<QrCodeSettingUserControl, QrCodeSettingViewModel>("QrCodeSetting");
             builder.RegisterViewWithViewModel<SpcUserControl, SpcViewModel>("Spc");

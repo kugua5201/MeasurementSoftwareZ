@@ -174,8 +174,10 @@ namespace MeasurementSoftware.ViewModels
                 "校准" => "Calibration",
                 "检测记录" => "DataManagement",
                 "SPC分析" => "Spc",
-                "通道设置" => "ChannelSetting",
+                "通道配置" => "ChannelSetting",
                 "设备管理" => "CommunicationSetting",
+                "参数监控" => "WriteDataPoint",
+                "参数监控配置" => "WriteDataPointConfig",
                 "二维码配置" => "QrCodeSetting",
                 "其他设置" => "OtherSettings",
                 "日志" => "LogViewer",
@@ -192,9 +194,11 @@ namespace MeasurementSoftware.ViewModels
                 "Calibration" => "校准",
                 "DataManagement" => "检测记录",
                 "DataRecord" => "检测记录",
-                "ChannelSetting" => "通道设置",
+                "ChannelSetting" => "通道配置",
                 "DeviceManagement" => "设备管理",
                 "CommunicationSetting" => "设备管理",
+                "WriteDataPoint" => "参数监控",
+                "WriteDataPointConfig" => "参数监控配置",
                 "QrCodeSetting" => "二维码配置",
                 "MesSetting" => "MES配置",
                 "Spc" => "SPC分析",
@@ -214,9 +218,11 @@ namespace MeasurementSoftware.ViewModels
                 "DataManagement" => "\xE8F1",
                 "DataRecord" => "\xE8F1",
                 "ChannelSetting" => "\xE762",
-                "DeviceManagement" => "\xE968",
-                "CommunicationSetting" => "\xE968",
-                "QrCodeSetting" => "\xEAD8",
+                "DeviceManagement" => "\xE772",
+                "CommunicationSetting" => "\xE772",
+                "WriteDataPoint" => "\xE895",
+                "WriteDataPointConfig" => "\xE895",
+                "QrCodeSetting" => "\xE8A7",
                 "MesSetting" => "\xE774",
                 "Spc" => "\xE9D9",
                 "OtherSettings" => "\xE713",
@@ -245,6 +251,18 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         [RelayCommand]
         private void NavigateToChannelSetting() => NavigateToPage("ChannelSetting");
+
+        /// <summary>
+        /// 导航到写入点位页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToWriteDataPoint() => NavigateToPage("WriteDataPoint");
+
+        /// <summary>
+        /// 导航到写入点位配置页面
+        /// </summary>
+        [RelayCommand]
+        private void NavigateToWriteDataPointConfig() => NavigateToPage("WriteDataPointConfig");
 
         /// <summary>
         /// 导航到首页（测量页面）

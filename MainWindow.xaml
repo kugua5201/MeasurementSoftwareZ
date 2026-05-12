@@ -198,6 +198,18 @@
                                 </StackPanel>
                             </MenuItem.Header>
                         </MenuItem>
+                        <MenuItem Command="{Binding NavigateToWriteDataPointConfigCommand}">
+                            <MenuItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock
+                                        Margin="0,0,8,0"
+                                        FontFamily="Segoe MDL2 Assets"
+                                        FontSize="14"
+                                        Text="&#xE898;" />
+                                    <TextBlock FontSize="13" Text="写入点位配置" />
+                                </StackPanel>
+                            </MenuItem.Header>
+                        </MenuItem>
                         <MenuItem Command="{Binding NavigateToQrCodeSettingCommand}">
                             <MenuItem.Header>
                                 <StackPanel Orientation="Horizontal">
@@ -338,6 +350,21 @@
                             </StackPanel>
                         </Button>
 
+                        <Button
+                            x:Name="WriteDataPointDisplayButton"
+                            Click="MenuButton_Click"
+                            Command="{Binding NavigateToWriteDataPointCommand}"
+                            Style="{StaticResource MainMenuButtonStyle}">
+                            <StackPanel Margin="10,0,0,0" Orientation="Horizontal">
+                                <TextBlock
+                                    Margin="0,0,12,0"
+                                    FontFamily="Segoe MDL2 Assets"
+                                    FontSize="16"
+                                    Text="&#xE895;" />
+                                <TextBlock FontSize="14" Text="参数监控" />
+                            </StackPanel>
+                        </Button>
+
                         <Expander
                             x:Name="SettingsExpander"
                             Background="Transparent"
@@ -388,8 +415,22 @@
                                             Margin="0,0,12,0"
                                             FontFamily="Segoe MDL2 Assets"
                                             FontSize="14"
-                                            Text="&#xE968;" />
+                                            Text="&#xE772;" />
                                         <TextBlock FontSize="13" Text="设备管理" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    x:Name="WriteDataPointButton"
+                                    Click="MenuButton_Click"
+                                    Command="{Binding NavigateToWriteDataPointConfigCommand}"
+                                    Style="{StaticResource SubMenuButtonStyle}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock
+                                            Margin="0,0,12,0"
+                                            FontFamily="Segoe MDL2 Assets"
+                                            FontSize="14"
+                                            Text="&#xE895;" />
+                                        <TextBlock FontSize="13" Text="参数监控配置" />
                                     </StackPanel>
                                 </Button>
                                 <Button
@@ -402,7 +443,7 @@
                                             Margin="0,0,12,0"
                                             FontFamily="Segoe MDL2 Assets"
                                             FontSize="14"
-                                            Text="&#xEAD8;" />
+                                            Text="&#xE8A7;" />
                                         <TextBlock FontSize="13" Text="二维码配置" />
                                     </StackPanel>
                                 </Button>
@@ -589,7 +630,7 @@
                     SelectedItem="{Binding SelectedTab, Mode=TwoWay}"
                     SelectionChanged="TabControl_SelectionChanged"
                     ShowCloseButton="True"
-                    TabItemWidth="120">
+                    TabItemWidth="140">
 
                     <!--  定义资源  -->
                     <hc:TabControl.Resources>
@@ -617,6 +658,7 @@
                             BasedOn="{StaticResource TabItemPlusBaseStyle}"
                             TargetType="hc:TabItem">
                             <Setter Property="BorderThickness" Value="0,0,1,1" />
+
                             <Setter Property="Background" Value="{DynamicResource RegionBrush}" />
                             <Setter Property="Template">
                                 <Setter.Value>
@@ -627,8 +669,8 @@
                                             SnapsToDevicePixels="true">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition />
-                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" MinWidth="60" />
+                                                <ColumnDefinition Width="28" />
                                             </Grid.ColumnDefinitions>
 
                                             <!--  外层边框  -->
@@ -851,7 +893,10 @@
 
                     <hc:TabControl.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                            <StackPanel
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal"
+                                ToolTip="{Binding Header}">
 
                                 <!--  ContentControl：动态选择图标模板  -->
                                 <ContentControl>

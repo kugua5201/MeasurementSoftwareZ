@@ -25,5 +25,7 @@
     <converters:ChannelDisplayTextConverter    x:Key="ChannelDisplayTextConverter"/>
     <converters:SizeToOffsetMarginConverter    x:Key="SizeToOffsetMarginConverter"/>
     <converters:DataPointStringLengthDisplayConverter x:Key="DataPointStringLengthDisplayConverter"/>
+    <converters:WriteDataPointEditorModeVisibilityConverter x:Key="WriteDataPointEditorModeVisibilityConverter"/>
+    <converters:WriteDataPointDisplayTextConverter x:Key="WriteDataPointDisplayTextConverter"/>
 </ResourceDictionary>
 

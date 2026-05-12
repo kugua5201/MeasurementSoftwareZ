@@ -524,6 +524,9 @@ namespace MeasurementSoftware
                 //"MES配置" => MesSettingButton,
                 "其他设置" => OtherSettingsButton,
                 "日志" => LogViewerButton,
+                "参数监控"=> WriteDataPointDisplayButton,
+                "参数监控配置"=> WriteDataPointButton,
+
                 _ => null
             };
         }

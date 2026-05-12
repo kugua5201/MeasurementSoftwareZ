@@ -228,6 +228,7 @@ namespace MeasurementSoftware.Services.Config
             HydrateChannelRuntimeData(recipe);
             HydrateQrCodeRuntimeData(recipe);
             recipe.OtherSettings?.HydrateStepOperationBindings(Devices);
+            recipe.OtherSettings?.HydrateWriteDataPoints(Devices);
 
             // 通知所有监听者：设备列表和二维码配置已随配方更新
             OnPropertyChanged(nameof(Devices));

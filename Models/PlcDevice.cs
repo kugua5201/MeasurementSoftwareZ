@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.ViewModels;
+using MultiProtocol.Model;
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
@@ -29,6 +30,14 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private PlcDeviceType deviceType;
+
+
+        ///// <summary>
+        ///// 字节顺序
+        ///// </summary>
+        //[ObservableProperty]
+        //private ByteOrder byteOrder= ByteOrder.CDAB;
+
 
         #endregion
 
