@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Obfuscator>
+	<Var name="ProjectDir" value="D:\项目\MeasurementSoftware" />
+	<Var name="InPath" value="$(ProjectDir)\bin\Release\net6.0-windows7.0" />
+	<Var name="OutPath" value="$(ProjectDir)\obfuscar_out\net6.0-windows7.0" />
+
+	<!-- 保留 public API，避免 WPF / DI / 反射 / 动态代理失效 -->
+	<Var name="KeepPublicApi" value="true" />
+
+	<!-- 混淆非 public API：private / protected / internal -->
+	<Var name="HidePrivateApi" value="true" />
+
+	<!-- 不复用混淆名，便于提升一定程度的混淆强度 -->
+	<Var name="ReuseNames" value="false" />
+
+	<!-- 禁用 Unicode 名称，避免某些 CLR / 反射 / 代理兼容问题 -->
+	<Var name="UseUnicodeNames" value="false" />
+
+	<!-- 禁用字符串隐藏，优先保证运行稳定性 -->
+	<Var name="HideStrings" value="true" />
+
+	<!-- 禁止属性重命名，避免 WPF 绑定、序列化等问题 -->
+	<Var name="RenameProperties" value="false" />
+
+	<!-- 禁止事件重命名，避免事件绑定与反射问题 -->
+	<Var name="RenameEvents" value="false" />
+
+	<!-- 跳过编译器生成代码（异步状态机、lambda、匿名类等） -->
+	<Var name="SkipGenerated" value="true" />
+
+	<!-- 跳过 SpecialName 成员（属性访问器、事件访问器等） -->
+	<Var name="SkipSpecialName" value="true" />
+
+	<AssemblySearchPath path="$(InPath)" />
+	<AssemblySearchPath path="C:\Program Files\dotnet\shared\Microsoft.NETCore.App\6.0.36" />
+	<AssemblySearchPath path="C:\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App\6.0.36" />
+	<AssemblySearchPath path="C:\Program Files\dotnet\packs\Microsoft.WindowsDesktop.App.Ref\6.0.36\ref\net6.0" />
+	<AssemblySearchPath path="C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\6.0.36\ref\net6.0" />
+	<AssemblySearchPath path="C:\Program Files\dotnet\packs\Microsoft.AspNetCore.App.Ref\6.0.36\ref\net6.0" />
+
+	<!-- 协议库 -->
+	<Module file="$(InPath)\MultiProtocol.dll" />
+
+	<!-- 主程序 -->
+	<Module file="$(InPath)\SF-GAMS通用自动测量系统.dll">
+		<!-- WPF 用户控件 -->
+		<SkipNamespace name="MeasurementSoftware.UserControls*" />
+
+		<!-- WPF 转换器 -->
+		<SkipNamespace name="MeasurementSoftware.Converters*" />
+
+		<!-- XAML 绑定辅助类型与行为 -->
+		<SkipNamespace name="MeasurementSoftware.Helpers*" />
+		<SkipNamespace name="MeasurementSoftware.Behaviors*" />
+
+		<!-- Castle DynamicProxy 拦截器 -->
+		<SkipNamespace name="MeasurementSoftware.Interceptors*" />
+		
+		<SkipNamespace name="MeasurementSoftware.ViewModels*" />
+
+		<!-- ViewModel 层：避免 DynamicProxy / MVVM / AsyncStateMachine 问题 -->
+	
+		<!-- 应用程序入口与主窗口 -->
+		<!--<SkipType name="MeasurementSoftware.App" skipFields="true" skipMethods="true" skipProperties="true" skipEvents="true" />
+		<SkipType name="MeasurementSoftware.MainWindow" skipFields="true" skipMethods="true" skipProperties="true" skipEvents="true" />-->
+		<!--<SkipType name="MeasurementSoftware.RegistrationWindow" skipFields="true" skipMethods="true" skipProperties="true" skipEvents="true" />-->
+	</Module>
+</Obfuscator>

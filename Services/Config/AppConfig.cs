@@ -6,9 +6,11 @@ using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.ViewModels;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace MeasurementSoftware.Services.Config
 {
@@ -22,12 +24,7 @@ namespace MeasurementSoftware.Services.Config
         private readonly ILogService _log;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
         //json配置
-        private static JsonSerializerOptions settings = new JsonSerializerOptions()
-        {
-            WriteIndented = true,
-            Converters = { new JsonStringEnumConverter(), new CustomDateTimeConverter("yyyy-MM-dd HH:mm:ss") },
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
+        private static readonly JsonSerializerOptions settings = CreateJsonSerializerOptions();
 
         public AppConfig(ILogService log, IPlcDeviceRuntimeService plcDeviceRuntimeService)
         {
@@ -35,6 +32,20 @@ namespace MeasurementSoftware.Services.Config
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
 
 
+        }
+
+        private static JsonSerializerOptions CreateJsonSerializerOptions()
+        {
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            };
+            
+            options.Converters.Add(new JsonStringEnumConverter());
+            //options.Converters.Add(new CustomDateTimeConverter());
+
+            return options;
         }
 
 
@@ -350,6 +361,7 @@ namespace MeasurementSoftware.Services.Config
                 }
 
                 var json = await File.ReadAllTextAsync(path);
+                //json = NormalizeLegacyRecipeDateTimes(json);
                 var recipe = JsonSerializer.Deserialize<MeasurementRecipe>(json, settings);
                 EnsureRecipeStatistics(recipe);
                 _log.Info($"配方已加载: {path}");
@@ -357,10 +369,15 @@ namespace MeasurementSoftware.Services.Config
             }
             catch (Exception ex)
             {
-                _log.Error($"加载配方失败: {ex.Message}");
+                _log.Error($"加载配方失败，异常详情: {ex}");
+                _log.Error($"加载配方失败，异常信息: {ex.Message}");
+                _log.Error($"加载配方失败，异常堆栈: {ex.StackTrace}");
+
                 return null;
             }
         }
+
+ 
 
         private void SyncSiemensCacheConfigurations(IEnumerable<PlcDevice> devices)
         {

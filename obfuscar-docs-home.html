@@ -1,0 +1,594 @@
+﻿<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Getting Started" href="getting-started/index.html" />
+        <link rel="canonical" href="https://docs.lextudio.com/obfuscar/index.html" />
+
+    <link rel="shortcut icon" href="_static/favicon.ico"/><!-- Generated with Sphinx 7.3.7 and Furo 2024.04.27 -->
+        <title>Obfuscar Documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=437aa6ec" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=36a5483c" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/fontawesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/solid.min.css" />
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/brands.min.css" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #272822;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #272822;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="#"><div class="brand">Obfuscar Documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
+  
+  
+  <span class="sidebar-brand-text">Obfuscar Documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference external" href="https://docs.lextudio.com">Visit Docs Home</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="getting-started/index.html">Getting Started</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Getting Started</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/basics.html">What does Obfuscar do?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/configuration.html">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/history.html">Project History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/ecosystem.html">Ecosystem Around Obfuscar</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/basics.html">Basic Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/source.html">Compiling Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/xamarin.html">Information on Xamarin.Android</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="support/index.html">Support</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Support</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="support/faq.html">Frequent Asked Questions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="support/services.html">Support Services</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="contribute/index.html">Contribute</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Contribute</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="contribute/contributors.html">Contributors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contribute/github.html">GitHub Guide</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="privacy.html">Privacy Policy</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="edit-this-page">
+  <a class="muted-link" href="https://github.com/obfuscar/docs/edit/master/index.rst" title="Edit this page">
+    <svg aria-hidden="true" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <path d="M4 20h4l10.5 -10.5a1.5 1.5 0 0 0 -4 -4l-10.5 10.5v4" />
+      <line x1="13.5" y1="6.5" x2="17.5" y2="10.5" />
+    </svg>
+    <span class="visually-hidden">Edit this page</span>
+  </a>
+</div><div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="obfuscar-documentation">
+<span id="index"></span><h1>Obfuscar Documentation<a class="headerlink" href="#obfuscar-documentation" title="Link to this heading">¶</a></h1>
+<div class="admonition attention">
+<p class="admonition-title">Attention</p>
+<p><strong>Obfuscar 3.0 Beta is now available!</strong></p>
+<p>Version 3.0 is a major upgrade with:</p>
+<ul class="simple">
+<li><p><strong>Significant performance improvements</strong> (modern IL pipeline, no Mono.Cecil)</p></li>
+<li><p><strong>Better .NET language feature support</strong> (recent async/LINQ patterns)</p></li>
+<li><p><strong>Stricter configuration</strong> (absolute paths only, no variable expansion)</p></li>
+</ul>
+<p><strong>Install via:</strong></p>
+<ul class="simple">
+<li><p><strong>Global Tool (console):</strong> <code class="docutils literal notranslate"><span class="pre">dotnet</span> <span class="pre">tool</span> <span class="pre">install</span> <span class="pre">--global</span> <span class="pre">Obfuscar.GlobalTool</span> <span class="pre">--prerelease</span></code></p></li>
+<li><p><strong>NuGet Package (.NET Framework/projects):</strong> <code class="docutils literal notranslate"><span class="pre">dotnet</span> <span class="pre">package</span> <span class="pre">add</span> <span class="pre">Obfuscar</span> <span class="pre">--prerelease</span></code></p></li>
+</ul>
+<p>Without <code class="docutils literal notranslate"><span class="pre">--prerelease</span></code>, the stable version 2.2 is installed.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Obfuscar 3.0 configuration files must use absolute paths for <code class="docutils literal notranslate"><span class="pre">InPath</span></code>, <code class="docutils literal notranslate"><span class="pre">OutPath</span></code>, and <code class="docutils literal notranslate"><span class="pre">LogFile</span></code>. Relative paths are rejected.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Obfuscar 3.0 does not expand environment variables or <code class="docutils literal notranslate"><span class="pre">$(...)</span></code> placeholders in configuration files. Provide explicit values.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It is recommended to <em>generate</em> the Obfuscar XML configuration file as part of your build or CI pipeline. Expand environment variables and resolve relative paths during generation so the produced XML contains only absolute paths and explicit values.</p>
+</div>
+<section id="general">
+<h2>General<a class="headerlink" href="#general" title="Link to this heading">¶</a></h2>
+<p>Obfuscar is a basic obfuscator for .NET assemblies. It uses massive
+overloading to rename metadata in .NET assemblies (including the names of
+methods, properties, events, fields, types and namespaces) to a minimal set,
+distinguishable in most cases only by signature.</p>
+<p>For example, if a class contains only methods that accept different
+parameters, they can all be renamed ‘A’. If another method is added to the
+class that accepts the same parameters as an existing method, it could be
+named ‘a’.</p>
+<p>It makes decompiled code very difficult to follow. The wiki has more details
+about What It Does.</p>
+<img alt="_images/obfuscar.png" src="_images/obfuscar.png" />
+<p>The current release is Obfuscar 2.x. The project historically used the Mono.Cecil
+library for metadata handling. With the upcoming v3 release Obfuscar has been
+refactored to use System.Reflection.Metadata (SRM)-backed readers and mutable
+metadata abstractions; v3 will not have a runtime dependency on Mono.Cecil for
+its core obfuscation pipeline. See the developer notes for migration details.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Since version 1.5 the attrib attribute is evaluated correctly. Be
+sure to check if there are any unintended attrib values from the example in
+your configuration file.</p>
+</div>
+<p>Its source code can be found at GitHub,</p>
+<p><a class="reference external" href="https://github.com/obfuscar/obfuscar">https://github.com/obfuscar/obfuscar</a></p>
+<p>Obfuscar previously relied on Jb Evain’s Mono.Cecil for low-level metadata
+manipulation. The codebase has since moved to SRM/mutable adapters.</p>
+<p>The documentation section includes the following topics,</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://docs.lextudio.com">Visit Docs Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/index.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/basics.html">What does Obfuscar do?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/basics.html#an-example">An Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/basics.html#caveat">Caveat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/basics.html#net-global-tools">.NET Global Tools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/basics.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/configuration.html">Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#settings">Settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#variables-inpath-and-outpath">Variables, InPath and OutPath</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#assembly-search-path-2-2-5">Assembly Search Path (2.2.5+)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#keeppublicapi-and-hideprivateapi">KeepPublicApi and HidePrivateApi</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#modules">Modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#exclusion-rules-by-configuration">Exclusion Rules by Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#skipping-special-name-and-compiler-generated-members">Skipping special-name and compiler-generated members</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#inclusion-rules-by-configuration-new">Inclusion Rules by Configuration (new)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#name-matching">Name Matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#accessibility-check">Accessibility Check</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#exclusion-by-attributes-in-code">Exclusion by Attributes in Code</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#inclusion-exclusion-rule-priorities">Inclusion/Exclusion Rule Priorities</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#control-generation-of-obfuscated-names">Control Generation of Obfuscated Names</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#control-string-hiding">Control String Hiding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#suppressildasm-attribute">SuppressIldasm Attribute</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#signing-of-strongly-named-assemblies">Signing of Strongly Named Assemblies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#configuration-fragments-2-2-5">Configuration Fragments (2.2.5+)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#skipgenerated">SkipGenerated</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/configuration.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/history.html">Project History</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/history.html#started-by-ryan">Started by Ryan</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/history.html#resumed-by-werner">Resumed by Werner</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/history.html#various-forks-after-2010">Various Forks After 2010</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/history.html#inherited-by-lex-li">Inherited by Lex Li</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/history.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/ecosystem.html">Ecosystem Around Obfuscar</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/ecosystem.html#obfuscarmappingparser">ObfuscarMappingParser</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/ecosystem.html#obfuscar-config-for-unity">Obfuscar Config for Unity</a></li>
+<li class="toctree-l3"><a class="reference internal" href="getting-started/ecosystem.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/basics.html">Basic Example</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/basics.html#folder-structure">Folder Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/basics.html#technical-details">Technical Details</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/basics.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/source.html">Compiling Source Code</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/source.html#source-structure">Source Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/source.html#compilation-steps">Compilation Steps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/source.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/xamarin.html">Information on Xamarin.Android</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/xamarin.html#nuget-package">Nuget Package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/xamarin.html#project-file">Project File</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/xamarin.html#obfuscar-configuration-file">Obfuscar Configuration File</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/xamarin.html#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="tutorials/xamarin.html#linking-issues">Linking issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tutorials/xamarin.html#androidx-issues">AndroidX issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="tutorials/xamarin.html#dependency-injection-errors">Dependency injection errors</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/xamarin.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="support/index.html">Support</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="support/faq.html">Frequent Asked Questions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-understand-the-return-code">How to understand the return code?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-troubleshoot-ioexception">How to troubleshoot IOException?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-troubleshoot-argumentexception">How to troubleshoot ArgumentException?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-troubleshoot-badimageformatexception">How to troubleshoot BadImageFormatException?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-troubleshoot-resolutionexception-or-assemblyresolutionexception">How to troubleshoot ResolutionException or AssemblyResolutionException?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-troubleshoot-notsupportedexception">How to troubleshoot NotSupportedException?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#why-does-obfuscar-reject-relative-paths-or-placeholders">Why does Obfuscar reject relative paths or $(…) placeholders?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-troubleshoot-unauthorizedaccessexception">How to troubleshoot UnauthorizedAccessException?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-troubleshoot-typeloadexception-during-reflection">How to troubleshoot TypeLoadException during reflection?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-troubleshoot-typeloadexception-if-a-method-does-not-have-implementation">How to troubleshoot TypeLoadException if a method does not have implementation?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#how-to-analyze-exception-call-stack-if-obfuscated">How to analyze exception call stack if obfuscated?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/faq.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="support/services.html">Support Services</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="support/services.html#community-support">Community Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/services.html#commercial-support">Commercial Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="support/services.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contribute/index.html">Contribute</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contribute/contributors.html">Contributors</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contribute/contributors.html#previous-contributors">Previous Contributors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/contributors.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="contribute/github.html">GitHub Guide</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#submitting-a-patch">Submitting a Patch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#reviewing-a-patch">Reviewing a Patch</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#reporting-a-bug">Reporting a Bug</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#reviewing-a-bug">Reviewing a Bug</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#asking-a-question">Asking a Question</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="contribute/github.html#asking-a-question-on-stackoverflow-recommended">Asking a Question on StackOverflow (Recommended)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="contribute/github.html#asking-a-question-on-github">Asking a Question on GitHub</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#answering-a-question">Answering a Question</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#overview-of-issue-tags">Overview of Issue Tags</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="contribute/github.html#tags-for-item-categories">Tags for Item Categories</a></li>
+<li class="toctree-l4"><a class="reference internal" href="contribute/github.html#tags-for-decoration">Tags for Decoration</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#suggestions-on-creating-pull-requests">Suggestions on Creating Pull Requests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#suggestions-on-reviewing-pull-requests">Suggestions on Reviewing Pull Requests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contribute/github.html#related-resources">Related Resources</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="privacy.html">Privacy Policy</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="privacy.html#information-collected">Information Collected</a></li>
+<li class="toctree-l2"><a class="reference internal" href="privacy.html#third-party-analytics">Third-Party Analytics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="privacy.html#changes-to-this-privacy-policy">Changes to this Privacy Policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="privacy.html#contact-us">Contact Us</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="contribute-to-documentation">
+<h2>Contribute to Documentation<a class="headerlink" href="#contribute-to-documentation" title="Link to this heading">¶</a></h2>
+<p>The documentation on this site is the handiwork of our many contributors.</p>
+<p><strong>We accept pull requests!</strong> But you’re more likely to have yours accepted if
+you follow these guidelines:</p>
+<p>Read the <a class="reference external" href="https://github.com/obfuscar/docs/blob/master/CONTRIBUTING.md">Contributing Guide</a>.</p>
+<span class="target" id="ryan-williams"></span></section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+
+
+        <div class="related-pages">
+          <a class="next-page" href="getting-started/index.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Getting Started</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2007-2026 Ryan Williams, Calvin Rien, Lex Li, RemObjects Software, and other contributors
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            <div class="last-updated">
+              Last updated on Feb 07, 2026</div>
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              <a class="muted-link fa-brands fa-solid fa-github fa-2x" href="https://github.com/obfuscar/docs" aria-label="GitHub"></a>
+              
+            </div>
+          </div>
+        </div>
+        
+
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8730896881590248"
+    crossorigin="anonymous"></script>
+<div>
+    <div style="text-align: center; font-size: small; margin: 5px; color: gray">Advertisement</div>
+    <!-- Post Bottom -->
+    <ins class="adsbygoogle"
+        style="display:block"
+        data-ad-client="ca-pub-8730896881590248"
+        data-ad-slot="3878233319"
+        data-ad-format="auto"
+        data-full-width-responsive="true"></ins>
+</div>
+<script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+<!-- Ad blocking recovery -->
+
+<script async src="https://fundingchoicesmessages.google.com/i/pub-8730896881590248?ers=1" nonce="U62zdaLDRAvhlI8FpLWfJg"></script><script nonce="U62zdaLDRAvhlI8FpLWfJg">(function() {function signalGooglefcPresent() {if (!window.frames['googlefcPresent']) {if (document.body) {const iframe = document.createElement('iframe'); iframe.style = 'width: 0; height: 0; border: none; z-index: -1000; left: -1000px; top: -1000px;'; iframe.style.display = 'none'; iframe.name = 'googlefcPresent'; document.body.appendChild(iframe);} else {setTimeout(signalGooglefcPresent, 0);}}}signalGooglefcPresent();})();</script>
+
+<script>(function(){'use strict';function aa(a){var b=0;return function(){return b<a.length?{done:!1,value:a[b++]}:{done:!0}}}var ba="function"==typeof Object.defineProperties?Object.defineProperty:function(a,b,c){if(a==Array.prototype||a==Object.prototype)return a;a[b]=c.value;return a};
+    function ca(a){a=["object"==typeof globalThis&&globalThis,a,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var b=0;b<a.length;++b){var c=a[b];if(c&&c.Math==Math)return c}throw Error("Cannot find global object");}var da=ca(this);function k(a,b){if(b)a:{var c=da;a=a.split(".");for(var d=0;d<a.length-1;d++){var e=a[d];if(!(e in c))break a;c=c[e]}a=a[a.length-1];d=c[a];b=b(d);b!=d&&null!=b&&ba(c,a,{configurable:!0,writable:!0,value:b})}}
+    function ea(a){return a.raw=a}function m(a){var b="undefined"!=typeof Symbol&&Symbol.iterator&&a[Symbol.iterator];if(b)return b.call(a);if("number"==typeof a.length)return{next:aa(a)};throw Error(String(a)+" is not an iterable or ArrayLike");}function fa(a){for(var b,c=[];!(b=a.next()).done;)c.push(b.value);return c}var ha="function"==typeof Object.create?Object.create:function(a){function b(){}b.prototype=a;return new b},n;
+    if("function"==typeof Object.setPrototypeOf)n=Object.setPrototypeOf;else{var q;a:{var ia={a:!0},ja={};try{ja.__proto__=ia;q=ja.a;break a}catch(a){}q=!1}n=q?function(a,b){a.__proto__=b;if(a.__proto__!==b)throw new TypeError(a+" is not extensible");return a}:null}var ka=n;
+    function r(a,b){a.prototype=ha(b.prototype);a.prototype.constructor=a;if(ka)ka(a,b);else for(var c in b)if("prototype"!=c)if(Object.defineProperties){var d=Object.getOwnPropertyDescriptor(b,c);d&&Object.defineProperty(a,c,d)}else a[c]=b[c];a.A=b.prototype}function la(){for(var a=Number(this),b=[],c=a;c<arguments.length;c++)b[c-a]=arguments[c];return b}k("Number.MAX_SAFE_INTEGER",function(){return 9007199254740991});
+    k("Number.isFinite",function(a){return a?a:function(b){return"number"!==typeof b?!1:!isNaN(b)&&Infinity!==b&&-Infinity!==b}});k("Number.isInteger",function(a){return a?a:function(b){return Number.isFinite(b)?b===Math.floor(b):!1}});k("Number.isSafeInteger",function(a){return a?a:function(b){return Number.isInteger(b)&&Math.abs(b)<=Number.MAX_SAFE_INTEGER}});
+    k("Math.trunc",function(a){return a?a:function(b){b=Number(b);if(isNaN(b)||Infinity===b||-Infinity===b||0===b)return b;var c=Math.floor(Math.abs(b));return 0>b?-c:c}});k("Object.is",function(a){return a?a:function(b,c){return b===c?0!==b||1/b===1/c:b!==b&&c!==c}});k("Array.prototype.includes",function(a){return a?a:function(b,c){var d=this;d instanceof String&&(d=String(d));var e=d.length;c=c||0;for(0>c&&(c=Math.max(c+e,0));c<e;c++){var f=d[c];if(f===b||Object.is(f,b))return!0}return!1}});
+    k("String.prototype.includes",function(a){return a?a:function(b,c){if(null==this)throw new TypeError("The 'this' value for String.prototype.includes must not be null or undefined");if(b instanceof RegExp)throw new TypeError("First argument to String.prototype.includes must not be a regular expression");return-1!==this.indexOf(b,c||0)}});/*
+    
+     Copyright The Closure Library Authors.
+     SPDX-License-Identifier: Apache-2.0
+    */
+    var t=this||self;function v(a){return a};var w,x;a:{for(var ma=["CLOSURE_FLAGS"],y=t,z=0;z<ma.length;z++)if(y=y[ma[z]],null==y){x=null;break a}x=y}var na=x&&x[610401301];w=null!=na?na:!1;var A,oa=t.navigator;A=oa?oa.userAgentData||null:null;function B(a){return w?A?A.brands.some(function(b){return(b=b.brand)&&-1!=b.indexOf(a)}):!1:!1}function C(a){var b;a:{if(b=t.navigator)if(b=b.userAgent)break a;b=""}return-1!=b.indexOf(a)};function D(){return w?!!A&&0<A.brands.length:!1}function E(){return D()?B("Chromium"):(C("Chrome")||C("CriOS"))&&!(D()?0:C("Edge"))||C("Silk")};var pa=D()?!1:C("Trident")||C("MSIE");!C("Android")||E();E();C("Safari")&&(E()||(D()?0:C("Coast"))||(D()?0:C("Opera"))||(D()?0:C("Edge"))||(D()?B("Microsoft Edge"):C("Edg/"))||D()&&B("Opera"));var qa={},F=null;var ra="undefined"!==typeof Uint8Array,sa=!pa&&"function"===typeof btoa;function G(){return"function"===typeof BigInt};var H=0,I=0;function ta(a){var b=0>a;a=Math.abs(a);var c=a>>>0;a=Math.floor((a-c)/4294967296);b&&(c=m(ua(c,a)),b=c.next().value,a=c.next().value,c=b);H=c>>>0;I=a>>>0}function va(a,b){b>>>=0;a>>>=0;if(2097151>=b)var c=""+(4294967296*b+a);else G()?c=""+(BigInt(b)<<BigInt(32)|BigInt(a)):(c=(a>>>24|b<<8)&16777215,b=b>>16&65535,a=(a&16777215)+6777216*c+6710656*b,c+=8147497*b,b*=2,1E7<=a&&(c+=Math.floor(a/1E7),a%=1E7),1E7<=c&&(b+=Math.floor(c/1E7),c%=1E7),c=b+wa(c)+wa(a));return c}
+    function wa(a){a=String(a);return"0000000".slice(a.length)+a}function ua(a,b){b=~b;a?a=~a+1:b+=1;return[a,b]};var J;J="function"===typeof Symbol&&"symbol"===typeof Symbol()?Symbol():void 0;var xa=J?function(a,b){a[J]|=b}:function(a,b){void 0!==a.g?a.g|=b:Object.defineProperties(a,{g:{value:b,configurable:!0,writable:!0,enumerable:!1}})},K=J?function(a){return a[J]|0}:function(a){return a.g|0},L=J?function(a){return a[J]}:function(a){return a.g},M=J?function(a,b){a[J]=b;return a}:function(a,b){void 0!==a.g?a.g=b:Object.defineProperties(a,{g:{value:b,configurable:!0,writable:!0,enumerable:!1}});return a};function ya(a,b){M(b,(a|0)&-14591)}function za(a,b){M(b,(a|34)&-14557)}
+    function Aa(a){a=a>>14&1023;return 0===a?536870912:a};var N={},Ba={};function Ca(a){return!(!a||"object"!==typeof a||a.g!==Ba)}function Da(a){return null!==a&&"object"===typeof a&&!Array.isArray(a)&&a.constructor===Object}function P(a,b,c){if(!Array.isArray(a)||a.length)return!1;var d=K(a);if(d&1)return!0;if(!(b&&(Array.isArray(b)?b.includes(c):b.has(c))))return!1;M(a,d|1);return!0}Object.freeze(new function(){});Object.freeze(new function(){});var Ea=/^-?([1-9][0-9]*|0)(\.[0-9]+)?$/;var Q;function Fa(a,b){Q=b;a=new a(b);Q=void 0;return a}
+    function R(a,b,c){null==a&&(a=Q);Q=void 0;if(null==a){var d=96;c?(a=[c],d|=512):a=[];b&&(d=d&-16760833|(b&1023)<<14)}else{if(!Array.isArray(a))throw Error();d=K(a);if(d&64)return a;d|=64;if(c&&(d|=512,c!==a[0]))throw Error();a:{c=a;var e=c.length;if(e){var f=e-1;if(Da(c[f])){d|=256;b=f-(+!!(d&512)-1);if(1024<=b)throw Error();d=d&-16760833|(b&1023)<<14;break a}}if(b){b=Math.max(b,e-(+!!(d&512)-1));if(1024<b)throw Error();d=d&-16760833|(b&1023)<<14}}}M(a,d);return a};function Ga(a){switch(typeof a){case "number":return isFinite(a)?a:String(a);case "boolean":return a?1:0;case "object":if(a)if(Array.isArray(a)){if(P(a,void 0,0))return}else if(ra&&null!=a&&a instanceof Uint8Array){if(sa){for(var b="",c=0,d=a.length-10240;c<d;)b+=String.fromCharCode.apply(null,a.subarray(c,c+=10240));b+=String.fromCharCode.apply(null,c?a.subarray(c):a);a=btoa(b)}else{void 0===b&&(b=0);if(!F){F={};c="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".split("");d=["+/=",
+    "+/","-_=","-_.","-_"];for(var e=0;5>e;e++){var f=c.concat(d[e].split(""));qa[e]=f;for(var g=0;g<f.length;g++){var h=f[g];void 0===F[h]&&(F[h]=g)}}}b=qa[b];c=Array(Math.floor(a.length/3));d=b[64]||"";for(e=f=0;f<a.length-2;f+=3){var l=a[f],p=a[f+1];h=a[f+2];g=b[l>>2];l=b[(l&3)<<4|p>>4];p=b[(p&15)<<2|h>>6];h=b[h&63];c[e++]=g+l+p+h}g=0;h=d;switch(a.length-f){case 2:g=a[f+1],h=b[(g&15)<<2]||d;case 1:a=a[f],c[e]=b[a>>2]+b[(a&3)<<4|g>>4]+h+d}a=c.join("")}return a}}return a};function Ha(a,b,c){a=Array.prototype.slice.call(a);var d=a.length,e=b&256?a[d-1]:void 0;d+=e?-1:0;for(b=b&512?1:0;b<d;b++)a[b]=c(a[b]);if(e){b=a[b]={};for(var f in e)Object.prototype.hasOwnProperty.call(e,f)&&(b[f]=c(e[f]))}return a}function Ia(a,b,c,d,e){if(null!=a){if(Array.isArray(a))a=P(a,void 0,0)?void 0:e&&K(a)&2?a:Ja(a,b,c,void 0!==d,e);else if(Da(a)){var f={},g;for(g in a)Object.prototype.hasOwnProperty.call(a,g)&&(f[g]=Ia(a[g],b,c,d,e));a=f}else a=b(a,d);return a}}
+    function Ja(a,b,c,d,e){var f=d||c?K(a):0;d=d?!!(f&32):void 0;a=Array.prototype.slice.call(a);for(var g=0;g<a.length;g++)a[g]=Ia(a[g],b,c,d,e);c&&c(f,a);return a}function Ka(a){return a.s===N?a.toJSON():Ga(a)};function La(a,b,c){c=void 0===c?za:c;if(null!=a){if(ra&&a instanceof Uint8Array)return b?a:new Uint8Array(a);if(Array.isArray(a)){var d=K(a);if(d&2)return a;b&&(b=0===d||!!(d&32)&&!(d&64||!(d&16)));return b?M(a,(d|34)&-12293):Ja(a,La,d&4?za:c,!0,!0)}a.s===N&&(c=a.h,d=L(c),a=d&2?a:Fa(a.constructor,Ma(c,d,!0)));return a}}function Ma(a,b,c){var d=c||b&2?za:ya,e=!!(b&32);a=Ha(a,b,function(f){return La(f,e,d)});xa(a,32|(c?2:0));return a};function Na(a,b){a=a.h;return Oa(a,L(a),b)}function Oa(a,b,c,d){if(-1===c)return null;if(c>=Aa(b)){if(b&256)return a[a.length-1][c]}else{var e=a.length;if(d&&b&256&&(d=a[e-1][c],null!=d))return d;b=c+(+!!(b&512)-1);if(b<e)return a[b]}}function Pa(a,b,c,d,e){var f=Aa(b);if(c>=f||e){var g=b;if(b&256)e=a[a.length-1];else{if(null==d)return;e=a[f+(+!!(b&512)-1)]={};g|=256}e[c]=d;c<f&&(a[c+(+!!(b&512)-1)]=void 0);g!==b&&M(a,g)}else a[c+(+!!(b&512)-1)]=d,b&256&&(a=a[a.length-1],c in a&&delete a[c])}
+    function Qa(a,b){var c=Ra;var d=void 0===d?!1:d;var e=a.h;var f=L(e),g=Oa(e,f,b,d);if(null!=g&&"object"===typeof g&&g.s===N)c=g;else if(Array.isArray(g)){var h=K(g),l=h;0===l&&(l|=f&32);l|=f&2;l!==h&&M(g,l);c=new c(g)}else c=void 0;c!==g&&null!=c&&Pa(e,f,b,c,d);e=c;if(null==e)return e;a=a.h;f=L(a);f&2||(g=e,c=g.h,h=L(c),g=h&2?Fa(g.constructor,Ma(c,h,!1)):g,g!==e&&(e=g,Pa(a,f,b,e,d)));return e}function Sa(a,b){a=Na(a,b);return null==a||"string"===typeof a?a:void 0}
+    function Ta(a,b){var c=void 0===c?0:c;a=Na(a,b);if(null!=a)if(b=typeof a,"number"===b?Number.isFinite(a):"string"!==b?0:Ea.test(a))if("number"===typeof a){if(a=Math.trunc(a),!Number.isSafeInteger(a)){ta(a);b=H;var d=I;if(a=d&2147483648)b=~b+1>>>0,d=~d>>>0,0==b&&(d=d+1>>>0);b=4294967296*d+(b>>>0);a=a?-b:b}}else if(b=Math.trunc(Number(a)),Number.isSafeInteger(b))a=String(b);else{if(b=a.indexOf("."),-1!==b&&(a=a.substring(0,b)),!("-"===a[0]?20>a.length||20===a.length&&-922337<Number(a.substring(0,7)):
+    19>a.length||19===a.length&&922337>Number(a.substring(0,6)))){if(16>a.length)ta(Number(a));else if(G())a=BigInt(a),H=Number(a&BigInt(4294967295))>>>0,I=Number(a>>BigInt(32)&BigInt(4294967295));else{b=+("-"===a[0]);I=H=0;d=a.length;for(var e=b,f=(d-b)%6+b;f<=d;e=f,f+=6)e=Number(a.slice(e,f)),I*=1E6,H=1E6*H+e,4294967296<=H&&(I+=Math.trunc(H/4294967296),I>>>=0,H>>>=0);b&&(b=m(ua(H,I)),a=b.next().value,b=b.next().value,H=a,I=b)}a=H;b=I;b&2147483648?G()?a=""+(BigInt(b|0)<<BigInt(32)|BigInt(a>>>0)):(b=
+    m(ua(a,b)),a=b.next().value,b=b.next().value,a="-"+va(a,b)):a=va(a,b)}}else a=void 0;return null!=a?a:c}function S(a,b){a=Sa(a,b);return null!=a?a:""};function T(a,b,c){this.h=R(a,b,c)}T.prototype.toJSON=function(){return Ua(this,Ja(this.h,Ka,void 0,void 0,!1),!0)};T.prototype.s=N;T.prototype.toString=function(){return Ua(this,this.h,!1).toString()};
+    function Ua(a,b,c){var d=a.constructor.v,e=L(c?a.h:b);a=b.length;if(!a)return b;var f;if(Da(c=b[a-1])){a:{var g=c;var h={},l=!1,p;for(p in g)if(Object.prototype.hasOwnProperty.call(g,p)){var u=g[p];if(Array.isArray(u)){var jb=u;if(P(u,d,+p)||Ca(u)&&0===u.size)u=null;u!=jb&&(l=!0)}null!=u?h[p]=u:l=!0}if(l){for(var O in h){g=h;break a}g=null}}g!=c&&(f=!0);a--}for(p=+!!(e&512)-1;0<a;a--){O=a-1;c=b[O];O-=p;if(!(null==c||P(c,d,O)||Ca(c)&&0===c.size))break;var kb=!0}if(!f&&!kb)return b;b=Array.prototype.slice.call(b,
+    0,a);g&&b.push(g);return b};function Va(a){return function(b){if(null==b||""==b)b=new a;else{b=JSON.parse(b);if(!Array.isArray(b))throw Error(void 0);xa(b,32);b=Fa(a,b)}return b}};function Wa(a){this.h=R(a)}r(Wa,T);var Xa=Va(Wa);var U;function V(a){this.g=a}V.prototype.toString=function(){return this.g+""};var Ya={};function Za(a){if(void 0===U){var b=null;var c=t.trustedTypes;if(c&&c.createPolicy){try{b=c.createPolicy("goog#html",{createHTML:v,createScript:v,createScriptURL:v})}catch(d){t.console&&t.console.error(d.message)}U=b}else U=b}a=(b=U)?b.createScriptURL(a):a;return new V(a,Ya)};function $a(){return Math.floor(2147483648*Math.random()).toString(36)+Math.abs(Math.floor(2147483648*Math.random())^Date.now()).toString(36)};function ab(a,b){b=String(b);"application/xhtml+xml"===a.contentType&&(b=b.toLowerCase());return a.createElement(b)}function bb(a){this.g=a||t.document||document};/*
+    
+     SPDX-License-Identifier: Apache-2.0
+    */
+    function cb(a,b){a.src=b instanceof V&&b.constructor===V?b.g:"type_error:TrustedResourceUrl";var c,d;(c=(b=null==(d=(c=(a.ownerDocument&&a.ownerDocument.defaultView||window).document).querySelector)?void 0:d.call(c,"script[nonce]"))?b.nonce||b.getAttribute("nonce")||"":"")&&a.setAttribute("nonce",c)};function db(a){a=void 0===a?document:a;return a.createElement("script")};function eb(a,b,c,d,e,f){try{var g=a.g,h=db(g);h.async=!0;cb(h,b);g.head.appendChild(h);h.addEventListener("load",function(){e();d&&g.head.removeChild(h)});h.addEventListener("error",function(){0<c?eb(a,b,c-1,d,e,f):(d&&g.head.removeChild(h),f())})}catch(l){f()}};var fb=t.atob("aHR0cHM6Ly93d3cuZ3N0YXRpYy5jb20vaW1hZ2VzL2ljb25zL21hdGVyaWFsL3N5c3RlbS8xeC93YXJuaW5nX2FtYmVyXzI0ZHAucG5n"),gb=t.atob("WW91IGFyZSBzZWVpbmcgdGhpcyBtZXNzYWdlIGJlY2F1c2UgYWQgb3Igc2NyaXB0IGJsb2NraW5nIHNvZnR3YXJlIGlzIGludGVyZmVyaW5nIHdpdGggdGhpcyBwYWdlLg=="),hb=t.atob("RGlzYWJsZSBhbnkgYWQgb3Igc2NyaXB0IGJsb2NraW5nIHNvZnR3YXJlLCB0aGVuIHJlbG9hZCB0aGlzIHBhZ2Uu");function ib(a,b,c){this.i=a;this.u=b;this.o=c;this.g=null;this.j=[];this.m=!1;this.l=new bb(this.i)}
+    function lb(a){if(a.i.body&&!a.m){var b=function(){mb(a);t.setTimeout(function(){nb(a,3)},50)};eb(a.l,a.u,2,!0,function(){t[a.o]||b()},b);a.m=!0}}
+    function mb(a){for(var b=W(1,5),c=0;c<b;c++){var d=X(a);a.i.body.appendChild(d);a.j.push(d)}b=X(a);b.style.bottom="0";b.style.left="0";b.style.position="fixed";b.style.width=W(100,110).toString()+"%";b.style.zIndex=W(2147483544,2147483644).toString();b.style.backgroundColor=ob(249,259,242,252,219,229);b.style.boxShadow="0 0 12px #888";b.style.color=ob(0,10,0,10,0,10);b.style.display="flex";b.style.justifyContent="center";b.style.fontFamily="Roboto, Arial";c=X(a);c.style.width=W(80,85).toString()+
+    "%";c.style.maxWidth=W(750,775).toString()+"px";c.style.margin="24px";c.style.display="flex";c.style.alignItems="flex-start";c.style.justifyContent="center";d=ab(a.l.g,"IMG");d.className=$a();d.src=fb;d.alt="Warning icon";d.style.height="24px";d.style.width="24px";d.style.paddingRight="16px";var e=X(a),f=X(a);f.style.fontWeight="bold";f.textContent=gb;var g=X(a);g.textContent=hb;Y(a,e,f);Y(a,e,g);Y(a,c,d);Y(a,c,e);Y(a,b,c);a.g=b;a.i.body.appendChild(a.g);b=W(1,5);for(c=0;c<b;c++)d=X(a),a.i.body.appendChild(d),
+    a.j.push(d)}function Y(a,b,c){for(var d=W(1,5),e=0;e<d;e++){var f=X(a);b.appendChild(f)}b.appendChild(c);c=W(1,5);for(d=0;d<c;d++)e=X(a),b.appendChild(e)}function W(a,b){return Math.floor(a+Math.random()*(b-a))}function ob(a,b,c,d,e,f){return"rgb("+W(Math.max(a,0),Math.min(b,255)).toString()+","+W(Math.max(c,0),Math.min(d,255)).toString()+","+W(Math.max(e,0),Math.min(f,255)).toString()+")"}function X(a){a=ab(a.l.g,"DIV");a.className=$a();return a}
+    function nb(a,b){0>=b||null!=a.g&&0!==a.g.offsetHeight&&0!==a.g.offsetWidth||(pb(a),mb(a),t.setTimeout(function(){nb(a,b-1)},50))}function pb(a){for(var b=m(a.j),c=b.next();!c.done;c=b.next())(c=c.value)&&c.parentNode&&c.parentNode.removeChild(c);a.j=[];(b=a.g)&&b.parentNode&&b.parentNode.removeChild(b);a.g=null};function qb(a,b,c,d,e){function f(l){document.body?g(document.body):0<l?t.setTimeout(function(){f(l-1)},e):b()}function g(l){l.appendChild(h);t.setTimeout(function(){h?(0!==h.offsetHeight&&0!==h.offsetWidth?b():a(),h.parentNode&&h.parentNode.removeChild(h)):a()},d)}var h=rb(c);f(3)}function rb(a){var b=document.createElement("div");b.className=a;b.style.width="1px";b.style.height="1px";b.style.position="absolute";b.style.left="-10000px";b.style.top="-10000px";b.style.zIndex="-10000";return b};function Ra(a){this.h=R(a)}r(Ra,T);function sb(a){this.h=R(a)}r(sb,T);var tb=Va(sb);function ub(a){var b=la.apply(1,arguments);if(0===b.length)return Za(a[0]);for(var c=a[0],d=0;d<b.length;d++)c+=encodeURIComponent(b[d])+a[d+1];return Za(c)};function vb(a){if(!a)return null;a=Sa(a,4);var b;null===a||void 0===a?b=null:b=Za(a);return b};var wb=ea([""]),xb=ea([""]);function yb(a,b){this.m=a;this.o=new bb(a.document);this.g=b;this.j=S(this.g,1);this.u=vb(Qa(this.g,2))||ub(wb);this.i=!1;b=vb(Qa(this.g,13))||ub(xb);this.l=new ib(a.document,b,S(this.g,12))}yb.prototype.start=function(){zb(this)};
+    function zb(a){Ab(a);eb(a.o,a.u,3,!1,function(){a:{var b=a.j;var c=t.btoa(b);if(c=t[c]){try{var d=Xa(t.atob(c))}catch(e){b=!1;break a}b=b===Sa(d,1)}else b=!1}b?Z(a,S(a.g,14)):(Z(a,S(a.g,8)),lb(a.l))},function(){qb(function(){Z(a,S(a.g,7));lb(a.l)},function(){return Z(a,S(a.g,6))},S(a.g,9),Ta(a.g,10),Ta(a.g,11))})}function Z(a,b){a.i||(a.i=!0,a=new a.m.XMLHttpRequest,a.open("GET",b,!0),a.send())}function Ab(a){var b=t.btoa(a.j);a.m[b]&&Z(a,S(a.g,5))};(function(a,b){t[a]=function(){var c=la.apply(0,arguments);t[a]=function(){};b.call.apply(b,[null].concat(c instanceof Array?c:fa(m(c))))}})("__h82AlnkH6D91__",function(a){"function"===typeof window.atob&&(new yb(window,tb(window.atob(a)))).start()});}).call(this);
+    
+    window.__h82AlnkH6D91__("WyJwdWItODczMDg5Njg4MTU5MDI0OCIsW251bGwsbnVsbCxudWxsLCJodHRwczovL2Z1bmRpbmdjaG9pY2VzbWVzc2FnZXMuZ29vZ2xlLmNvbS9iL3B1Yi04NzMwODk2ODgxNTkwMjQ4Il0sbnVsbCxudWxsLCJodHRwczovL2Z1bmRpbmdjaG9pY2VzbWVzc2FnZXMuZ29vZ2xlLmNvbS9lbC9BR1NLV3hWR1JmNnYyanFycGJxQXA1emk2OUdURHF1MjdqRkNvemlFRmdHdklYNkVrbExqUlg3VlhHN1JCM2psWUkwNU9NNmxUdUtWN3BEUWhkMmg3Y3dUbUJDazRBXHUwMDNkXHUwMDNkP3RlXHUwMDNkVE9LRU5fRVhQT1NFRCIsImh0dHBzOi8vZnVuZGluZ2Nob2ljZXNtZXNzYWdlcy5nb29nbGUuY29tL2VsL0FHU0tXeFduZzVaMGhYdmpLX0VyTDFSSG1EcElHOHV2czB1WXpoby00NmdaMzVnVm85LVRIM1BYNU1Wc255b2l2TDY2TmxfRzJnVzhwZjhHYVNENmEzc2dVcy0yQVFcdTAwM2RcdTAwM2Q/YWJcdTAwM2QxXHUwMDI2c2JmXHUwMDNkMSIsImh0dHBzOi8vZnVuZGluZ2Nob2ljZXNtZXNzYWdlcy5nb29nbGUuY29tL2VsL0FHU0tXeFUtTHRHc00wS2IwSzUtZDA5bzVzZFJEcFdlNXFDQzdlUjVhMFExejg3d3VZaHEyNC1nQ0JuWjBYUUE4VVUyZWxWWHQ0T0lOZndlYU1YYzNRUllNS1pNdXdcdTAwM2RcdTAwM2Q/YWJcdTAwM2QyXHUwMDI2c2JmXHUwMDNkMSIsImh0dHBzOi8vZnVuZGluZ2Nob2ljZXNtZXNzYWdlcy5nb29nbGUuY29tL2VsL0FHU0tXeFVqZXJRaWRTamhITVpaTWdxVzNfNXRjdzIwdm9YUVRQNmttaTY4Y0FaNkw5WHJFQlpqclB4M293dXRySlNUUmx0bTl0eWxGa0RYTE9EcWstRmJTX0FnWWdcdTAwM2RcdTAwM2Q/c2JmXHUwMDNkMiIsImRpdi1ncHQtYWQiLDIwLDEwMCwiY0hWaUxUZzNNekE0T1RZNE9ERTFPVEF5TkRnXHUwMDNkIixbbnVsbCxudWxsLG51bGwsImh0dHBzOi8vd3d3LmdzdGF0aWMuY29tLzBlbW4vZi9wL3B1Yi04NzMwODk2ODgxNTkwMjQ4LmpzP3VzcXBcdTAwM2RDQXMiXSwiaHR0cHM6Ly9mdW5kaW5nY2hvaWNlc21lc3NhZ2VzLmdvb2dsZS5jb20vZWwvQUdTS1d4V2piSzE3XzlLUi1WcmxDQlJYU3gxeGVmQ1FXOTJDZFBNQ1JPS2VjeEE5U2FhQWl2V3NPZUVpWDFnTDdMUmVRQ1A3S21pdjhGTkh3X05lOVlkRjQ0dm5JQVx1MDAzZFx1MDAzZCJd");</script>
+
+
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+
+<!-- TOC Begin -->
+<div>
+  <div style="text-align: center; font-size: small; margin: 5px; color: gray">Advertisement</div>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8730896881590248"
+  crossorigin="anonymous"></script>
+  <ins class="adsbygoogle"
+  style="display:block"
+  data-ad-client="ca-pub-8730896881590248"
+  data-ad-slot="7892811542"
+  data-ad-format="auto"
+  data-full-width-responsive="true"></ins>
+  <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+  </script>
+</div>
+<!-- TOC End -->
+
+
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Obfuscar Documentation</a><ul>
+<li><a class="reference internal" href="#general">General</a></li>
+<li><a class="reference internal" href="#contribute-to-documentation">Contribute to Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=f35be339"></script>
+    <script src="_static/doctools.js?v=9a2dae69"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=4e2eecee"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="https://www.googletagmanager.com/gtag/js?id=G-DFLYZZK12P"></script>
+    <script src="_static/google_analytics_tracker.js?v=51f29958"></script>
+    <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"d03d741d4e204b16a20300ea029a78b8","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
