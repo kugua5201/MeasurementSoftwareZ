@@ -1,4 +1,5 @@
 ﻿using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.UserSetting;
 using System.Text;
@@ -42,6 +43,7 @@ namespace MeasurementSoftware.UserControls
         {
             _isAlternateLayout = false;
             _isGuidePanelVisible = true;
+            ResetLayoutSizesToDefault();
             ApplyCurrentLayout();
             SaveLayout();
         }
@@ -64,10 +66,52 @@ namespace MeasurementSoftware.UserControls
         {
             LayoutMenuItem.Header = _isAlternateLayout ? "切换为水平布局" : "切换为垂直布局";
             showNg.Header = _isGuidePanelVisible == true ? "隐藏导向区" : "显示导向区";
+            ResetMainPanelLayoutState();
             if (_isAlternateLayout)
                 ApplyAlternateLayout();
             else
                 ApplyDefaultLayout();
+        }
+
+        /// <summary>
+        /// 切换布局前清理主区域位置状态，避免 GuidePanel 继承旧布局的行列设置。
+        /// </summary>
+        private void ResetMainPanelLayoutState()
+        {
+            ResetElementLayout(ImagePanel);
+            ResetElementLayout(GuidePanel);
+            ResetElementLayout(TablePanel);
+            ResetElementLayout(HorizontalSplitter);
+            ResetElementLayout(VerticalSplitter);
+        }
+
+        /// <summary>
+        /// 重置元素的 Grid 位置。
+        /// </summary>
+        private static void ResetElementLayout(UIElement element)
+        {
+            Grid.SetColumn(element, 0);
+            Grid.SetRow(element, 0);
+            Grid.SetColumnSpan(element, 1);
+            Grid.SetRowSpan(element, 1);
+        }
+
+        /// <summary>
+        /// 恢复测量页布局尺寸默认值。
+        /// </summary>
+        private void ResetLayoutSizesToDefault()
+        {
+            var settings = ContainerBuilderExtensions.GetService<IUserSettingsService>();
+            if (settings == null)
+            {
+                return;
+            }
+
+            var layout = settings.Settings.HomeLayout;
+            layout.GuideColumnWidth = HomeLayoutSettings.DefaultGuideColumnWidth;
+            layout.TableRowStarHeight = HomeLayoutSettings.DefaultTableRowStarHeight;
+            layout.AltRightColumnStarWidth = HomeLayoutSettings.DefaultAltRightColumnStarWidth;
+            layout.AltGuideRowHeight = HomeLayoutSettings.DefaultAltGuideRowHeight;
         }
 
         /// <summary>
@@ -83,7 +127,7 @@ namespace MeasurementSoftware.UserControls
 
             if (_isGuidePanelVisible)
             {
-                double guideWidth = layout?.GuideColumnWidth ?? 220;
+                double guideWidth = layout?.GuideColumnWidth ?? HomeLayoutSettings.DefaultGuideColumnWidth;
                 // 三列：图片 | 分割条 | 导向区
                 MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 200 });
                 MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -95,7 +139,7 @@ namespace MeasurementSoftware.UserControls
                 MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 200 });
             }
 
-            double tableStarHeight = layout?.TableRowStarHeight ?? 0.6;
+            double tableStarHeight = layout?.TableRowStarHeight ?? HomeLayoutSettings.DefaultTableRowStarHeight;
             // 三行：上方内容 | 水平分割条 | 下方表格
             MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = 120 });
             MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -146,8 +190,8 @@ namespace MeasurementSoftware.UserControls
         }
 
         /// <summary>
-        /// 备选布局：[图片] 左列全高 | [导向区 + 通道表格] 右列上下排列
-        /// 隐藏导向区时表格铺满右列
+        /// 备选布局：[图片 + 导向区] 左列上下排列 | [通道表格] 右列全高
+        /// 隐藏导向区时图片与表格左右排列
         /// </summary>
         private void ApplyAlternateLayout()
         {
@@ -156,31 +200,31 @@ namespace MeasurementSoftware.UserControls
             MainContentGrid.ColumnDefinitions.Clear();
             MainContentGrid.RowDefinitions.Clear();
 
-            double rightStarWidth = layout?.AltRightColumnStarWidth ?? 1.2;
-            // 三列：图片 | 分割条 | 导向区+表格
+            double rightStarWidth = layout?.AltRightColumnStarWidth ?? HomeLayoutSettings.DefaultAltRightColumnStarWidth;
+            // 三列：左侧图片区/导向区 | 分割条 | 右侧通道表格
             MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 200 });
             MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(rightStarWidth, GridUnitType.Star), MinWidth = 350 });
 
             if (_isGuidePanelVisible)
             {
-                double guideRowHeight = layout?.AltGuideRowHeight ?? 220;
-                // 三行：导向区 | 水平分割条 | 表格
-                MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(guideRowHeight) });
-                MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                double guideRowHeight = layout?.AltGuideRowHeight ?? HomeLayoutSettings.DefaultAltGuideRowHeight;
+                // 三行：图片 | 水平分割条 | 导向区
                 MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = 120 });
+                MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(guideRowHeight), MinHeight = 120 });
             }
             else
             {
-                // 一行：表格铺满
+                // 一行：图片与表格左右排列
                 MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = 120 });
             }
 
             int totalRows = _isGuidePanelVisible ? 3 : 1;
 
-            // 图片占满左列全部行
+            // 图片在左列上方
             Grid.SetColumn(ImagePanel, 0); Grid.SetRow(ImagePanel, 0);
-            Grid.SetColumnSpan(ImagePanel, 1); Grid.SetRowSpan(ImagePanel, totalRows);
+            Grid.SetColumnSpan(ImagePanel, 1); Grid.SetRowSpan(ImagePanel, 1);
             ImagePanel.Visibility = Visibility.Visible;
 
             // 左右分割条（竖线，全高）
@@ -194,13 +238,13 @@ namespace MeasurementSoftware.UserControls
 
             if (_isGuidePanelVisible)
             {
-                // 导向区在右列上方
-                Grid.SetColumn(GuidePanel, 2); Grid.SetRow(GuidePanel, 0);
+                // 导向区在左列下方
+                Grid.SetColumn(GuidePanel, 0); Grid.SetRow(GuidePanel, 2);
                 Grid.SetColumnSpan(GuidePanel, 1); Grid.SetRowSpan(GuidePanel, 1);
                 GuidePanel.Visibility = Visibility.Visible;
 
-                // 上下分割条（横线，在右列 导向区和表格之间）
-                Grid.SetColumn(VerticalSplitter, 2); Grid.SetRow(VerticalSplitter, 1);
+                // 上下分割条（横线，在左列 图片和导向区之间）
+                Grid.SetColumn(VerticalSplitter, 0); Grid.SetRow(VerticalSplitter, 1);
                 Grid.SetColumnSpan(VerticalSplitter, 1); Grid.SetRowSpan(VerticalSplitter, 1);
                 VerticalSplitter.Width = double.NaN; VerticalSplitter.Height = 6;
                 VerticalSplitter.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -208,9 +252,9 @@ namespace MeasurementSoftware.UserControls
                 VerticalSplitter.Cursor = Cursors.SizeNS;
                 VerticalSplitter.Visibility = Visibility.Visible;
 
-                // 表格在右列下方
-                Grid.SetColumn(TablePanel, 2); Grid.SetRow(TablePanel, 2);
-                Grid.SetColumnSpan(TablePanel, 1); Grid.SetRowSpan(TablePanel, 1);
+                // 表格在右列整列显示
+                Grid.SetColumn(TablePanel, 2); Grid.SetRow(TablePanel, 0);
+                Grid.SetColumnSpan(TablePanel, 1); Grid.SetRowSpan(TablePanel, totalRows);
             }
             else
             {

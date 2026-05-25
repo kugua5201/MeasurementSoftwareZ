@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Services.Measurements;
 using MeasurementSoftware.ViewModels;
 using MultiProtocol.Model;
 using System.Collections.Specialized;
@@ -11,14 +12,20 @@ namespace MeasurementSoftware.Models
     /// <summary>
     /// 测量通道模型
     /// </summary>
-    public partial class MeasurementChannel : ObservableViewModel
+    public partial class MeasurementChannel : ObservableViewModel, IDataErrorInfo
     {
+        #region 构造函数
+
         public MeasurementChannel()
         {
             AttachIndirectSourceBindings(IndirectSourceBindings);
             EnsureVirtualSourceBindings(1);
             AttachVirtualSourceBindings(VirtualSourceBindings);
         }
+
+        #endregion
+
+        #region 基础配置属性
 
         /// <summary>
         /// 通道编号
@@ -152,6 +159,10 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private IndirectMeasurementTriggerMode indirectTriggerMode = IndirectMeasurementTriggerMode.AllValuesChanged;
 
+        #endregion
+
+        #region 虚拟测量配置与显示属性
+
         /// <summary>
         /// 虚拟测量来源模式。
         /// 用于在软件模拟数据与测量通道公式之间切换。
@@ -229,6 +240,10 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private ObservableCollection<VirtualMeasurementChannelBinding> virtualSourceBindings = [];
 
+        #endregion
+
+        #region 结果输出配置属性
+
         /// <summary>
         /// 是否启用测量结果输出。
         /// 启用后会在测量完成时将当前通道 OK/NG 结果写入指定 PLC 点位。
@@ -277,6 +292,10 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         [NotifyPropertyChangedFor(nameof(ResultOutputDataPointName))]
         private ObservableCollection<DataPoint> availableResultOutputDataPoints = new();
+
+        #endregion
+
+        #region 运行时绑定属性
 
         /// <summary>
         /// 运行时绑定的 PLC 设备实例。
@@ -347,6 +366,10 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        #endregion
+
+        #region 虚拟来源绑定事件与方法
+
         private void AttachVirtualSourceBindings(ObservableCollection<VirtualMeasurementChannelBinding>? bindings)
         {
             if (bindings == null)
@@ -387,6 +410,10 @@ namespace MeasurementSoftware.Models
             OnPropertyChanged(nameof(DisplayDataPointName));
             OnPropertyChanged(nameof(DisplayDataSourceAddress));
         }
+
+        #endregion
+
+        #region 显示属性
 
         private void VirtualSourceBinding_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -566,6 +593,10 @@ namespace MeasurementSoftware.Models
         [JsonIgnore]
         public bool IsVirtualMeasurementMode => MeasurementMode == MeasurementChannelMode.Virtual;
 
+        #endregion
+
+        #region 结果输出运行时绑定属性
+
         /// <summary>
         /// 运行时绑定的结果输出点位实例。
         /// 仅在程序运行期使用，不参与配方持久化。
@@ -617,6 +648,10 @@ namespace MeasurementSoftware.Models
         [JsonIgnore]
         public bool IsResultOutputBoolDataPoint => ResultOutputRuntimeDataPoint?.DataType == FieldType.Bool;
 
+        #endregion
+
+        #region 采集运行时绑定属性
+
         /// <summary>
         /// 运行时绑定的采集点位实例。
         /// 仅在程序运行期使用，不参与配方持久化。
@@ -656,6 +691,10 @@ namespace MeasurementSoftware.Models
                 OnPropertyChanged(nameof(DisplayDataSourceAddress));
             }
         }
+
+        #endregion
+
+        #region 运行时绑定回填方法
 
         /// <summary>
         /// 按已保存的输出设备/点位标识回填结果输出运行时绑定。
@@ -770,6 +809,10 @@ namespace MeasurementSoftware.Models
             OnPropertyChanged(nameof(DisplayDataSourceAddress));
         }
 
+        #endregion
+
+        #region 显示名称属性
+
         /// <summary>
         /// PLC设备名称（用于显示）
         /// </summary>
@@ -834,6 +877,10 @@ namespace MeasurementSoftware.Models
                 return point?.PointName ?? DataPointId;
             }
         }
+
+        #endregion
+
+        #region 测量配置与缓存属性
 
         /// <summary>
         /// 是否启用
@@ -943,6 +990,91 @@ namespace MeasurementSoftware.Models
         private int sampleCount = 100;
 
         /// <summary>
+        /// 是否启用滤波。
+        /// </summary>
+        private bool enableFilter;
+
+        /// <summary>
+        /// 是否启用滤波。
+        /// </summary>
+        public bool EnableFilter
+        {
+            get => enableFilter;
+            set
+            {
+                if (!SetProperty(ref enableFilter, value))
+                {
+                    return;
+                }
+
+                OnPropertyChanged(nameof(IsFilterSettingsVisible));
+            }
+        }
+
+        /// <summary>
+        /// 滤波类型。
+        /// 当前先支持平均滤波。
+        /// </summary>
+        private MeasurementFilterType filterType = MeasurementFilterType.Average;
+
+        /// <summary>
+        /// 滤波类型。
+        /// </summary>
+        public MeasurementFilterType FilterType
+        {
+            get => filterType;
+            set
+            {
+                if (!SetProperty(ref filterType, value))
+                {
+                    return;
+                }
+            }
+        }
+
+        [JsonIgnore]
+        public string Error => string.Empty;
+
+        public string this[string columnName]
+        {
+            get
+            {
+                if (columnName == nameof(FilterSampleCount))
+                {
+                    if (!EnableFilter)
+                    {
+                        return string.Empty;
+                    }
+
+                    if (FilterSampleCount < 3) return "滤波点数最小值为 3";
+                    if (FilterSampleCount % 2 == 0) return "滤波点数只能为奇数";
+                }
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// 滤波采样点数。
+        /// 使用独立窗口，不与采样数量共用同一含义。
+        /// </summary>
+        private int filterSampleCount = 3;
+
+        /// <summary>
+        /// 滤波采样点数。
+        /// </summary>
+        public int FilterSampleCount
+        {
+            get => filterSampleCount;
+            set
+            {
+                if (!SetProperty(ref filterSampleCount, value))
+                {
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
         /// 实时值是否有效。
         /// </summary>
         [ObservableProperty]
@@ -954,6 +1086,16 @@ namespace MeasurementSoftware.Models
         /// 历史数据（用于计算最大值、最小值等）
         /// </summary>
         public List<double> HistoricalData { get; set; } = [];
+
+        /// <summary>
+        /// 是否显示滤波配置区。
+        /// </summary>
+        [JsonIgnore]
+        public bool IsFilterSettingsVisible => EnableFilter;
+
+        #endregion
+
+        #region 绑定与清理方法
 
         /// <summary>
         /// 绑定运行时设备实例，并同步可用点位集合。
@@ -1022,6 +1164,10 @@ namespace MeasurementSoftware.Models
             OnPropertyChanged(nameof(ResultOutputDataPointName));
             OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
         }
+
+        #endregion
+
+        #region 运行时事件处理
 
         private void RuntimeDevice_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -1281,6 +1427,10 @@ namespace MeasurementSoftware.Models
                 OnPropertyChanged(nameof(ResultOutputDataPointName));
                 OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
             }
+
+        #endregion
+
+            #region 结果判定方法
         }
 
         /// <summary>
@@ -1321,55 +1471,78 @@ namespace MeasurementSoftware.Models
             }
         }
 
+        #endregion
+
+        #region 采集与滤波方法
+
         private readonly object _dataLock = new();
 
         /// <summary>
-        /// 根据通道类型处理并更新测量值
+        /// 更新单个测量值。
+        /// 顺序固定为：原始值 -> 校准 -> 四舍五入 -> 写入历史数据。
+        /// 滤波仅在测量结束时统一处理。
         /// </summary>
-        /// <param name="rawValue">原始值</param>
+        /// <param name="rawValue">原始测量值。</param>
         public void UpdateMeasuredValue(double rawValue)
         {
-
             lock (_dataLock)
-
             {
                 IsMeasuredValueAvailable = true;
-                MeasuredValue = rawValue;
-                var checkValue = RoundMeasuredValue(rawValue);
-                TrimHistoricalDataForIncoming(SampleCount, 1);
-                HistoricalData.Add(checkValue);
+                int maxSamples = Math.Max(1, SampleCount);
 
+                double measuredValue = RequiresCalibration
+                    ? CalibrationCoefficientA * rawValue + CalibrationCoefficientB
+                    : rawValue;
+
+                measuredValue = Math.Round(measuredValue, DecimalPlaces);
+                TrimHistoricalDataForIncoming(maxSamples, 1);
+                HistoricalData.Add(measuredValue);
+                MeasuredValue = measuredValue;
             }
         }
 
         /// <summary>
-        /// 硬件缓存时加入硬件缓存值，并且刷新实时值
+        /// 追加一批测量值。
+        /// 主要用于硬件缓存场景，批量数据中的每个值都会按“校准后写入历史窗口”的顺序进入缓存。
+        /// 滤波仅在测量结束时统一处理。
         /// </summary>
-        /// <param name="rawValues"></param>
-        /// <param name="rawValue"></param>
+        /// <param name="rawValues">批量原始测量值。</param>
+        /// <param name="rawValue">当前实时原始值。</param>
         public void AppendMeasuredValues(IEnumerable<double> rawValues, double rawValue)
         {
             lock (_dataLock)
             {
                 IsMeasuredValueAvailable = true;
-                MeasuredValue = rawValue;
-                if (rawValues is IReadOnlyList<double> rawValueList)
+                int maxSamples = Math.Max(1, SampleCount);
+
+                if (rawValues is not IReadOnlyList<double> rawValueList || rawValueList.Count == 0)
                 {
-                    int startIndex = Math.Max(0, rawValueList.Count - SampleCount);
-                    int incomingCount = rawValueList.Count - startIndex;
-                    TrimHistoricalDataForIncoming(SampleCount, incomingCount);
-                    int requiredCapacity = HistoricalData.Count + incomingCount;
-                    if (HistoricalData.Capacity < requiredCapacity)
-                    {
-                        HistoricalData.Capacity = requiredCapacity;
-                    }
-                    for (int i = startIndex; i < rawValueList.Count; i++)
-                    {
-                        double lastMeasuredValue = RoundMeasuredValue(rawValueList[i]);
-                        HistoricalData.Add(lastMeasuredValue);
-                    }
+                    UpdateMeasuredValue(rawValue);
+                    return;
                 }
 
+                int startIndex = Math.Max(0, rawValueList.Count - SampleCount);
+                int incomingCount = rawValueList.Count - startIndex;
+                TrimHistoricalDataForIncoming(maxSamples, incomingCount);
+
+                int requiredCapacity = HistoricalData.Count + incomingCount;
+                if (HistoricalData.Capacity < requiredCapacity)
+                {
+                    HistoricalData.Capacity = requiredCapacity;
+                }
+
+                double lastMeasuredValue = 0d;
+                for (int i = startIndex; i < rawValueList.Count; i++)
+                {
+                    double measuredValue = RequiresCalibration
+                        ? CalibrationCoefficientA * rawValueList[i] + CalibrationCoefficientB
+                        : rawValueList[i];
+
+                    lastMeasuredValue = Math.Round(measuredValue, DecimalPlaces);
+                    HistoricalData.Add(lastMeasuredValue);
+                }
+
+                MeasuredValue = lastMeasuredValue;
             }
         }
 
@@ -1405,22 +1578,33 @@ namespace MeasurementSoftware.Models
             }
         }
 
-        /// <summary>
-        /// 通过校准并且转换保留对应的值
-        /// </summary>
-        /// <param name="rawValue">原始测量值</param>
-        /// <param name="applyCalibration">是否应用校准</param>
-        /// <returns>经过校准和小数位处理后的测量值</returns>
-        private double RoundMeasuredValue(double rawValue)
+        private void ApplyFilterToHistoricalDataIfNeeded()
         {
-            if (RequiresCalibration)
+            IMeasurementValueFilter filter = MeasurementValueFilterFactory.Create(FilterType);
+            List<double> filteredValues = filter.Apply(HistoricalData, this);
+            if (filteredValues.Count == 0)
             {
-                rawValue = CalibrationCoefficientA * rawValue + CalibrationCoefficientB;
+                return;
             }
 
-            return Math.Round(rawValue, DecimalPlaces);
+            HistoricalData.Clear();
+            HistoricalData.AddRange(filteredValues);
+            MeasuredValue = HistoricalData[^1];
         }
 
+        /// <summary>
+        /// 采样数量变化后，同步修正历史数据容量。
+        /// </summary>
+        /// <param name="value">新的采样数量。</param>
+        partial void OnSampleCountChanged(int value)
+        {
+            TrimHistoricalData();
+        }
+
+        #endregion
+
+
+        #region 结果状态属性
 
         /// <summary>
         /// 最终结果
@@ -1456,43 +1640,55 @@ namespace MeasurementSoftware.Models
             _ => "--"
         };
 
+        #endregion
+
+
+        #region 结果结算与状态方法
 
         /// <summary>
         /// 更新最终结果值
         /// </summary>
         public void UpdateResultValue()
         {
-            if (HistoricalData == null || HistoricalData.Count == 0)
+            lock (_dataLock)
             {
-                ReusltValue = 0;
-                IsResultValueAvailable = false;
-                ChannelDescription = "没有采集到数据";
-                Result = MeasurementResult.Fail;
-                return;
-            }
-            switch (ChannelType)
-            {
-                case ChannelType.结果值:
-                    ReusltValue = MeasuredValue;
-                    break;
-                case ChannelType.最大值:
-                    ReusltValue = HistoricalData.Max();
-                    break;
-                case ChannelType.最小值:
-                    ReusltValue = HistoricalData.Min();
-                    break;
-                case ChannelType.平均值:
-                    ReusltValue = HistoricalData.Average();
-                    break;
-                case ChannelType.跳动值:
-                case ChannelType.齿跳动值:
-                    ReusltValue = HistoricalData.Max() - HistoricalData.Min();
-                    break;
-            }
+                if (HistoricalData == null || HistoricalData.Count == 0)
+                {
+                    ReusltValue = 0;
+                    IsResultValueAvailable = false;
+                    ChannelDescription = "没有采集到数据";
+                    Result = MeasurementResult.Fail;
+                    return;
+                }
+                if (EnableFilter)
+                {
+                    ApplyFilterToHistoricalDataIfNeeded();
 
-            ReusltValue = Math.Round(ReusltValue, DecimalPlaces);
-            IsResultValueAvailable = true;
-            CheckResult();
+                }
+                switch (ChannelType)
+                {
+                    case ChannelType.结果值:
+                        ReusltValue = MeasuredValue;
+                        break;
+                    case ChannelType.最大值:
+                        ReusltValue = HistoricalData.Max();
+                        break;
+                    case ChannelType.最小值:
+                        ReusltValue = HistoricalData.Min();
+                        break;
+                    case ChannelType.平均值:
+                        ReusltValue = HistoricalData.Average();
+                        break;
+                    case ChannelType.跳动值:
+                    case ChannelType.齿跳动值:
+                        ReusltValue = HistoricalData.Max() - HistoricalData.Min();
+                        break;
+                }
+
+                ReusltValue = Math.Round(ReusltValue, DecimalPlaces);
+                IsResultValueAvailable = true;
+                CheckResult();
+            }
         }
 
         public void ResetMeasurementState()
@@ -1526,6 +1722,8 @@ namespace MeasurementSoftware.Models
                 _ => MeasurementResult.Waiting
             };
         }
+
+        #endregion
 
     }
 

@@ -73,6 +73,18 @@ namespace MeasurementSoftware.Models
     }
 
     /// <summary>
+    /// 通道滤波类型。
+    /// </summary>
+    public enum MeasurementFilterType
+    {
+        /// <summary>
+        /// 平均滤波。
+        /// </summary>
+        [Description("平均滤波")]
+        Average
+    }
+
+    /// <summary>
     /// 测量通道模式。
     /// </summary>
     public enum MeasurementChannelMode

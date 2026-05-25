@@ -11,6 +11,9 @@
     <converters:Boolean2ColorConverter         x:Key="Boolean2ColorConverter"/>
     <converters:Boolean2TextConverter          x:Key="Boolean2TextConverter"/>
     <converters:Boolean2VisibilityConverter    x:Key="Boolean2VisibilityConverter"/>
+    <converters:MeasurementFilterSettingsVisibilityConverter x:Key="MeasurementFilterSettingsVisibilityConverter"/>
+    <converters:FilterSampleCountMaximumConverter x:Key="FilterSampleCountMaximumConverter"/>
+    <converters:FilterSampleCountHintConverter x:Key="FilterSampleCountHintConverter"/>
     <converters:Boolean2BooleanReConverter     x:Key="Boolean2BooleanReConverter"/>
     <converters:EnumDescriptionConverter       x:Key="EnumDescriptionConverter"/>
     <converters:String2VisibilityConverter     x:Key="String2VisibilityConverter"/>

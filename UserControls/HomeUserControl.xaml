@@ -589,13 +589,13 @@
                             <DataGridTextColumn
                                 Width="50"
                                 Binding="{Binding DisplayStepText}"
-                                IsReadOnly="True"
-                                Header="工步" />
+                                Header="工步"
+                                IsReadOnly="True" />
                             <DataGridTextColumn
                                 Width="90"
                                 Binding="{Binding MeasurementMode, Converter={StaticResource EnumToDisplayTextConverter}}"
-                                IsReadOnly="True"
-                                Header="测量模式" />
+                                Header="测量模式"
+                                IsReadOnly="True" />
                             <DataGridTextColumn
                                 Width="120"
                                 Binding="{Binding MeasurementType}"
@@ -660,7 +660,7 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTextColumn Width="*" Header="" />
+
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

@@ -440,7 +440,8 @@ ORDER BY MeasurementTime DESC;";
 
         private SqliteConnection CreateConnection(int year)
         {
-            return new SqliteConnection($"Data Source={GetDatabaseFilePath(year)}");
+            return new SqliteConnection($"Data Source={GetDatabaseFilePath(year)}:Pooling=false");
+            //  return new SqliteConnection($"Data Source={GetDatabaseFilePath(year)}");
         }
 
         private string GetDatabaseFilePath(int year)

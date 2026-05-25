@@ -31,16 +31,21 @@
                 x:Name="MainContentGrid"
                 Grid.Row="0"
                 Margin="15">
-                <Grid.ColumnDefinitions>
+                <!--<Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" MinWidth="250" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="1.2*" MinWidth="350" />
-                </Grid.ColumnDefinitions>
+                </Grid.ColumnDefinitions>-->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" MinHeight="120" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" MinHeight="120" />
+                </Grid.RowDefinitions>
 
                 <!--  左侧：产品图片 + 标注  -->
                 <Border
                     x:Name="ImagePanel"
-                    Grid.Column="0"
+                    Grid.Row="0"
                     Padding="0"
                     Background="{DynamicResource RegionBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
@@ -210,7 +215,7 @@
                 <!--  可拖动分割条  -->
                 <GridSplitter
                     x:Name="MainSplitter"
-                    Grid.Column="1"
+                    Grid.Row="1"
                     Width="6"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Stretch"
@@ -222,7 +227,7 @@
                 <!--  右侧：通道列表  -->
                 <Border
                     x:Name="ChannelListPanel"
-                    Grid.Column="2"
+                    Grid.Row="2"
                     Background="{DynamicResource RegionBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1"
@@ -543,8 +548,7 @@
                                     Foreground="{DynamicResource WarningBrush}"
                                     Text="工步配置" />
 
-                                <Grid Margin="0,0,0,20"
-                                      IsEnabled="{Binding EditingChannel.CanEditStepConfiguration}">
+                                <Grid Margin="0,0,0,20" IsEnabled="{Binding EditingChannel.CanEditStepConfiguration}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="90" />
                                         <ColumnDefinition Width="*" />
@@ -600,6 +604,11 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -713,6 +722,89 @@
                                         Maximum="6"
                                         Minimum="0"
                                         Value="{Binding EditingChannel.DecimalPlaces}" />
+
+                                    <TextBlock
+                                        Grid.Row="7"
+                                        Grid.Column="0"
+                                        Margin="0,8,0,8"
+                                        VerticalAlignment="Center"
+                                        Text="滤波：" />
+                                    <ToggleButton
+                                        Grid.Row="7"
+                                        Grid.Column="1"
+                                        Margin="0,8,0,8"
+                                        HorizontalAlignment="Left"
+                                        IsChecked="{Binding EditingChannel.EnableFilter, Mode=TwoWay}"
+                                        Style="{StaticResource ToggleButtonSwitch}" />
+
+                                    <Grid
+                                        Grid.Row="8"
+                                        Grid.RowSpan="4"
+                                        Grid.Column="0"
+                                        Grid.ColumnSpan="2"
+                                        Visibility="{Binding EditingChannel.EnableFilter, Converter={StaticResource MeasurementFilterSettingsVisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock
+                                            Grid.Row="0"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="滤波类型：" />
+                                        <ComboBox
+                                            Grid.Row="0"
+                                            Grid.Column="1"
+                                            Width="{StaticResource FormInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            ItemsSource="{Binding FilterTypes}"
+                                            SelectedItem="{Binding EditingChannel.FilterType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Style="{StaticResource ComboBoxExtend}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Converter={StaticResource EnumToDisplayTextConverter}}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="滤波点数：" />
+                                        <StackPanel
+                                            Grid.Row="1"
+                                            Grid.Column="1"
+                                            Orientation="Horizontal">
+                                            <hc:NumericUpDown
+                                                Width="{StaticResource FormInputWidth}"
+                                                Margin="0,0,0,8"
+                                                HorizontalAlignment="Left"
+                                                Increment="2"
+                                                Maximum="{Binding EditingChannel.SampleCount, Converter={StaticResource FilterSampleCountMaximumConverter}}"
+                                                Minimum="3"
+                                                Value="{Binding EditingChannel.FilterSampleCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}" />
+
+                                            <TextBlock
+                                                Grid.Row="1"
+                                                Grid.Column="1"
+                                                Margin="4,8,0,8"
+                                                FontSize="12"
+                                                Foreground="{StaticResource PlaceholderTextBrush}"
+                                                Text="{Binding EditingChannel.SampleCount, Converter={StaticResource FilterSampleCountHintConverter}}"
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Grid>
                                 </Grid>
 
                                 <Separator Margin="0,5,0,15" />

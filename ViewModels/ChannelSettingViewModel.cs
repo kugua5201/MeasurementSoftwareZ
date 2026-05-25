@@ -99,6 +99,7 @@ namespace MeasurementSoftware.ViewModels
         public string DrawerTitle => IsEditMode ? "编辑通道" : "添加通道";
 
         public IEnumerable<ChannelType> ChannelTypes => Enum.GetValues<ChannelType>();
+        public IEnumerable<MeasurementFilterType> FilterTypes => Enum.GetValues<MeasurementFilterType>();
         public IEnumerable<MeasurementChannelMode> MeasurementChannelModes => Enum.GetValues<MeasurementChannelMode>();
         public IEnumerable<IndirectMeasurementTriggerMode> IndirectMeasurementTriggerModes => Enum.GetValues<IndirectMeasurementTriggerMode>();
         public IEnumerable<VirtualMeasurementSourceMode> VirtualMeasurementSourceModes => Enum.GetValues<VirtualMeasurementSourceMode>();
@@ -457,6 +458,9 @@ namespace MeasurementSoftware.ViewModels
                 Unit = channel.Unit,
                 DecimalPlaces = channel.DecimalPlaces,
                 SampleCount = channel.SampleCount,
+                EnableFilter = channel.EnableFilter,
+                FilterType = channel.FilterType,
+                FilterSampleCount = channel.FilterSampleCount,
                 RequiresCalibration = channel.RequiresCalibration,
                 StepNumber = channel.StepNumber,
                 StepName = channel.StepName,
@@ -970,6 +974,17 @@ namespace MeasurementSoftware.ViewModels
             {
                 return;
             }
+
+            if (EditingChannel.EnableFilter)
+            {
+                string filterSampleCountError = EditingChannel[nameof(MeasurementChannel.FilterSampleCount)];
+                if (!string.IsNullOrWhiteSpace(filterSampleCountError))
+                {
+                    Growl.Warning($"滤波点数配置无效：{filterSampleCountError}");
+                    return;
+                }
+            }
+
             //如果启用工步测量，则需要检查已经启用的通道是否跟添加或者编辑的通道的工步练习，
             if (CurrentRecipe.OtherSettings.EnableStepMode)
             {
@@ -1026,6 +1041,9 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.DataPointId = EditingChannel.DataPointId;
                     originalChannel.DataSourceAddress = EditingChannel.DataSourceAddress;
                     originalChannel.SampleCount = EditingChannel.SampleCount;
+                    originalChannel.EnableFilter = EditingChannel.EnableFilter;
+                    originalChannel.FilterType = EditingChannel.FilterType;
+                    originalChannel.FilterSampleCount = EditingChannel.FilterSampleCount;
                     originalChannel.IndirectFormula = EditingChannel.IndirectFormula;
                     originalChannel.IndirectTriggerMode = EditingChannel.IndirectTriggerMode;
                     originalChannel.VirtualSourceMode = EditingChannel.VirtualSourceMode;

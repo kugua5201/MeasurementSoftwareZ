@@ -214,22 +214,39 @@ namespace MeasurementSoftware.UserControls
         private void RestoreDefaultLayout_Click(object sender, RoutedEventArgs e)
         {
             _isVertical = true;
+            ResetLayoutSizesToDefault();
             ApplyCurrentLayout();
             SaveLayout();
+        }
+
+        /// <summary>
+        /// 恢复通道设置页面布局尺寸默认值。
+        /// </summary>
+        private void ResetLayoutSizesToDefault()
+        {
+            var settings = ContainerBuilderExtensions.GetService<IUserSettingsService>();
+            if (settings == null)
+            {
+                return;
+            }
+
+            var layout = settings.Settings.ChannelSettingLayout;
+            layout.RightColumnStarWidth = ChannelSettingLayoutSettings.DefaultRightColumnStarWidth;
+            layout.BottomRowStarHeight = ChannelSettingLayoutSettings.DefaultBottomRowStarHeight;
         }
 
         private void ApplyCurrentLayout()
         {
             var layout = ContainerBuilderExtensions.GetService<IUserSettingsService>()?.Settings.ChannelSettingLayout;
 
-            LayoutMenuItem.Header = _isVertical ? "切换为水平布局" : "切换为垂直布局";
+            LayoutMenuItem.Header = _isVertical ? "切换为垂直布局" : "切换为水平布局";
 
             MainContentGrid.ColumnDefinitions.Clear();
             MainContentGrid.RowDefinitions.Clear();
 
             if (_isVertical)
             {
-                double bottomStarHeight = layout?.BottomRowStarHeight ?? 1.2;
+                double bottomStarHeight = layout?.BottomRowStarHeight ?? ChannelSettingLayoutSettings.DefaultBottomRowStarHeight;
                 // 纵向：图片(上) | 分割 | 通道列表(下)
                 MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star), MinHeight = 150 });
                 MainContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -250,7 +267,7 @@ namespace MeasurementSoftware.UserControls
             }
             else
             {
-                double rightStarWidth = layout?.RightColumnStarWidth ?? 1.2;
+                double rightStarWidth = layout?.RightColumnStarWidth ?? ChannelSettingLayoutSettings.DefaultRightColumnStarWidth;
                 // 横向（默认）：图片(左) | 分割 | 通道列表(右)
                 MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 250 });
                 MainContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });

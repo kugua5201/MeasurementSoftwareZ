@@ -70,6 +70,11 @@
     /// </summary>
     public class HomeLayoutSettings
     {
+        public const double DefaultGuideColumnWidth = 220;
+        public const double DefaultTableRowStarHeight = 0.6;
+        public const double DefaultAltRightColumnStarWidth = 1.2;
+        public const double DefaultAltGuideRowHeight = 220;
+
         /// <summary>
         /// 是否为备选布局（垂直布局）
         /// </summary>
@@ -83,22 +88,22 @@
         /// <summary>
         /// 默认布局 - 右侧导向区列宽
         /// </summary>
-        public double GuideColumnWidth { get; set; } = 220;
+        public double GuideColumnWidth { get; set; } = DefaultGuideColumnWidth;
 
         /// <summary>
         /// 默认布局 - 底部表格行高比例（Star值）
         /// </summary>
-        public double TableRowStarHeight { get; set; } = 0.6;
+        public double TableRowStarHeight { get; set; } = DefaultTableRowStarHeight;
 
         /// <summary>
         /// 备选布局 - 右侧列宽比例（Star值）
         /// </summary>
-        public double AltRightColumnStarWidth { get; set; } = 1.2;
+        public double AltRightColumnStarWidth { get; set; } = DefaultAltRightColumnStarWidth;
 
         /// <summary>
         /// 备选布局 - 导向区行高
         /// </summary>
-        public double AltGuideRowHeight { get; set; } = 220;
+        public double AltGuideRowHeight { get; set; } = DefaultAltGuideRowHeight;
     }
 
     /// <summary>
@@ -106,6 +111,9 @@
     /// </summary>
     public class ChannelSettingLayoutSettings
     {
+        public const double DefaultRightColumnStarWidth = 1.2;
+        public const double DefaultBottomRowStarHeight = 1.2;
+
         /// <summary>
         /// 是否为垂直布局
         /// </summary>
@@ -114,11 +122,11 @@
         /// <summary>
         /// 水平布局 - 右列宽度比例（Star值）
         /// </summary>
-        public double RightColumnStarWidth { get; set; } = 1.2;
+        public double RightColumnStarWidth { get; set; } = DefaultRightColumnStarWidth;
 
         /// <summary>
         /// 垂直布局 - 下方行高比例（Star值）
         /// </summary>
-        public double BottomRowStarHeight { get; set; } = 1.2;
+        public double BottomRowStarHeight { get; set; } = DefaultBottomRowStarHeight;
     }
 }
