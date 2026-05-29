@@ -1020,7 +1020,7 @@ namespace MeasurementSoftware.ViewModels
                     StandardValue = c.StandardValue,
                     UpperTolerance = c.UpperTolerance,
                     LowerTolerance = c.LowerTolerance,
-                    MeasuredValue = c.MeasuredValue,
+                    MeasuredResultValue = c.ReusltValue,
                     Unit = c.Unit,
                     StepNumber = c.StepNumber,
                     StepDisplayText = c.DisplayStepText,

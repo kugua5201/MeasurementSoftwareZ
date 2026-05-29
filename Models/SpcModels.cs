@@ -137,4 +137,41 @@
         public List<ControlChartPoint> Points { get; set; } = [];
         public ControlLimits Limits { get; set; } = new();
     }
+
+    public enum SpcChartSeriesType
+    {
+        Scatter,
+        Bar
+    }
+
+    public enum SpcChartReferenceLineType
+    {
+        Horizontal,
+        Vertical
+    }
+
+    public class SpcChartSeries
+    {
+        public SpcChartSeriesType SeriesType { get; set; }
+        public double[] XValues { get; set; } = [];
+        public double[] YValues { get; set; } = [];
+        public string ColorHex { get; set; } = "#2196F3";
+        public double Size { get; set; } = 1;
+    }
+
+    public class SpcChartReferenceLine
+    {
+        public SpcChartReferenceLineType LineType { get; set; }
+        public double Value { get; set; }
+        public string ColorHex { get; set; } = "#F44336";
+    }
+
+    public class SpcChartModel
+    {
+        public string Title { get; set; } = string.Empty;
+        public string XLabel { get; set; } = string.Empty;
+        public string YLabel { get; set; } = string.Empty;
+        public List<SpcChartSeries> Series { get; set; } = [];
+        public List<SpcChartReferenceLine> ReferenceLines { get; set; } = [];
+    }
 }

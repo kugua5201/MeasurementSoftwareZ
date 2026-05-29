@@ -282,7 +282,7 @@ namespace MeasurementSoftware.Models
         /// <summary>
         /// 测量值
         /// </summary>
-        public double MeasuredValue { get; set; }
+        public double MeasuredResultValue { get; set; }
 
         /// <summary>
         /// 单位。
