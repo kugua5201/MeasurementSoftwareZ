@@ -4,6 +4,7 @@ using MultiProtocol.Model;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace MeasurementSoftware.Models
@@ -48,6 +49,24 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [Description("规则显示")]
         RuleBased
+    }
+
+    /// <summary>
+    /// 按钮模式下的交互方式。
+    /// </summary>
+    public enum WriteValueButtonInteractionMode
+    {
+        /// <summary>
+        /// 点击按钮直接写入单个预设值。
+        /// </summary>
+        [Description("点击写入")]
+        Click,
+
+        /// <summary>
+        /// 鼠标按下时写入按下值，鼠标松开时写入松开值。
+        /// </summary>
+        [Description("按下/松开写入")]
+        PressAndRelease
     }
 
     /// <summary>
@@ -99,7 +118,9 @@ namespace MeasurementSoftware.Models
         private string ruleScriptStatusText = string.Empty;
         private bool isRuleScriptValid = true;
         private string pendingWriteValueText = string.Empty;
+        private WriteValueButtonInteractionMode buttonInteractionMode = WriteValueButtonInteractionMode.Click;
         private string buttonWriteValueText = string.Empty;
+        private string buttonReleaseWriteValueText = string.Empty;
         private string buttonDisplayText = "按钮1";
         private string editingWriteValueText = string.Empty;
         private bool isValueEditing;
@@ -196,6 +217,12 @@ namespace MeasurementSoftware.Models
                 OnPropertyChanged(nameof(IsButtonMode));
                 OnPropertyChanged(nameof(UsesRuleDisplay));
                 OnPropertyChanged(nameof(CurrentValueDisplayText));
+                OnPropertyChanged(nameof(EditorModeDisplayText));
+                OnPropertyChanged(nameof(ButtonPrimaryValueLabel));
+                OnPropertyChanged(nameof(ButtonPrimaryValuePlaceholder));
+                OnPropertyChanged(nameof(ButtonReleaseValuePlaceholder));
+                OnPropertyChanged(nameof(ButtonWriteValueText));
+                OnPropertyChanged(nameof(ButtonReleaseWriteValueText));
             });
         }
 
@@ -266,6 +293,34 @@ namespace MeasurementSoftware.Models
             set => SetProperty(ref buttonWriteValueText, value);
         }
 
+        /// <summary>
+        /// 按钮交互模式。
+        /// </summary>
+        public WriteValueButtonInteractionMode ButtonInteractionMode
+        {
+            get => buttonInteractionMode;
+            set => SetProperty(ref buttonInteractionMode, value, () =>
+            {
+                OnPropertyChanged(nameof(IsButtonClickWriteMode));
+                OnPropertyChanged(nameof(IsButtonPressAndReleaseMode));
+                OnPropertyChanged(nameof(EditorModeDisplayText));
+                OnPropertyChanged(nameof(ButtonPrimaryValueLabel));
+                OnPropertyChanged(nameof(ButtonPrimaryValuePlaceholder));
+                OnPropertyChanged(nameof(ButtonReleaseValuePlaceholder));
+                OnPropertyChanged(nameof(ButtonWriteValueText));
+                OnPropertyChanged(nameof(ButtonReleaseWriteValueText));
+            });
+        }
+
+        /// <summary>
+        /// 按钮松开时写入的预设值。
+        /// </summary>
+        public string ButtonReleaseWriteValueText
+        {
+            get => buttonReleaseWriteValueText;
+            set => SetProperty(ref buttonReleaseWriteValueText, value);
+        }
+
         public string ButtonDisplayText
         {
             get => buttonDisplayText;
@@ -321,6 +376,41 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [JsonIgnore]
         public bool IsButtonMode => EditorMode == WriteValueEditorMode.Button;
+
+        [JsonIgnore]
+        public bool IsButtonClickWriteMode => IsButtonMode && ButtonInteractionMode == WriteValueButtonInteractionMode.Click;
+
+        [JsonIgnore]
+        public bool IsButtonPressAndReleaseMode => IsButtonMode && ButtonInteractionMode == WriteValueButtonInteractionMode.PressAndRelease;
+
+        [JsonIgnore]
+        public string ButtonPrimaryValueLabel => IsButtonPressAndReleaseMode ? "按下值：" : "点击值：";
+
+        [JsonIgnore]
+        public string ButtonPrimaryValuePlaceholder => IsButtonPressAndReleaseMode ? "请输入按钮按下时写入的值" : "请输入按钮点击时写入的值";
+
+        [JsonIgnore]
+        public string ButtonReleaseValuePlaceholder => "请输入按钮松开时写入的值";
+
+        [JsonIgnore]
+        public string EditorModeDisplayText
+        {
+            get
+            {
+                if (!IsButtonMode)
+                {
+                    var description = typeof(WriteValueEditorMode)
+                        .GetField(EditorMode.ToString())?
+                        .GetCustomAttributes(typeof(DescriptionAttribute), false)
+                        .OfType<DescriptionAttribute>()
+                        .FirstOrDefault()?.Description;
+
+                    return string.IsNullOrWhiteSpace(description) ? EditorMode.ToString() : description;
+                }
+
+                return IsButtonPressAndReleaseMode ? "按钮输入（按下/松开）" : "按钮输入（点击）";
+            }
+        }
 
         [JsonIgnore]
         public bool CanEditValue => EditorMode != WriteValueEditorMode.Label;
@@ -474,17 +564,62 @@ namespace MeasurementSoftware.Models
         {
             get
             {
-                if (columnName != nameof(EditingWriteValueText) || !IsValueEditing)
+                if (columnName == nameof(EditingWriteValueText))
                 {
-                    return string.Empty;
+                    if (!IsValueEditing)
+                    {
+                        return string.Empty;
+                    }
+
+                    if (TryConvertWriteValue(EditingWriteValueText, DataType, out _, out var editErrorMessage))
+                    {
+                        return string.Empty;
+                    }
+
+                    return $"验证失败：{editErrorMessage}";
                 }
 
-                if (TryConvertWriteValue(EditingWriteValueText, DataType, out _, out var errorMessage))
+                if (columnName == nameof(ButtonWriteValueText))
                 {
-                    return string.Empty;
+                    if (!IsButtonMode)
+                    {
+                        return string.Empty;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(ButtonWriteValueText))
+                    {
+                        return $"验证失败：{(IsButtonPressAndReleaseMode ? "请输入按钮按下值" : "请输入按钮点击值")}";
+                    }
+
+                    if (TryConvertWriteValue(ButtonWriteValueText, DataType, out _, out var buttonErrorMessage))
+                    {
+                        return string.Empty;
+                    }
+
+                    return $"验证失败：{buttonErrorMessage}";
                 }
 
-                return $"验证失败：{errorMessage}";
+                if (columnName == nameof(ButtonReleaseWriteValueText))
+                {
+                    if (!IsButtonPressAndReleaseMode)
+                    {
+                        return string.Empty;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(ButtonReleaseWriteValueText))
+                    {
+                        return "验证失败：请输入按钮松开值";
+                    }
+
+                    if (TryConvertWriteValue(ButtonReleaseWriteValueText, DataType, out _, out var releaseErrorMessage))
+                    {
+                        return string.Empty;
+                    }
+
+                    return $"验证失败：{releaseErrorMessage}";
+                }
+
+                return string.Empty;
             }
         }
 

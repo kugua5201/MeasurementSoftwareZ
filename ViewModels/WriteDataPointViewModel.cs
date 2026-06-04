@@ -48,6 +48,8 @@ namespace MeasurementSoftware.ViewModels
 
         public IEnumerable<WriteValueLabelDisplayMode> LabelDisplayModes => Enum.GetValues<WriteValueLabelDisplayMode>();
 
+        public IEnumerable<WriteValueButtonInteractionMode> ButtonInteractionModes => Enum.GetValues<WriteValueButtonInteractionMode>();
+
         public IEnumerable<FieldType> DataTypes => Enum.GetValues<FieldType>();
 
         public WriteDataPointConfig? SelectedWriteDataPoint
@@ -161,7 +163,7 @@ namespace MeasurementSoftware.ViewModels
             _enabledDevicesObserver.Rebind();
             RebindWriteDataPointNotifications();
             HydrateWriteDataPoints();
-          
+
             RefreshEnabledWriteDataPoints();
             SelectedWriteDataPoint = WriteDataPoints.FirstOrDefault();
             OnPropertyChanged(nameof(CurrentRecipe));
@@ -208,6 +210,7 @@ namespace MeasurementSoftware.ViewModels
                 or nameof(WriteDataPointConfig.LabelDisplayMode)
                 or nameof(WriteDataPointConfig.DefaultDisplayText)
                 or nameof(WriteDataPointConfig.PendingWriteValueText)
+                or nameof(WriteDataPointConfig.ButtonInteractionMode)
                 or nameof(WriteDataPointConfig.WriteStatusText)
                 or nameof(WriteDataPointConfig.RuleScriptText))
             {
@@ -344,7 +347,7 @@ namespace MeasurementSoftware.ViewModels
                 }
             }
 
-   
+
             RefreshEnabledWriteDataPoints();
             OnPropertyChanged(nameof(WriteDataPoints));
         }
@@ -386,11 +389,11 @@ namespace MeasurementSoftware.ViewModels
                 RefreshCurrentValueDisplayText(config);
             }
 
-    
+
             RefreshEnabledWriteDataPoints();
         }
 
-     
+
         private void RefreshEnabledWriteDataPoints()
         {
             var enabledItems = WriteDataPoints.Where(x => x.IsEnabled).ToList();
@@ -531,6 +534,21 @@ namespace MeasurementSoftware.ViewModels
                 {
                     Growl.Warning(presetValueErrorMessage);
                     return;
+                }
+
+                if (EditingWriteDataPoint.IsButtonPressAndReleaseMode)
+                {
+                    if (string.IsNullOrWhiteSpace(EditingWriteDataPoint.ButtonReleaseWriteValueText))
+                    {
+                        Growl.Warning("按下/松开模式下松开写入值不能为空");
+                        return;
+                    }
+
+                    if (!WriteDataPointConfig.TryConvertWriteValue(EditingWriteDataPoint.ButtonReleaseWriteValueText, EditingWriteDataPoint.DataType, out _, out var releaseValueErrorMessage))
+                    {
+                        Growl.Warning(releaseValueErrorMessage);
+                        return;
+                    }
                 }
             }
 
@@ -731,12 +749,36 @@ namespace MeasurementSoftware.ViewModels
         private async Task SubmitButtonWriteAsync(WriteDataPointConfig? config)
         {
             config ??= SelectedWriteDataPoint;
-            if (config == null)
+            if (config == null || !config.IsButtonClickWriteMode)
             {
                 return;
             }
 
             await WriteValueAsync(config, config.ButtonWriteValueText);
+        }
+
+        [RelayCommand]
+        private async Task SubmitButtonPressWriteAsync(WriteDataPointConfig? config)
+        {
+            config ??= SelectedWriteDataPoint;
+            if (config == null || !config.IsButtonPressAndReleaseMode)
+            {
+                return;
+            }
+
+            await WriteValueAsync(config, config.ButtonWriteValueText);
+        }
+
+        [RelayCommand]
+        private async Task SubmitButtonReleaseWriteAsync(WriteDataPointConfig? config)
+        {
+            config ??= SelectedWriteDataPoint;
+            if (config == null || !config.IsButtonPressAndReleaseMode)
+            {
+                return;
+            }
+
+            await WriteValueAsync(config, config.ButtonReleaseWriteValueText);
         }
 
         [RelayCommand]
@@ -959,7 +1001,9 @@ namespace MeasurementSoftware.ViewModels
                 LabelDisplayMode = source.LabelDisplayMode,
                 DefaultDisplayText = source.DefaultDisplayText,
                 PendingWriteValueText = source.PendingWriteValueText,
+                ButtonInteractionMode = source.ButtonInteractionMode,
                 ButtonWriteValueText = source.ButtonWriteValueText,
+                ButtonReleaseWriteValueText = source.ButtonReleaseWriteValueText,
                 ButtonDisplayText = source.ButtonDisplayText,
                 RuleScriptText = source.RuleScriptText
             };
@@ -992,7 +1036,9 @@ namespace MeasurementSoftware.ViewModels
             target.EditorMode = source.EditorMode;
             target.LabelDisplayMode = source.LabelDisplayMode;
             target.DefaultDisplayText = source.DefaultDisplayText;
+            target.ButtonInteractionMode = source.ButtonInteractionMode;
             target.ButtonWriteValueText = source.ButtonWriteValueText;
+            target.ButtonReleaseWriteValueText = source.ButtonReleaseWriteValueText;
             target.ButtonDisplayText = source.ButtonDisplayText;
             target.RuleScriptText = source.RuleScriptText;
 

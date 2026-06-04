@@ -101,30 +101,61 @@
                                         </ContentControl>
                                         <ContentControl Visibility="{Binding IsButtonMode, Converter={StaticResource Boolean2VisibilityConverter}}">
                                             <StackPanel Orientation="Horizontal">
-                                                <!--<TextBlock VerticalAlignment="Center" Text="{Binding PendingWriteValueText}" />-->
+                                                <ContentControl Visibility="{Binding IsButtonClickWriteMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                    <Button
+                                                        MaxWidth="100"
+                                                        Margin="0,0,0,0"
+                                                        Padding="10,4"
+                                                        HorizontalContentAlignment="Left"
+                                                        Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
+                                                        CommandParameter="{Binding}"
+                                                        Content="{Binding ButtonDisplayText}"
+                                                        Style="{StaticResource ButtonDefault}">
 
-                                                <Button
-                                                    MaxWidth="100"
-                                                    Margin="0,0,0,0"
-                                                    Padding="10,4"
-                                                    HorizontalContentAlignment="Left"
-                                                    Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
-                                                    CommandParameter="{Binding}"
-                                                    Content="{Binding ButtonDisplayText}"
-                                                    Style="{StaticResource ButtonDefault}">
+                                                        <Button.ToolTip>
+                                                            <TextBlock Text="{Binding ButtonDisplayText}" />
+                                                        </Button.ToolTip>
+                                                        <Button.ContentTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock
+                                                                    Text="{Binding}"
+                                                                    TextTrimming="CharacterEllipsis"
+                                                                    ToolTip="{Binding}" />
+                                                            </DataTemplate>
+                                                        </Button.ContentTemplate>
+                                                    </Button>
+                                                </ContentControl>
 
-                                                    <Button.ToolTip>
-                                                        <TextBlock Text="{Binding ButtonDisplayText}" />
-                                                    </Button.ToolTip>
-                                                    <Button.ContentTemplate>
-                                                        <DataTemplate>
-                                                            <TextBlock
-                                                                Text="{Binding}"
-                                                                TextTrimming="CharacterEllipsis"
-                                                                ToolTip="{Binding}" />
-                                                        </DataTemplate>
-                                                    </Button.ContentTemplate>
-                                                </Button>
+                                                <ContentControl Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                    <Button
+                                                        MaxWidth="100"
+                                                        Margin="0,0,0,0"
+                                                        Padding="10,4"
+                                                        HorizontalContentAlignment="Left"
+                                                        Content="{Binding ButtonDisplayText}"
+                                                        Style="{StaticResource ButtonDefault}">
+                                                        <i:Interaction.Triggers>
+                                                            <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                                                                <i:InvokeCommandAction Command="{Binding Data.SubmitButtonPressWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
+                                                            </i:EventTrigger>
+                                                            <i:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                                                                <i:InvokeCommandAction Command="{Binding Data.SubmitButtonReleaseWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
+                                                            </i:EventTrigger>
+                                                        </i:Interaction.Triggers>
+
+                                                        <Button.ToolTip>
+                                                            <TextBlock Text="{Binding ButtonDisplayText}" />
+                                                        </Button.ToolTip>
+                                                        <Button.ContentTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock
+                                                                    Text="{Binding}"
+                                                                    TextTrimming="CharacterEllipsis"
+                                                                    ToolTip="{Binding}" />
+                                                            </DataTemplate>
+                                                        </Button.ContentTemplate>
+                                                    </Button>
+                                                </ContentControl>
                                             </StackPanel>
                                         </ContentControl>
                                     </Grid>
@@ -181,8 +212,8 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn
-                        Width="110"
-                        Binding="{Binding EditorMode, Converter={StaticResource EnumDescriptionConverter}, Mode=OneWay}"
+                        Width="180"
+                        Binding="{Binding EditorModeDisplayText, Mode=OneWay}"
                         Header="写值方式"
                         IsReadOnly="True" />
                     <DataGridTextColumn

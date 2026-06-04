@@ -8,8 +8,8 @@
     xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:scottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
-    d:DesignHeight="700"
-    d:DesignWidth="1200"
+    d:DesignHeight="704"
+    d:DesignWidth="1139.333"
     mc:Ignorable="d">
 
     <Grid Style="{StaticResource PageRootGrid}">
@@ -434,9 +434,13 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
                     <Border
                         Grid.Row="0"
+                        Grid.Column="0"
                         Padding="12"
                         Background="{DynamicResource SecondaryRegionBrush}"
                         BorderBrush="{DynamicResource BorderBrush}"
@@ -449,50 +453,102 @@
                             Text="SPC控制图" />
                     </Border>
 
-                    <hc:TabControl
+                    <Grid
                         Grid.Row="1"
+                        Grid.Column="0"
                         Margin="10"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Left"
-                        IsEnabled="{Binding HasAnalysisResult}"
-                        SelectedIndex="{Binding SelectedChartTabIndex, Mode=TwoWay}"
-                        Style="{StaticResource TabControlCapsuleSolid}">
-                        <!--  Xbar 控制图  -->
-                        <hc:TabItem Header="Xbar 控制图">
-                            <scottPlot:WpfPlot Margin="5">
-                                <i:Interaction.Behaviors>
-                                    <behaviors:ScottPlotChartBehavior ChartModel="{Binding XbarChartModel}" />
-                                </i:Interaction.Behaviors>
-                            </scottPlot:WpfPlot>
-                        </hc:TabItem>
+                        IsEnabled="{Binding HasAnalysisResult}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
 
-                        <!--  R 控制图  -->
-                        <hc:TabItem Header="R 控制图">
-                            <scottPlot:WpfPlot Margin="5">
-                                <i:Interaction.Behaviors>
-                                    <behaviors:ScottPlotChartBehavior ChartModel="{Binding RChartModel}" />
-                                </i:Interaction.Behaviors>
-                            </scottPlot:WpfPlot>
-                        </hc:TabItem>
+                        <hc:TabControl
+                            Grid.Row="0"
+                            HorizontalAlignment="Left"
+                            BorderThickness="0"
+                            SelectedIndex="{Binding SelectedChartTabIndex, Mode=TwoWay}"
+                            Style="{StaticResource TabControlCapsuleSolid}">
+                            <hc:TabItem Header="Xbar 控制图" />
+                            <hc:TabItem Header="R 控制图" />
+                            <hc:TabItem Header="直方图" />
+                            <hc:TabItem Header="数据趋势" />
+                        </hc:TabControl>
 
-                        <!--  直方图  -->
-                        <hc:TabItem Header="直方图">
-                            <scottPlot:WpfPlot Margin="5">
-                                <i:Interaction.Behaviors>
-                                    <behaviors:ScottPlotChartBehavior ChartModel="{Binding HistogramChartModel}" />
-                                </i:Interaction.Behaviors>
-                            </scottPlot:WpfPlot>
-                        </hc:TabItem>
+                        <Grid Grid.Row="1" Margin="0,10,0,0">
+                            <Border>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedChartTabIndex}" Value="0">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <scottPlot:WpfPlot Margin="5">
+                                    <i:Interaction.Behaviors>
+                                        <behaviors:ScottPlotChartBehavior ChartModel="{Binding XbarChartModel}" />
+                                    </i:Interaction.Behaviors>
+                                </scottPlot:WpfPlot>
+                            </Border>
 
-                        <!--  趋势图  -->
-                        <hc:TabItem HorizontalAlignment="Stretch" Header="数据趋势">
-                            <scottPlot:WpfPlot Margin="5">
-                                <i:Interaction.Behaviors>
-                                    <behaviors:ScottPlotChartBehavior ChartModel="{Binding TrendChartModel}" />
-                                </i:Interaction.Behaviors>
-                            </scottPlot:WpfPlot>
-                        </hc:TabItem>
-                    </hc:TabControl>
+                            <Border>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedChartTabIndex}" Value="1">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <scottPlot:WpfPlot Margin="5">
+                                    <i:Interaction.Behaviors>
+                                        <behaviors:ScottPlotChartBehavior ChartModel="{Binding RChartModel}" />
+                                    </i:Interaction.Behaviors>
+                                </scottPlot:WpfPlot>
+                            </Border>
+
+                            <Border>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedChartTabIndex}" Value="2">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <scottPlot:WpfPlot Margin="5">
+                                    <i:Interaction.Behaviors>
+                                        <behaviors:ScottPlotChartBehavior ChartModel="{Binding HistogramChartModel}" />
+                                    </i:Interaction.Behaviors>
+                                </scottPlot:WpfPlot>
+                            </Border>
+
+                            <Border>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedChartTabIndex}" Value="3">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <scottPlot:WpfPlot Margin="5">
+                                    <i:Interaction.Behaviors>
+                                        <behaviors:ScottPlotChartBehavior ChartModel="{Binding TrendChartModel}" />
+                                    </i:Interaction.Behaviors>
+                                </scottPlot:WpfPlot>
+                            </Border>
+                        </Grid>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>

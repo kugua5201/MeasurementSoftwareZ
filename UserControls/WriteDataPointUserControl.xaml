@@ -21,6 +21,31 @@
             TargetType="ComboBoxItem">
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+        <Style
+            x:Key="WriteDataPointValidationTextBoxStyle"
+            BasedOn="{StaticResource TextBoxExtend}"
+            TargetType="TextBox">
+            <Setter Property="Validation.ErrorTemplate">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <AdornedElementPlaceholder Grid.Column="0" VerticalAlignment="Top" />
+                            <TextBlock
+                                Grid.Column="2"
+                                VerticalAlignment="Center"
+                                Foreground="Red"
+                                Text="{Binding [0].ErrorContent}"
+                                TextWrapping="Wrap" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <hc:SimplePanel>
@@ -172,29 +197,59 @@
                                                 </ContentControl>
                                                 <ContentControl Visibility="{Binding IsButtonMode, Converter={StaticResource Boolean2VisibilityConverter}}">
                                                     <StackPanel Orientation="Horizontal">
-                                                        <!--<TextBlock VerticalAlignment="Center" Text="{Binding PendingWriteValueText}" />-->
-                                                        <Button
-                                                            MaxWidth="100"
-                                                            Margin="0,0,0,0"
-                                                            Padding="10,4"
-                                                            HorizontalContentAlignment="Left"
-                                                            Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
-                                                            CommandParameter="{Binding}"
-                                                            Content="{Binding ButtonDisplayText}"
-                                                            Style="{StaticResource ButtonDefault}">
+                                                        <ContentControl Visibility="{Binding IsButtonClickWriteMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                            <Button
+                                                                MaxWidth="100"
+                                                                Margin="0,0,0,0"
+                                                                Padding="10,4"
+                                                                HorizontalContentAlignment="Left"
+                                                                Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
+                                                                CommandParameter="{Binding}"
+                                                                Content="{Binding ButtonDisplayText}"
+                                                                Style="{StaticResource ButtonDefault}">
 
-                                                            <Button.ToolTip>
-                                                                <TextBlock Text="{Binding ButtonDisplayText}" />
-                                                            </Button.ToolTip>
-                                                            <Button.ContentTemplate>
-                                                                <DataTemplate>
-                                                                    <TextBlock
-                                                                        Text="{Binding}"
-                                                                        TextTrimming="CharacterEllipsis"
-                                                                        ToolTip="{Binding}" />
-                                                                </DataTemplate>
-                                                            </Button.ContentTemplate>
-                                                        </Button>
+                                                                <Button.ToolTip>
+                                                                    <TextBlock Text="{Binding ButtonDisplayText}" />
+                                                                </Button.ToolTip>
+                                                                <Button.ContentTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock
+                                                                            Text="{Binding}"
+                                                                            TextTrimming="CharacterEllipsis"
+                                                                            ToolTip="{Binding}" />
+                                                                    </DataTemplate>
+                                                                </Button.ContentTemplate>
+                                                            </Button>
+                                                        </ContentControl>
+                                                        <ContentControl Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                            <Button
+                                                                MaxWidth="100"
+                                                                Margin="0,0,0,0"
+                                                                Padding="10,4"
+                                                                HorizontalContentAlignment="Left"
+                                                                Content="{Binding ButtonDisplayText}"
+                                                                Style="{StaticResource ButtonDefault}">
+                                                                <i:Interaction.Triggers>
+                                                                    <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                                                                        <i:InvokeCommandAction Command="{Binding Data.SubmitButtonPressWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
+                                                                    </i:EventTrigger>
+                                                                    <i:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                                                                        <i:InvokeCommandAction Command="{Binding Data.SubmitButtonReleaseWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
+                                                                    </i:EventTrigger>
+                                                                </i:Interaction.Triggers>
+                                                                <Button.ToolTip>
+                                                                    <TextBlock Text="{Binding ButtonDisplayText}" />
+                                                                </Button.ToolTip>
+                                                                <Button.ContentTemplate>
+                                                                    <DataTemplate>
+                                                                        <TextBlock
+                                                                            Text="{Binding}"
+                                                                            TextTrimming="CharacterEllipsis"
+                                                                            ToolTip="{Binding}" />
+                                                                    </DataTemplate>
+                                                                </Button.ContentTemplate>
+                                                            </Button>
+                                                        </ContentControl>
 
                                                     </StackPanel>
                                                 </ContentControl>
@@ -252,8 +307,8 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             <DataGridTextColumn
-                                Width="110"
-                                Binding="{Binding EditorMode, Converter={StaticResource EnumDescriptionConverter}, Mode=OneWay}"
+                                Width="180"
+                                Binding="{Binding EditorModeDisplayText, Mode=OneWay}"
                                 Header="写值方式"
                                 IsReadOnly="True" />
                             <DataGridTextColumn
@@ -475,6 +530,8 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
                                     <TextBlock
@@ -571,18 +628,65 @@
                                     <TextBlock
                                         Grid.Row="5"
                                         Grid.Column="0"
+                                        Margin="0,0,0,8"
                                         VerticalAlignment="Center"
-                                        Text="预设值："
+                                        Text="按钮动作："
                                         Visibility="{Binding EditorMode, Converter={StaticResource WriteDataPointEditorModeVisibilityConverter}, ConverterParameter=Button}" />
-                                    <TextBox
+                                    <ComboBox
                                         Grid.Row="5"
                                         Grid.Column="1"
                                         Width="{StaticResource FormInputWidth}"
+                                        Margin="0,0,0,8"
                                         HorizontalAlignment="Left"
-                                        hc:InfoElement.Placeholder="请输入按钮点击后写入的值"
-                                        Style="{StaticResource TextBoxExtend}"
-                                        Text="{Binding ButtonWriteValueText, UpdateSourceTrigger=PropertyChanged}"
+                                        ItemContainerStyle="{StaticResource WriteDataPointComboBoxItemStyle}"
+                                        ItemsSource="{Binding Data.ButtonInteractionModes, Source={StaticResource VmProxy}}"
+                                        SelectedItem="{Binding ButtonInteractionMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        Style="{StaticResource ComboBoxExtend}"
+                                        Visibility="{Binding EditorMode, Converter={StaticResource WriteDataPointEditorModeVisibilityConverter}, ConverterParameter=Button}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+
+                                    <TextBlock
+                                        Grid.Row="6"
+                                        Grid.Column="0"
+                                        Margin="0,0,0,8"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding ButtonPrimaryValueLabel}"
                                         Visibility="{Binding EditorMode, Converter={StaticResource WriteDataPointEditorModeVisibilityConverter}, ConverterParameter=Button}" />
+                                    <TextBox
+                                        Grid.Row="6"
+                                        Grid.Column="1"
+                                        Width="{StaticResource FormInputWidth}"
+                                        Margin="0,0,0,8"
+                                        HorizontalAlignment="Left"
+                                        hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
+                                        hc:InfoElement.Placeholder="{Binding ButtonPrimaryValuePlaceholder}"
+                                        Style="{StaticResource WriteDataPointValidationTextBoxStyle}"
+                                        Text="{Binding ButtonWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
+                                        ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}"
+                                        Visibility="{Binding EditorMode, Converter={StaticResource WriteDataPointEditorModeVisibilityConverter}, ConverterParameter=Button}" />
+
+                                    <TextBlock
+                                        Grid.Row="7"
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center"
+                                        Text="松开值："
+                                        Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}" />
+                                    <TextBox
+                                        Grid.Row="7"
+                                        Grid.Column="1"
+                                        Width="{StaticResource FormInputWidth}"
+                                        HorizontalAlignment="Left"
+                                        hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
+                                        hc:InfoElement.Placeholder="{Binding ButtonReleaseValuePlaceholder}"
+                                        Style="{StaticResource WriteDataPointValidationTextBoxStyle}"
+                                        Text="{Binding ButtonReleaseWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
+                                        ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}"
+                                        Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}" />
                                 </Grid>
 
                                 <StackPanel Margin="0,0,0,0" Visibility="{Binding UsesRuleDisplay, Converter={StaticResource Boolean2VisibilityConverter}}">
