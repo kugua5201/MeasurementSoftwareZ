@@ -181,6 +181,7 @@ namespace MeasurementSoftware.ViewModels
                 "二维码配置" => "QrCodeSetting",
                 "其他设置" => "OtherSettings",
                 "日志" => "LogViewer",
+                "置零" => "Zeroing",
                 _ => string.Empty
             };
         }
@@ -192,6 +193,7 @@ namespace MeasurementSoftware.ViewModels
                 "Home" => "测量",
                 "RecipeManagement" => "配方管理",
                 "Calibration" => "校准",
+                "Zeroing" => "置零",
                 "DataManagement" => "检测记录",
                 "DataRecord" => "检测记录",
                 "ChannelSetting" => "通道配置",
@@ -215,6 +217,7 @@ namespace MeasurementSoftware.ViewModels
                 "Home" => "\xE80F",
                 "RecipeManagement" => "\xE7C3",
                 "Calibration" => "\xE9E9",
+                "Zeroing" => "\xE65A",
                 "DataManagement" => "\xE8F1",
                 "DataRecord" => "\xE8F1",
                 "ChannelSetting" => "\xE762",
@@ -275,6 +278,9 @@ namespace MeasurementSoftware.ViewModels
         /// </summary>
         [RelayCommand]
         private void NavigateToCalibration() => NavigateToPage("Calibration");
+
+        [RelayCommand]
+        private void NavigateToZeroing() => NavigateToPage("Zeroing");
 
         /// <summary>
         /// 导航到检测记录页面

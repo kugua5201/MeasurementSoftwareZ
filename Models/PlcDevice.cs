@@ -233,5 +233,12 @@ namespace MeasurementSoftware.Models
         /// 数据点列表
         /// </summary>
         public ObservableCollection<DataPoint> DataPoints { get; set; } = [];
+
+
+        /// <summary>
+        /// 获取西门子参数的属性
+        /// </summary>
+        /// <returns></returns>
+        public SiemensReadCacheConfig GetSiemensCacheConfig => SiemensReadCache ?? new SiemensReadCacheConfig();
     }
 }

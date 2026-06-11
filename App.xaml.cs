@@ -84,6 +84,7 @@ namespace MeasurementSoftware
             builder.RegisterViewWithInterceptedViewModel<RecipeManagementUserControl, RecipeManagementViewModel, AcquiringInterceptor>("RecipeManagement");
             builder.RegisterViewWithViewModel<ChannelSettingUserControl, ChannelSettingViewModel>("ChannelSetting");
             builder.RegisterViewWithViewModel<CalibrationUserControl, CalibrationViewModel>("Calibration");
+            builder.RegisterViewWithViewModel<ZeroingUserControl, ZeroingViewModel>("Zeroing");
             builder.RegisterViewWithViewModel<DataRecordUserControl, DataRecordViewModel>("DataManagement");
             builder.RegisterViewWithViewModel<DataRecordUserControl, DataRecordViewModel>("DataRecord");
             builder.RegisterViewWithViewModel<DeviceSettingUserControl, DeviceSettingViewModel>("CommunicationSetting");

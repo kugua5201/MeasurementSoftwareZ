@@ -1,4 +1,5 @@
 ﻿using MeasurementSoftware.Models;
+using MeasurementSoftware.Services.MeasurementValueFilters;
 
 namespace MeasurementSoftware.Services.Measurements
 {
@@ -18,6 +19,7 @@ namespace MeasurementSoftware.Services.Measurements
             return filterType switch
             {
                 MeasurementFilterType.Average => new AverageMeasurementValueFilter(),
+                MeasurementFilterType.HighSpeed => new HighSpeedMeasurementValueFilter(),
                 _ => throw new NotSupportedException($"不支持的滤波类型：{filterType}")
             };
         }

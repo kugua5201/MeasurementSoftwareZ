@@ -23,6 +23,8 @@ namespace MeasurementSoftware.ViewModels
 
         private ObservableCollection<StepOperationBindingConfig>? _observedStepOperationBindings;
         private OverallMeasurementResultOutputConfig? _observedOverallResultOutput;
+        private PlcTriggerBindingConfig? _observedAutoCalibrationBinding;
+        private PlcTriggerBindingConfig? _observedAutoZeroBinding;
 
         [ObservableProperty]
         private AcquisitionCsvColumnDefinition? selectedAvailableCsvColumn;
@@ -46,13 +48,15 @@ namespace MeasurementSoftware.ViewModels
         /// <summary>
         /// 所有可添加的导出列定义。
         /// </summary>
-        public ObservableCollection<AcquisitionCsvColumnDefinition> AvailableCsvColumns { get; } = [.. AcquisitionCsvColumnCatalog.All];
+        public ReadOnlyObservableCollection<AcquisitionCsvColumnDefinition> AvailableCsvColumns { get; } = new ReadOnlyObservableCollection<AcquisitionCsvColumnDefinition>(new ObservableCollection<AcquisitionCsvColumnDefinition>(AcquisitionCsvColumnCatalog.All));
 
         /// <summary>
         /// 工步操作可选设备。
         /// 仅显示已启用设备，并随设备启用状态实时联动。
         /// </summary>
         public ReadOnlyObservableCollection<PlcDevice> StepOperationDevices => _enabledDevicesObserver.EnabledDevicesView;
+
+        public ReadOnlyObservableCollection<PlcDevice> AutomaticMeasurementDevices => _enabledDevicesObserver.EnabledDevicesView;
 
         /// <summary>
         /// 当前配方的工步操作绑定集合。
@@ -83,7 +87,9 @@ namespace MeasurementSoftware.ViewModels
                         _enabledDevicesObserver.Rebind();
                         RebindOverallResultOutputNotifications();
                         CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
+                        CurrentRecipe?.OtherSettings.HydrateAutomaticMeasurementBindings(_enabledDevicesObserver.EnabledDevices);
                         RebindStepOperationBindingNotifications();
+                        RebindAutomaticMeasurementBindingNotifications();
                         OnPropertyChanged(nameof(CurrentRecipe));
                         OnPropertyChanged(nameof(HasRecipe));
                         OnPropertyChanged(nameof(ConfiguredCsvColumns));
@@ -96,12 +102,15 @@ namespace MeasurementSoftware.ViewModels
             {
                 CurrentRecipe?.OtherSettings.OverallResultOutput.AttachAvailableDevices(_enabledDevicesObserver.EnabledDevices);
                 CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
+                CurrentRecipe?.OtherSettings.HydrateAutomaticMeasurementBindings(_enabledDevicesObserver.EnabledDevices);
             };
 
             _enabledDevicesObserver.Rebind();
             RebindOverallResultOutputNotifications();
             CurrentRecipe?.OtherSettings.HydrateStepOperationBindings(_enabledDevicesObserver.EnabledDevices);
+            CurrentRecipe?.OtherSettings.HydrateAutomaticMeasurementBindings(_enabledDevicesObserver.EnabledDevices);
             RebindStepOperationBindingNotifications();
+            RebindAutomaticMeasurementBindingNotifications();
         }
 
         /// <summary>
@@ -122,6 +131,17 @@ namespace MeasurementSoftware.ViewModels
             }
 
             _observedOverallResultOutput.AttachAvailableDevices(_enabledDevicesObserver.EnabledDevices);
+        }
+
+        private void RebindAutomaticMeasurementBindingNotifications()
+        {
+            _observedAutoCalibrationBinding?.DetachAvailableDevices();
+            _observedAutoZeroBinding?.DetachAvailableDevices();
+
+            _observedAutoZeroBinding = CurrentRecipe?.OtherSettings.AutoZeroBinding;
+
+            _observedAutoCalibrationBinding?.AttachAvailableDevices(_enabledDevicesObserver.EnabledDevices);
+            _observedAutoZeroBinding?.AttachAvailableDevices(_enabledDevicesObserver.EnabledDevices);
         }
 
         /// <summary>

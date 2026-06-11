@@ -1,14 +1,19 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MeasurementSoftware.Extensions;
+using MeasurementSoftware.Services.ChannelResultCalculators;
 using MeasurementSoftware.Services.Measurements;
+using MeasurementSoftware.Services.MeasurementValueFilters;
 using MeasurementSoftware.ViewModels;
 using MultiProtocol.Model;
-using System.Collections.Specialized;
+using NLog.Filters;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Reflection.Metadata;
 using System.Text.Json.Serialization;
 namespace MeasurementSoftware.Models
 {
+
     /// <summary>
     /// 测量通道模型
     /// </summary>
@@ -95,6 +100,37 @@ namespace MeasurementSoftware.Models
         [NotifyPropertyChangedFor(nameof(DisplayMeasuredValue))]
         private double measuredValue;
 
+        /// <summary>
+        /// 通道独立的预设置零值，默认 0。
+        /// </summary>
+        [ObservableProperty]
+        private double presetZeroOffsetValue;
+
+        /// <summary>
+        /// 当前通道置零时是否使用预设值。
+        /// </summary>
+        [ObservableProperty]
+        private bool usePresetZeroOffsetValue;
+
+        /// <summary>
+        /// 置零页面中是否勾选该通道参与一键置零。
+        /// </summary>
+        [ObservableProperty]
+        public bool isZeroingSelected;
+        /// <summary>
+        /// 当前通道的零值参考值。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayZeroOffsetValue))]
+        private double zeroOffsetValue;
+
+        /// <summary>
+        /// 是否有效的零值参考值。
+        /// </summary>
+        [JsonIgnore]
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayZeroOffsetValue))]
+        private bool hasZeroOffsetReferenceValue;
         partial void OnMeasuredValueChanging(double value)
         {
             measuredValue = Math.Round(value, DecimalPlaces);
@@ -902,6 +938,14 @@ namespace MeasurementSoftware.Models
         [NotifyPropertyChangedFor(nameof(DisplayResultValue))]
         private int decimalPlaces = 3;
 
+        partial void OnDecimalPlacesChanged(int value)
+        {
+            OnPropertyChanged(nameof(DisplayZeroOffsetValue));
+            OnPropertyChanged(nameof(MeasuredValue));
+        }
+
+
+
         /// <summary>
         /// 是否需要校准
         /// </summary>
@@ -992,45 +1036,15 @@ namespace MeasurementSoftware.Models
         /// <summary>
         /// 是否启用滤波。
         /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsFilterSettingsVisible))]
         private bool enableFilter;
 
         /// <summary>
-        /// 是否启用滤波。
-        /// </summary>
-        public bool EnableFilter
-        {
-            get => enableFilter;
-            set
-            {
-                if (!SetProperty(ref enableFilter, value))
-                {
-                    return;
-                }
-
-                OnPropertyChanged(nameof(IsFilterSettingsVisible));
-            }
-        }
-
-        /// <summary>
         /// 滤波类型。
-        /// 当前先支持平均滤波。
         /// </summary>
+        [ObservableProperty]
         private MeasurementFilterType filterType = MeasurementFilterType.Average;
-
-        /// <summary>
-        /// 滤波类型。
-        /// </summary>
-        public MeasurementFilterType FilterType
-        {
-            get => filterType;
-            set
-            {
-                if (!SetProperty(ref filterType, value))
-                {
-                    return;
-                }
-            }
-        }
 
         [JsonIgnore]
         public string Error => string.Empty;
@@ -1052,28 +1066,18 @@ namespace MeasurementSoftware.Models
                 return string.Empty;
             }
         }
-
         /// <summary>
         /// 滤波采样点数。
         /// 使用独立窗口，不与采样数量共用同一含义。
         /// </summary>
+        [ObservableProperty]
         private int filterSampleCount = 3;
 
         /// <summary>
-        /// 滤波采样点数。
+        /// 高速滤波 响应系数
         /// </summary>
-        public int FilterSampleCount
-        {
-            get => filterSampleCount;
-            set
-            {
-                if (!SetProperty(ref filterSampleCount, value))
-                {
-                    return;
-                }
-            }
-        }
-
+        [ObservableProperty]
+        private double highSpeedAlpha = 0.65;
         /// <summary>
         /// 实时值是否有效。
         /// </summary>
@@ -1081,17 +1085,73 @@ namespace MeasurementSoftware.Models
         [NotifyPropertyChangedFor(nameof(DisplayMeasuredValue))]
         private bool isMeasuredValueAvailable;
 
-        [JsonIgnore]
         /// <summary>
-        /// 历史数据（用于计算最大值、最小值等）
+        /// PLC 原始值分组历史记录。
+        /// 普通采集每次一条 Y，缓存高速采集则一次记录多个 Y。
         /// </summary>
-        public List<double> HistoricalData { get; set; } = [];
+        [JsonIgnore]
+        public List<HistoryRecordModel> PlcRawHistoricalRecords { get; set; } = [];
+
+        /// <summary>
+        /// 置零后值分组历史记录。
+        /// </summary>
+        [JsonIgnore]
+        public List<HistoryRecordModel> ZeroedHistoricalRecords { get; set; } = [];
+
+        [JsonIgnore]
+        public List<double> HistoricalData =>HasZeroOffsetReferenceValue
+                ? [.. ZeroedHistoricalRecords.SelectMany(record => record.YValues)]
+                : [.. PlcRawHistoricalRecords.SelectMany(record => record.YValues)];
+
 
         /// <summary>
         /// 是否显示滤波配置区。
         /// </summary>
         [JsonIgnore]
         public bool IsFilterSettingsVisible => EnableFilter;
+
+        [JsonIgnore]
+        public string DisplayZeroOffsetValue => HasZeroOffsetReferenceValue ? ZeroOffsetValue.ToString($"F{Math.Max(0, DecimalPlaces)}") : "----";
+
+        #region 结果状态属性
+
+        /// <summary>
+        /// 最终结果
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayResultValue))]
+        private double reusltValue;
+
+        /// <summary>
+        /// 结果值是否有效。
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(DisplayResultValue))]
+        private bool isResultValueAvailable;
+
+        /// <summary>
+        /// 通道显示状态。
+        /// </summary>
+        [ObservableProperty]
+        private MeasurementResult displayState = MeasurementResult.Waiting;
+
+        [JsonIgnore]
+        public string DisplayMeasuredValue => IsMeasuredValueAvailable ? MeasuredValue.ToString($"F{Math.Max(0, DecimalPlaces)}") : "----";
+
+        [JsonIgnore]
+        public string DisplayResultValue => IsResultValueAvailable ? ReusltValue.ToString($"F{Math.Max(0, DecimalPlaces)}") : "----";
+
+        [JsonIgnore]
+        public string DisplayResultText => Result switch
+        {
+            MeasurementResult.Pass => "OK",
+            MeasurementResult.Fail => "NG",
+            _ => "--"
+        };
+
+        #endregion
+
+
 
         #endregion
 
@@ -1267,6 +1327,8 @@ namespace MeasurementSoftware.Models
             OnPropertyChanged(nameof(DisplayDataPointName));
             OnPropertyChanged(nameof(DisplayDataSourceAddress));
         }
+
+
 
         /// <summary>
         /// 确保间接测量数据源至少存在指定数量。
@@ -1471,10 +1533,13 @@ namespace MeasurementSoftware.Models
             }
         }
 
-        #endregion
+            #endregion
 
         #region 采集与滤波方法
 
+        /// <summary>
+        /// 数据锁
+        /// </summary>
         private readonly object _dataLock = new();
 
         /// <summary>
@@ -1487,109 +1552,251 @@ namespace MeasurementSoftware.Models
         {
             lock (_dataLock)
             {
-                IsMeasuredValueAvailable = true;
                 int maxSamples = Math.Max(1, SampleCount);
 
-                double measuredValue = RequiresCalibration
+                TrimHistoryRecordListForIncoming(PlcRawHistoricalRecords, maxSamples, 1);
+                if (HasZeroOffsetReferenceValue)
+                {
+                    TrimHistoryRecordListForIncoming(ZeroedHistoricalRecords, maxSamples, 1);
+                }
+
+                double normalizedCalibratedValue = RequiresCalibration
                     ? CalibrationCoefficientA * rawValue + CalibrationCoefficientB
                     : rawValue;
 
-                measuredValue = Math.Round(measuredValue, DecimalPlaces);
-                TrimHistoricalDataForIncoming(maxSamples, 1);
-                HistoricalData.Add(measuredValue);
-                MeasuredValue = measuredValue;
+                double roundedCalibratedValue = Math.Round(normalizedCalibratedValue, DecimalPlaces);
+
+                PlcRawHistoricalRecords.Add(new HistoryRecordModel(null, [roundedCalibratedValue]));
+
+                if (HasZeroOffsetReferenceValue)
+                {
+                    double roundedZeroedValue = Math.Round(
+                        roundedCalibratedValue - ZeroOffsetValue,
+                        DecimalPlaces);
+
+                    ZeroedHistoricalRecords.Add(new HistoryRecordModel(null, [roundedZeroedValue]));
+                    MeasuredValue = roundedZeroedValue;
+                }
+                else
+                {
+                    MeasuredValue = roundedCalibratedValue;
+                }
+
+                IsMeasuredValueAvailable = true;
             }
         }
-
         /// <summary>
-        /// 追加一批测量值。
-        /// 主要用于硬件缓存场景，批量数据中的每个值都会按“校准后写入历史窗口”的顺序进入缓存。
-        /// 滤波仅在测量结束时统一处理。
+        /// 追加西门子缓存测量值
+        /// 缓存数据按结构定义分组解析：
+        /// - 启用 X 时，第 1 个值是 X，后面的是 Y
+        /// - 不启用 X 时，全部都是 Y
         /// </summary>
-        /// <param name="rawValues">批量原始测量值。</param>
-        /// <param name="rawValue">当前实时原始值。</param>
-        public void AppendMeasuredValues(IEnumerable<double> rawValues, double rawValue)
+        public void AppendMeasuredCacheSiemensValues(IReadOnlyList<double> rawValues, double currentRawValue)
         {
             lock (_dataLock)
             {
-                IsMeasuredValueAvailable = true;
-                int maxSamples = Math.Max(1, SampleCount);
-
-                if (rawValues is not IReadOnlyList<double> rawValueList || rawValueList.Count == 0)
+                var cacheConfig = runtimeDevice?.GetSiemensCacheConfig;
+                if (cacheConfig is null || !cacheConfig.IsEnabled)
                 {
-                    UpdateMeasuredValue(rawValue);
                     return;
                 }
 
-                int startIndex = Math.Max(0, rawValueList.Count - SampleCount);
-                int incomingCount = rawValueList.Count - startIndex;
-                TrimHistoricalDataForIncoming(maxSamples, incomingCount);
-
-                int requiredCapacity = HistoricalData.Count + incomingCount;
-                if (HistoricalData.Capacity < requiredCapacity)
+                if (rawValues.Count == 0)
                 {
-                    HistoricalData.Capacity = requiredCapacity;
+                    return;
                 }
 
-                double lastMeasuredValue = 0d;
-                for (int i = startIndex; i < rawValueList.Count; i++)
+                int recordValueCount = cacheConfig.FieldDefinitions.Count;
+                if (recordValueCount <= 0)
                 {
-                    double measuredValue = RequiresCalibration
-                        ? CalibrationCoefficientA * rawValueList[i] + CalibrationCoefficientB
-                        : rawValueList[i];
-
-                    lastMeasuredValue = Math.Round(measuredValue, DecimalPlaces);
-                    HistoricalData.Add(lastMeasuredValue);
+                    return;
                 }
 
-                MeasuredValue = lastMeasuredValue;
+                bool enableXValue = cacheConfig.EnableXValue;
+                bool useZeroOffset = HasZeroOffsetReferenceValue;
+
+                int yCountPerGroup = enableXValue ? recordValueCount - 1 : recordValueCount;
+                if (yCountPerGroup <= 0)
+                {
+                    return;
+                }
+
+                int groupCount = rawValues.Count / recordValueCount;
+                if (groupCount == 0)
+                {
+                    return;
+                }
+
+                int incomingCount = groupCount * yCountPerGroup;
+                int maxSamples = Math.Max(1, SampleCount);
+
+                TrimHistoryRecordListForIncoming(PlcRawHistoricalRecords, maxSamples, incomingCount);
+                if (useZeroOffset)
+                {
+                    TrimHistoryRecordListForIncoming(ZeroedHistoricalRecords, maxSamples, incomingCount);
+                }
+
+                for (int groupIndex = 0; groupIndex < groupCount; groupIndex++)
+                {
+                    int start = groupIndex * recordValueCount;
+
+                    double? xValue = null;
+                    int yStart = start;
+
+                    if (enableXValue)
+                    {
+                        xValue = rawValues[start];
+                        yStart = start + 1;
+                    }
+
+                    var roundedRawValues = new List<double>(yCountPerGroup);
+                    List<double>? roundedZeroedValues = useZeroOffset
+                        ? new List<double>(yCountPerGroup)
+                        : null;
+
+                    for (int i = yStart; i < start + recordValueCount; i++)
+                    {
+                        double rawValue = rawValues[i];
+
+                        double normalizedCalibratedValue = RequiresCalibration
+                            ? CalibrationCoefficientA * rawValue + CalibrationCoefficientB
+                            : rawValue;
+
+                        double roundedCalibratedValue = Math.Round(normalizedCalibratedValue, DecimalPlaces);
+                        roundedRawValues.Add(roundedCalibratedValue);
+
+                        if (useZeroOffset)
+                        {
+                            double roundedZeroedValue = Math.Round(
+                                roundedCalibratedValue - ZeroOffsetValue,
+                                DecimalPlaces);
+
+                            roundedZeroedValues!.Add(roundedZeroedValue);
+                        }
+                    }
+
+                    PlcRawHistoricalRecords.Add(new HistoryRecordModel(xValue, roundedRawValues));
+
+                    if (useZeroOffset)
+                    {
+                        ZeroedHistoricalRecords.Add(new HistoryRecordModel(xValue, roundedZeroedValues!));
+                    }
+                }
+
+                double normalizedCurrentValue = RequiresCalibration
+                    ? CalibrationCoefficientA * currentRawValue + CalibrationCoefficientB
+                    : currentRawValue;
+
+                double roundedCurrentValue = Math.Round(normalizedCurrentValue, DecimalPlaces);
+
+                if (useZeroOffset)
+                {
+                    roundedCurrentValue = Math.Round(
+                        roundedCurrentValue - ZeroOffsetValue,
+                        DecimalPlaces);
+                }
+
+                MeasuredValue = roundedCurrentValue;
+                IsMeasuredValueAvailable = true;
             }
         }
-
         /// <summary>
-        /// 去掉历史数据
+        /// 裁剪掉历史数据
         /// </summary>
-        private void TrimHistoricalData()
+        /// <param name="records"></param>
+        /// <param name="maxSamples"></param>
+        /// <param name="incomingCount"></param>
+        private static void TrimHistoryRecordListForIncoming(List<HistoryRecordModel> records, int maxSamples, int incomingCount)
         {
-            int maxSamples = Math.Max(1, SampleCount);
-            if (HistoricalData.Count > maxSamples)
+            if (records.Count == 0)
             {
-                HistoricalData.RemoveRange(0, HistoricalData.Count - maxSamples);
+                return;
             }
-        }
 
-        /// <summary>
-        /// 去掉历史数据中超出容量限制的旧数据，以便为即将追加的新数据腾出空间。
-        /// </summary>
-        /// <param name="maxSamples">历史数据的最大容量</param>
-        /// <param name="incomingCount">即将追加的新数据数量</param>
-        private void TrimHistoricalDataForIncoming(int maxSamples, int incomingCount)
-        {
             if (incomingCount >= maxSamples)
             {
-                HistoricalData.Clear();
+                records.Clear();
                 return;
             }
 
-            int overflow = HistoricalData.Count + incomingCount - maxSamples;
-            if (overflow > 0)
+            int totalValueCount = records.Sum(record => record.YValues.Count);
+            int overflow = totalValueCount + incomingCount - maxSamples;
+            while (overflow > 0 && records.Count > 0)
             {
-                HistoricalData.RemoveRange(0, overflow);
+                var firstRecord = records[0];
+                if (firstRecord.YValues.Count <= overflow)
+                {
+                    overflow -= firstRecord.YValues.Count;
+                    records.RemoveAt(0);
+                    continue;
+                }
+
+                firstRecord.YValues.RemoveRange(0, overflow);
+                overflow = 0;
             }
         }
 
-        private void ApplyFilterToHistoricalDataIfNeeded()
+
+
+
+        /// <summary>
+        /// 单个点位采集数据
+        /// </summary>
+        /// <param name="rawValue"></param>
+        private void AppendMeasurementSeries(double rawValue)
         {
-            IMeasurementValueFilter filter = MeasurementValueFilterFactory.Create(FilterType);
-            List<double> filteredValues = filter.Apply(HistoricalData, this);
-            if (filteredValues.Count == 0)
+            double normalizedCalibratedValue = RequiresCalibration
+                ? CalibrationCoefficientA * rawValue + CalibrationCoefficientB
+                : rawValue;
+
+            double roundedCalibratedValue = Math.Round(normalizedCalibratedValue, DecimalPlaces);
+            double roundedZeroedValue = Math.Round(
+                roundedCalibratedValue - (HasZeroOffsetReferenceValue ? ZeroOffsetValue : 0d),
+                DecimalPlaces);
+
+            PlcRawHistoricalRecords.Add(new HistoryRecordModel(null, [roundedCalibratedValue]));
+            ZeroedHistoricalRecords.Add(new HistoryRecordModel(null, [roundedZeroedValue]));
+
+            IsMeasuredValueAvailable = true;
+            MeasuredValue = roundedZeroedValue;
+        }
+
+        /// <summary>
+        /// 将当前采样值设为置零参考点。
+        /// </summary>
+        public bool ApplyCurrentValueAsZeroOffset()
+        {
+            if (IsMeasuredValueAvailable)
             {
-                return;
+                return ApplySpecifiedZeroOffset(MeasuredValue);
             }
 
-            HistoricalData.Clear();
-            HistoricalData.AddRange(filteredValues);
-            MeasuredValue = HistoricalData[^1];
+            return false;
+        }
+
+        /// <summary>
+        /// 将指定值设为置零基准。
+        /// </summary>
+        public bool ApplySpecifiedZeroOffset(double referenceValue)
+        {
+            ZeroOffsetValue = Math.Round(referenceValue, DecimalPlaces);
+            HasZeroOffsetReferenceValue = true;
+            if (IsMeasuredValueAvailable)
+            {
+                MeasuredValue = Math.Round(MeasuredValue - ZeroOffsetValue, DecimalPlaces);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 清除置零偏移。
+        /// </summary>
+        public void ClearZeroOffset()
+        {
+            ZeroOffsetValue = 0d;
+            HasZeroOffsetReferenceValue = false;
+
         }
 
         /// <summary>
@@ -1598,53 +1805,18 @@ namespace MeasurementSoftware.Models
         /// <param name="value">新的采样数量。</param>
         partial void OnSampleCountChanged(int value)
         {
-            TrimHistoricalData();
+            int maxSamples = Math.Max(1, value);
+            TrimHistoryRecordListForIncoming(PlcRawHistoricalRecords, maxSamples, 0);
+            TrimHistoryRecordListForIncoming(ZeroedHistoricalRecords, maxSamples, 0);
         }
 
         #endregion
 
 
-        #region 结果状态属性
 
-        /// <summary>
-        /// 最终结果
-        /// </summary>
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(DisplayResultValue))]
-        private double reusltValue;
-
-        /// <summary>
-        /// 结果值是否有效。
-        /// </summary>
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(DisplayResultValue))]
-        private bool isResultValueAvailable;
-
-        /// <summary>
-        /// 通道显示状态。
-        /// </summary>
-        [ObservableProperty]
-        private MeasurementResult displayState = MeasurementResult.Waiting;
-
-        [JsonIgnore]
-        public string DisplayMeasuredValue => IsMeasuredValueAvailable ? MeasuredValue.ToString($"F{Math.Max(0, DecimalPlaces)}") : "----";
-
-        [JsonIgnore]
-        public string DisplayResultValue => IsResultValueAvailable ? ReusltValue.ToString($"F{Math.Max(0, DecimalPlaces)}") : "----";
-
-        [JsonIgnore]
-        public string DisplayResultText => Result switch
-        {
-            MeasurementResult.Pass => "OK",
-            MeasurementResult.Fail => "NG",
-            _ => "--"
-        };
-
-        #endregion
 
 
         #region 结果结算与状态方法
-
         /// <summary>
         /// 更新最终结果值
         /// </summary>
@@ -1652,7 +1824,11 @@ namespace MeasurementSoftware.Models
         {
             lock (_dataLock)
             {
-                if (HistoricalData == null || HistoricalData.Count == 0)
+                var sourceRecords = HasZeroOffsetReferenceValue
+                    ? ZeroedHistoricalRecords
+                    : PlcRawHistoricalRecords;
+
+                if (sourceRecords.Count == 0)
                 {
                     ReusltValue = 0;
                     IsResultValueAvailable = false;
@@ -1660,37 +1836,41 @@ namespace MeasurementSoftware.Models
                     Result = MeasurementResult.Fail;
                     return;
                 }
+
                 if (EnableFilter)
                 {
-                    ApplyFilterToHistoricalDataIfNeeded();
-
+                    IMeasurementValueFilter filter = MeasurementValueFilterFactory.Create(FilterType);
+                    sourceRecords = filter.Apply(sourceRecords, this);
+                    if (sourceRecords.Count == 0)
+                    {
+                        ReusltValue = 0;
+                        IsResultValueAvailable = false;
+                        ChannelDescription = "滤波后没有可用数据";
+                        Result = MeasurementResult.Fail;
+                        return;
+                    }
                 }
-                switch (ChannelType)
+
+                try
                 {
-                    case ChannelType.结果值:
-                        ReusltValue = MeasuredValue;
-                        break;
-                    case ChannelType.最大值:
-                        ReusltValue = HistoricalData.Max();
-                        break;
-                    case ChannelType.最小值:
-                        ReusltValue = HistoricalData.Min();
-                        break;
-                    case ChannelType.平均值:
-                        ReusltValue = HistoricalData.Average();
-                        break;
-                    case ChannelType.跳动值:
-                    case ChannelType.齿跳动值:
-                        ReusltValue = HistoricalData.Max() - HistoricalData.Min();
-                        break;
+                    var calculator = ChannelResultCalculatorFactory.Create(ChannelType);
+                    ReusltValue = Math.Round(calculator.Calculate(sourceRecords, this), DecimalPlaces);
+                    MeasuredValue = ReusltValue;
+                    IsResultValueAvailable = true;
+                    CheckResult();
                 }
-
-                ReusltValue = Math.Round(ReusltValue, DecimalPlaces);
-                IsResultValueAvailable = true;
-                CheckResult();
+                catch (Exception ex)
+                {
+                    ReusltValue = 0;
+                    IsResultValueAvailable = false;
+                    ChannelDescription = $"结果计算失败: {ex.Message}";
+                    Result = MeasurementResult.Fail;
+                }
             }
         }
-
+        /// <summary>
+        /// 重置测量状态，清空实时值和历史数据，但不修改设备绑定、通道配置和结果状态。
+        /// </summary>
         public void ResetMeasurementState()
         {
             MeasuredValue = 0;
@@ -1700,7 +1880,8 @@ namespace MeasurementSoftware.Models
             IsMeasuredValueAvailable = false;
             IsResultValueAvailable = false;
             ChannelDescription = string.Empty;
-            HistoricalData.Clear();
+            PlcRawHistoricalRecords.Clear();
+            ZeroedHistoricalRecords.Clear();
         }
 
         partial void OnMeasurementModeChanged(MeasurementChannelMode value)

@@ -5,6 +5,7 @@ using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.Services.Measurements;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Reflection;
 using System.Windows;
 using HandyControl.Controls;
 using MeasurementSoftware.Services.Config;
@@ -102,13 +103,45 @@ namespace MeasurementSoftware.ViewModels
         public IEnumerable<MeasurementFilterType> FilterTypes => Enum.GetValues<MeasurementFilterType>();
         public IEnumerable<MeasurementChannelMode> MeasurementChannelModes => Enum.GetValues<MeasurementChannelMode>();
         public IEnumerable<IndirectMeasurementTriggerMode> IndirectMeasurementTriggerModes => Enum.GetValues<IndirectMeasurementTriggerMode>();
+        public IReadOnlyList<TriggerModeOption> TriggerModeOptions { get; } = CreateEnumOptions();
         public IEnumerable<VirtualMeasurementSourceMode> VirtualMeasurementSourceModes => Enum.GetValues<VirtualMeasurementSourceMode>();
         public IEnumerable<VirtualMeasurementWaveformType> VirtualMeasurementWaveformTypes => Enum.GetValues<VirtualMeasurementWaveformType>();
         public IEnumerable<MeasurementChannel> AvailableVirtualSourceChannels => GetAvailableVirtualSourceChannels();
 
+        private static IReadOnlyList<TriggerModeOption> CreateEnumOptions()
+        {
+            return Enum.GetValues<StepOperationTriggerMode>()
+                .Select(value => new TriggerModeOption(value, GetEnumDescription(value)))
+                .ToList();
+        }
+
+        private static string GetEnumDescription<TEnum>(TEnum value) where TEnum : struct, Enum
+        {
+            var field = typeof(TEnum).GetField(value.ToString());
+            if (field?.GetCustomAttribute<DescriptionAttribute>() is DescriptionAttribute description)
+            {
+                return description.Description;
+            }
+
+            return value.ToString();
+        }
+
         partial void OnEditingChannelChanged(MeasurementChannel? value)
         {
             OnPropertyChanged(nameof(AvailableVirtualSourceChannels));
+        }
+
+        public sealed class TriggerModeOption
+        {
+            public TriggerModeOption(StepOperationTriggerMode value, string displayText)
+            {
+                Value = value;
+                DisplayText = displayText;
+            }
+
+            public StepOperationTriggerMode Value { get; }
+
+            public string DisplayText { get; }
         }
 
         public ChannelSettingViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IMeasurementFormulaScriptEvaluator formulaScriptEvaluator, IEnumerable<IMeasurementChannelHandler> channelHandlers)
@@ -233,6 +266,27 @@ namespace MeasurementSoftware.ViewModels
         private void SyncMeasurementBindingState(MeasurementChannel channel)
         {
             GetChannelHandler(channel).SyncBindings(channel, _deviceConfigService);
+        }
+
+
+
+
+
+        private static void SyncTriggerBindingState(PlcTriggerBindingConfig binding)
+        {
+            if (binding.RuntimeDevice != null)
+            {
+                binding.PlcDeviceId = binding.RuntimeDevice.DeviceId;
+            }
+
+            if (binding.RuntimeDataPoint != null)
+            {
+                binding.DataPointId = binding.RuntimeDataPoint.PointId;
+            }
+            else if (binding.PlcDeviceId == 0)
+            {
+                binding.DataPointId = string.Empty;
+            }
         }
 
         private bool ValidateMeasurementConfiguration(MeasurementChannel channel, out string errorMessage)
@@ -1053,15 +1107,15 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.VirtualWaveformDutyCycle = EditingChannel.VirtualWaveformDutyCycle;
                     originalChannel.VirtualWaveformOffset = EditingChannel.VirtualWaveformOffset;
                     originalChannel.VirtualFormula = EditingChannel.VirtualFormula;
-                     originalChannel.EnableResultOutput = EditingChannel.EnableResultOutput;
-                     originalChannel.ResultOutputPlcDeviceId = EditingChannel.ResultOutputPlcDeviceId;
-                     originalChannel.ResultOutputDataPointId = EditingChannel.ResultOutputDataPointId;
-                     originalChannel.ResultOutputAddress = EditingChannel.ResultOutputAddress;
-                     originalChannel.ResultOutputOkValue = EditingChannel.ResultOutputOkValue;
-                     originalChannel.ResultOutputNgValue = EditingChannel.ResultOutputNgValue;
+                    originalChannel.EnableResultOutput = EditingChannel.EnableResultOutput;
+                    originalChannel.ResultOutputPlcDeviceId = EditingChannel.ResultOutputPlcDeviceId;
+                    originalChannel.ResultOutputDataPointId = EditingChannel.ResultOutputDataPointId;
+                    originalChannel.ResultOutputAddress = EditingChannel.ResultOutputAddress;
+                    originalChannel.ResultOutputOkValue = EditingChannel.ResultOutputOkValue;
+                    originalChannel.ResultOutputNgValue = EditingChannel.ResultOutputNgValue;
                     originalChannel.ReplaceIndirectSourceBindings(EditingChannel.IndirectSourceBindings.Select(binding => binding.Clone()));
                     originalChannel.ReplaceVirtualSourceBindings(EditingChannel.VirtualSourceBindings.Select(binding => binding.Clone()));
-                  
+
                     if (EditingChannel.IsDirectMeasurementMode)
                     {
                         if (EditingChannel.PlcDeviceId == 0)
@@ -1081,14 +1135,14 @@ namespace MeasurementSoftware.ViewModels
                         LoadMeasurementBindingsForChannel(originalChannel);
                     }
 
-                     if (!EditingChannel.EnableResultOutput || EditingChannel.ResultOutputPlcDeviceId == 0)
-                     {
-                         originalChannel.ClearResultOutputBindings();
-                     }
-                     else
-                     {
-                         LoadResultOutputDataPointsForChannel(originalChannel);
-                     }
+                    if (!EditingChannel.EnableResultOutput || EditingChannel.ResultOutputPlcDeviceId == 0)
+                    {
+                        originalChannel.ClearResultOutputBindings();
+                    }
+                    else
+                    {
+                        LoadResultOutputDataPointsForChannel(originalChannel);
+                    }
 
                     // 重新订阅属性变化事件（如果之前没订阅）
                     originalChannel.PropertyChanged -= Channel_PropertyChanged;

@@ -94,6 +94,7 @@ namespace MeasurementSoftware.Models
         private bool enableStepOperationBinding;
         private int totalSteps = 10;
         private int acquisitionDelayMs = 500;
+        private int measurementStartDelayMs;
         private double annotationSize = 28;
         private AnnotationShape annotationShape = AnnotationShape.圆形;
         private string okColor = "#4CAF50";
@@ -106,7 +107,11 @@ namespace MeasurementSoftware.Models
         private string annotationTextColor = "#FFFFFF";
         private AcquisitionStorageConfig acquisitionStorage = new();
         private OverallMeasurementResultOutputConfig overallResultOutput = new();
+        private bool enableAutoCalibration;
+        private bool enableAutoZero;
+        private PlcTriggerBindingConfig autoZeroBinding = new();
         private ObservableCollection<StepOperationBindingConfig> stepOperationBindings = CreateDefaultStepOperationBindings();
+        private ObservableCollection<StepDelayConfig> stepDelaySettings = CreateDefaultStepDelaySettings(10);
         private ObservableCollection<WriteDataPointConfig> writeDataPoints = [];
 
         public RecipeOtherSettingsConfig()
@@ -139,7 +144,7 @@ namespace MeasurementSoftware.Models
         public int TotalSteps
         {
             get => totalSteps;
-            set => SetProperty(ref totalSteps, value);
+            set => SetProperty(ref totalSteps, value, EnsureStepDelaySettings);
         }
 
         /// <summary>
@@ -149,6 +154,15 @@ namespace MeasurementSoftware.Models
         {
             get => acquisitionDelayMs;
             set => SetProperty(ref acquisitionDelayMs, value);
+        }
+
+        /// <summary>
+        /// 非分步模式下，启动测量后的延时（毫秒）。
+        /// </summary>
+        public int MeasurementStartDelayMs
+        {
+            get => measurementStartDelayMs;
+            set => SetProperty(ref measurementStartDelayMs, Math.Max(0, value));
         }
 
         /// <summary>
@@ -261,6 +275,29 @@ namespace MeasurementSoftware.Models
             set => SetProperty(ref overallResultOutput, value ?? new OverallMeasurementResultOutputConfig());
         }
 
+        public bool EnableAutoCalibration
+        {
+            get => enableAutoCalibration;
+            set => SetProperty(ref enableAutoCalibration, value);
+        }
+
+    
+
+        public bool EnableAutoZero
+        {
+            get => enableAutoZero;
+            set => SetProperty(ref enableAutoZero, value);
+        }
+
+        /// <summary>
+        /// 全局自动置零触发绑定。
+        /// </summary>
+        public PlcTriggerBindingConfig AutoZeroBinding
+        {
+            get => autoZeroBinding;
+            set => SetProperty(ref autoZeroBinding, value ?? new PlcTriggerBindingConfig());
+        }
+
         /// <summary>
         /// 工步操作绑定配置。
         /// </summary>
@@ -268,6 +305,15 @@ namespace MeasurementSoftware.Models
         {
             get => stepOperationBindings;
             set => SetProperty(ref stepOperationBindings, value ?? [], EnsureStepOperationBindings);
+        }
+
+        /// <summary>
+        /// 分步模式下每个工步对应的延时配置。
+        /// </summary>
+        public ObservableCollection<StepDelayConfig> StepDelaySettings
+        {
+            get => stepDelaySettings;
+            set => SetProperty(ref stepDelaySettings, value ?? [], EnsureStepDelaySettings);
         }
 
         /// <summary>
@@ -291,6 +337,50 @@ namespace MeasurementSoftware.Models
             {
                 OkColor = ToHexColorString(value?.Color, "#4CAF50");
                 OnPropertyChanged();
+            }
+        }
+
+        private void EnsureStepDelaySettings()
+        {
+            stepDelaySettings ??= [];
+
+            int total = Math.Max(1, TotalSteps);
+            var existing = stepDelaySettings
+                .GroupBy(item => item.StepNumber)
+                .Select(group => group.First())
+                .ToDictionary(item => item.StepNumber);
+
+            var ordered = new List<StepDelayConfig>();
+            for (int step = 1; step <= total; step++)
+            {
+                if (!existing.TryGetValue(step, out var config))
+                {
+                    config = new StepDelayConfig { StepNumber = step };
+                }
+
+                ordered.Add(config);
+            }
+
+            var staleItems = stepDelaySettings.Where(item => !ordered.Contains(item)).ToList();
+            foreach (var staleItem in staleItems)
+            {
+                stepDelaySettings.Remove(staleItem);
+            }
+
+            for (int index = 0; index < ordered.Count; index++)
+            {
+                var config = ordered[index];
+                var currentIndex = stepDelaySettings.IndexOf(config);
+                if (currentIndex < 0)
+                {
+                    stepDelaySettings.Insert(index, config);
+                    continue;
+                }
+
+                if (currentIndex != index)
+                {
+                    stepDelaySettings.Move(currentIndex, index);
+                }
             }
         }
 
@@ -374,6 +464,18 @@ namespace MeasurementSoftware.Models
         }
 
         /// <summary>
+        /// 自动校准/置零统一绑定反序列化后，按当前设备列表重建运行时绑定。
+        /// </summary>
+        public void HydrateAutomaticMeasurementBindings(IEnumerable<PlcDevice> devices)
+        {
+            var deviceList = devices.ToList();
+            AutoZeroBinding ??= new PlcTriggerBindingConfig();
+
+            var autoZeroDevice = deviceList.FirstOrDefault(d => d.DeviceId == AutoZeroBinding.PlcDeviceId);
+            AutoZeroBinding.HydrateRuntimeBindings(autoZeroDevice);
+        }
+
+        /// <summary>
         /// 写入点位配置反序列化后，确保集合已初始化。
         /// 运行时设备与点位引用由上层服务负责重建。
         /// </summary>
@@ -447,6 +549,17 @@ namespace MeasurementSoftware.Models
             ];
         }
 
+        private static ObservableCollection<StepDelayConfig> CreateDefaultStepDelaySettings(int totalSteps)
+        {
+            var settings = new ObservableCollection<StepDelayConfig>();
+            for (int step = 1; step <= Math.Max(1, totalSteps); step++)
+            {
+                settings.Add(new StepDelayConfig { StepNumber = step });
+            }
+
+            return settings;
+        }
+
         private static string NormalizeColorString(string? colorStr, string fallback)
         {
             if (string.IsNullOrWhiteSpace(colorStr))
@@ -492,5 +605,32 @@ namespace MeasurementSoftware.Models
                 return null;
             }
         }
+
+    /// <summary>
+    /// 工步延时配置。
+    /// </summary>
+    public class StepDelayConfig : ObservableViewModel
+    {
+        private int stepNumber;
+        private int delayMs;
+
+        /// <summary>
+        /// 工步号。
+        /// </summary>
+        public int StepNumber
+        {
+            get => stepNumber;
+            set => SetProperty(ref stepNumber, Math.Max(1, value));
+        }
+
+        /// <summary>
+        /// 当前工步执行前延时（毫秒）。
+        /// </summary>
+        public int DelayMs
+        {
+            get => delayMs;
+            set => SetProperty(ref delayMs, Math.Max(0, value));
+        }
+    }
     }
 }

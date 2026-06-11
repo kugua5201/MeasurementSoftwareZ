@@ -27,7 +27,7 @@ namespace MeasurementSoftware.ViewModels
         private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
 
         private ObservableCollection<WriteDataPointConfig>? _observedWriteDataPoints;
-        private readonly ObservableCollection<WriteDataPointConfig> _enabledWriteDataPoints = [];
+
         private PropertyChangedEventHandler? _editingRuntimeDataPointPropertyChangedHandler;
         private WriteDataPointConfig? selectedWriteDataPoint;
         private WriteDataPointConfig? editingWriteDataPoint;
@@ -40,7 +40,8 @@ namespace MeasurementSoftware.ViewModels
 
         public ObservableCollection<WriteDataPointConfig> WriteDataPoints => CurrentRecipe?.OtherSettings.WriteDataPoints ?? [];
 
-        public ReadOnlyObservableCollection<WriteDataPointConfig> EnabledWriteDataPoints { get; }
+
+        public ObservableCollection<WriteDataPointConfig> EnabledWriteDataPoints { get; set; } = [];
 
         public ReadOnlyObservableCollection<PlcDevice> EnabledPlcDevices => _enabledDevicesObserver.EnabledDevicesView;
 
@@ -137,7 +138,6 @@ namespace MeasurementSoftware.ViewModels
             _writeValueLabelRuleService = writeValueLabelRuleService;
             _writeDataPointBindingService = writeDataPointBindingService;
             _enabledDevicesObserver = new EnabledPlcDevicesObserver(_deviceConfigService);
-            EnabledWriteDataPoints = new ReadOnlyObservableCollection<WriteDataPointConfig>(_enabledWriteDataPoints);
 
             if (_recipeConfigService is INotifyPropertyChanged npc)
             {
@@ -398,15 +398,15 @@ namespace MeasurementSoftware.ViewModels
         {
             var enabledItems = WriteDataPoints.Where(x => x.IsEnabled).ToList();
 
-            _enabledWriteDataPoints.Clear();
+            EnabledWriteDataPoints.Clear();
             foreach (var enabledItem in enabledItems)
             {
-                _enabledWriteDataPoints.Add(enabledItem);
+                EnabledWriteDataPoints.Add(enabledItem);
             }
 
-            if (SelectedWriteDataPoint != null && !SelectedWriteDataPoint.IsEnabled && _enabledWriteDataPoints.Count > 0)
+            if (SelectedWriteDataPoint != null && !SelectedWriteDataPoint.IsEnabled && EnabledWriteDataPoints.Count > 0)
             {
-                SelectedWriteDataPoint = _enabledWriteDataPoints.FirstOrDefault();
+                SelectedWriteDataPoint = EnabledWriteDataPoints.FirstOrDefault();
             }
 
             OnPropertyChanged(nameof(EnabledWriteDataPoints));
@@ -1041,7 +1041,7 @@ namespace MeasurementSoftware.ViewModels
             target.ButtonReleaseWriteValueText = source.ButtonReleaseWriteValueText;
             target.ButtonDisplayText = source.ButtonDisplayText;
             target.RuleScriptText = source.RuleScriptText;
-
+            //target.SelectedDeviceName=source.SelectedDeviceName;
             target.DisplayRules.Clear();
             foreach (var rule in source.DisplayRules)
             {
@@ -1127,6 +1127,130 @@ namespace MeasurementSoftware.ViewModels
         private int GetNextWriteDataPointIndex()
         {
             return WriteDataPoints.Count == 0 ? 1 : WriteDataPoints.Max(x => x.Index) + 1;
+        }
+
+
+
+        public void MoveWriteDataPoint(WriteDataPointConfig source, WriteDataPointConfig? target)
+        {
+            if (source is null)
+            {
+                return;
+            }
+
+            if (WriteDataPoints.Count == 0)
+            {
+                return;
+            }
+
+            int oldIndex = WriteDataPoints.IndexOf(source);
+            if (oldIndex < 0)
+            {
+                return;
+            }
+
+            int newIndex = target is null
+                ? WriteDataPoints.Count - 1
+                : WriteDataPoints.IndexOf(target);
+
+            if (newIndex < 0 || newIndex == oldIndex)
+            {
+                return;
+            }
+
+            WriteDataPoints.Move(oldIndex, newIndex);
+            WriteDataPoints.Select((x, i) => { x.Index = i + 1; return x; }).ToList();
+
+        }
+
+
+
+
+        [RelayCommand]
+        private void UpChannel()
+        {
+            if (SelectedWriteDataPoint == null)
+            {
+                Growl.Warning("请先选中要上移的通道");
+                return;
+            }
+
+            if (WriteDataPoints.Count <= 1)
+            {
+                return;
+            }
+
+            int currentIndex = WriteDataPoints.IndexOf(SelectedWriteDataPoint);
+            if (currentIndex < 0)
+            {
+                Growl.Warning("当前选中通道无效");
+                return;
+            }
+
+            if (currentIndex == 0)
+            {
+                Growl.Info("当前已是第一行");
+                return;
+            }
+
+            WriteDataPoints.Move(currentIndex, currentIndex - 1);
+            UpdateWriteDataPointIndexes(currentIndex - 1, currentIndex);
+        }
+        [RelayCommand]
+        private void DownChannel()
+        {
+            if (SelectedWriteDataPoint == null)
+            {
+                Growl.Warning("请先选中要下移的通道");
+                return;
+            }
+
+            if (WriteDataPoints.Count <= 1)
+            {
+                return;
+            }
+
+            int currentIndex = WriteDataPoints.IndexOf(SelectedWriteDataPoint);
+            if (currentIndex < 0)
+            {
+                Growl.Warning("当前选中通道无效");
+                return;
+            }
+
+            if (currentIndex >= WriteDataPoints.Count - 1)
+            {
+                Growl.Info("当前已是最后一行");
+                return;
+            }
+
+            WriteDataPoints.Move(currentIndex, currentIndex + 1);
+            UpdateWriteDataPointIndexes(currentIndex, currentIndex + 1);
+        }
+        private void UpdateWriteDataPointIndexes(int startIndex, int endIndex)
+        {
+            if (WriteDataPoints.Count == 0)
+            {
+                return;
+            }
+
+            if (startIndex < 0)
+            {
+                startIndex = 0;
+            }
+
+            if (endIndex >= WriteDataPoints.Count)
+            {
+                endIndex = WriteDataPoints.Count - 1;
+            }
+
+            for (int i = startIndex; i <= endIndex; i++)
+            {
+                int newDisplayIndex = i + 1;
+                if (WriteDataPoints[i].Index != newDisplayIndex)
+                {
+                    WriteDataPoints[i].Index = newDisplayIndex;
+                }
+            }
         }
     }
 }

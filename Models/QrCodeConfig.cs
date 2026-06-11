@@ -52,8 +52,33 @@ namespace MeasurementSoftware.Models
         public bool RequireQrCodeBeforeMeasurement
         {
             get => requireQrCodeBeforeMeasurement;
-            set => SetProperty(ref requireQrCodeBeforeMeasurement, value);
+            set
+            {
+                if (!SetProperty(ref requireQrCodeBeforeMeasurement, value))
+                {
+                    return;
+                }
+
+                if (value)
+                {
+                    enableMeasurementCompletedScanTimeoutRule = false;
+                }
+            }
         }
+
+        /// <summary>
+        /// 是否启用“测量完成后扫码超时强制 NG”规则。
+        /// 启用后不阻塞测量过程，但完成测量时会校验本轮是否在允许时间内扫到码。
+        /// </summary>
+        [ObservableProperty]
+        private bool enableMeasurementCompletedScanTimeoutRule;
+
+        /// <summary>
+        /// 测量完成后允许继续等待扫码的延时时间（毫秒）。
+        /// 超过该时间仍未扫到码，则本轮强制判定为 NG。
+        /// </summary>
+        [ObservableProperty]
+        private int measurementCompletedScanTimeoutMs = 0;
 
         /// <summary>
         /// 数据源类型

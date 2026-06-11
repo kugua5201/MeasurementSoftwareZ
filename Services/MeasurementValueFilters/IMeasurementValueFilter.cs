@@ -1,6 +1,6 @@
 ﻿using MeasurementSoftware.Models;
 
-namespace MeasurementSoftware.Services.Measurements
+namespace MeasurementSoftware.Services.MeasurementValueFilters
 {
     /// <summary>
     /// 测量值滤波器。
@@ -18,6 +18,6 @@ namespace MeasurementSoftware.Services.Measurements
         /// <param name="values">待处理的历史样本数据。</param>
         /// <param name="channel">通道配置模型。</param>
         /// <returns>滤波后的整段结果。</returns>
-        List<double> Apply(IReadOnlyList<double> values, MeasurementChannel channel);
+        List<HistoryRecordModel> Apply(IReadOnlyList<HistoryRecordModel> values, MeasurementChannel channel);
     }
 }

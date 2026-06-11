@@ -38,5 +38,7 @@ namespace MeasurementSoftware.UserControls
             viewModel.BeginDisplayValueEditCommand.Execute(config);
             e.Handled = true;
         }
+
+     
     }
 }

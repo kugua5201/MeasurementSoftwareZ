@@ -71,10 +71,20 @@
                             Content="删除点位"
                             Style="{StaticResource ButtonDanger}" />
                         <Button
+                            Margin="0,0,8,0"
                             Padding="15,6"
                             Command="{Binding ResetWriteDataPointOrderCommand}"
                             Content="重新编号"
                             Style="{StaticResource ButtonPrimary}" />
+                        <Button
+                            Margin="0,0,8,0"
+                            Command="{Binding UpChannelCommand}"
+                            Content="上移点位"
+                            Style="{StaticResource ButtonInfo}" />
+                        <Button
+                            Command="{Binding DownChannelCommand}"
+                            Content="下移点位"
+                            Style="{StaticResource ButtonSuccess}" />
                     </StackPanel>
                     <Button Command="{Binding SaveRecipeCommand}" Style="{StaticResource SaveRecipeButton}" />
                 </Grid>
@@ -121,17 +131,24 @@
 
                     <DataGrid
                         Margin="12"
+                        AllowDrop="True"
                         AutoGenerateColumns="False"
                         CanUserAddRows="False"
+                        DragOver="DataGrid_DragOver"
+                        Drop="DataGrid_Drop"
                         HeadersVisibility="Column"
                         ItemsSource="{Binding WriteDataPoints}"
+                        MouseMove="DataGrid_MouseMove"
+                        PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown"
                         SelectedItem="{Binding SelectedWriteDataPoint, Mode=TwoWay}"
                         SelectionMode="Single">
                         <DataGrid.ContextMenu>
                             <ContextMenu>
-                                <MenuItem Command="{Binding AddWriteDataPointCommand}" Header="添加通道" />
-                                <MenuItem Command="{Binding DeleteWriteDataPointCommand}" Header="删除通道" />
+                                <MenuItem Command="{Binding AddWriteDataPointCommand}" Header="添加点位" />
+                                <MenuItem Command="{Binding DeleteWriteDataPointCommand}" Header="删除点位" />
                                 <MenuItem Command="{Binding ResetWriteDataPointOrderCommand}" Header="重新编号" />
+                                <MenuItem Command="{Binding UpChannelCommand}" Header="上移点位" />
+                                <MenuItem Command="{Binding DownChannelCommand}" Header="下移点位" />
                             </ContextMenu>
                         </DataGrid.ContextMenu>
                         <i:Interaction.Triggers>
@@ -147,7 +164,7 @@
                                 IsReadOnly="True" />
                             <DataGridCheckBoxColumn
                                 Width="70"
-                                Binding="{Binding IsEnabled, Mode=TwoWay}"
+                                Binding="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                 Header="启用"
                                 IsReadOnly="False" />
                             <DataGridTextColumn
@@ -316,11 +333,11 @@
                                 Binding="{Binding Unit, Mode=OneWay}"
                                 Header="单位"
                                 IsReadOnly="True" />
-                            <DataGridTextColumn
+                            <!--<DataGridTextColumn
                                 MinWidth="200"
                                 Binding="{Binding DisplayDescription, Mode=OneWay}"
                                 Header="说明"
-                                IsReadOnly="True" />
+                                IsReadOnly="True" />-->
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.Input;
 using MeasurementSoftware.ViewModels;
 using MultiProtocol.Model;
 using System.Collections.ObjectModel;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MeasurementSoftware.Models
 {
@@ -36,6 +38,13 @@ namespace MeasurementSoftware.Models
         /// </summary>
         [ObservableProperty]
         private string structureDefinitionText = "时间戳:Double:DCBA\n测量值1:Float:DCBA\n测量值2:Float:DCBA";
+
+        /// <summary>
+        /// 是否添加 X 值。
+        /// 未启用时只解析 Y；启用时第一行作为 X，后续行为 Y。
+        /// </summary>
+        [ObservableProperty]
+        private bool enableXValue = true;
 
         /// <summary>
         /// 兼容旧配方保留的组数配置。
@@ -85,7 +94,7 @@ namespace MeasurementSoftware.Models
         /// <summary>
         /// 展开后的字段列表（缓存区 × 组数 × 字段数），用于 Grid 显示和缓存值更新
         /// </summary>
-        [System.Text.Json.Serialization.JsonIgnore]
+        [JsonIgnore]
         public ObservableCollection<CacheFieldDefinition> ExpandedFieldDefinitions { get; set; } = [];
 
         /// <summary>
@@ -205,6 +214,16 @@ namespace MeasurementSoftware.Models
                 return (false, StructureValidationMessage);
             }
 
+            int yFieldCount = EnableXValue ? Math.Max(0, newFields.Count - 1) : newFields.Count;
+            if (yFieldCount == 0)
+            {
+                IsStructureValid = false;
+                StructureValidationMessage = EnableXValue
+                    ? "❌ 当前已启用 X 值，第一行作为 X 后至少还需要 1 个 Y 字段"
+                    : "❌ 至少需要 1 个 Y 字段";
+                return (false, StructureValidationMessage);
+            }
+
             // 单条结构总字节数 = 最后一个字段结束偏移。
             // 例如 3 个 Float：4 + 4 + 4 = 12 字节。
             GroupSize = currentOffset;
@@ -243,7 +262,8 @@ namespace MeasurementSoftware.Models
             }
 
             IsStructureValid = true;
-            StructureValidationMessage = $"✅ 验证通过，{newFields.Count} 个字段，单条结构 {GroupSize} 字节，实际条数由长度地址决定";
+            string xDisplay = EnableXValue ? newFields[0].FieldName : "未启用";
+            StructureValidationMessage = $"✅ 验证通过，X={xDisplay}，Y={yFieldCount} 个字段，单条结构 {GroupSize} 字节，实际条数由长度地址决定";
             OnPropertyChanged(nameof(FieldDefinitions));
             OnPropertyChanged(nameof(ExpandedFieldDefinitions));
             return (true, StructureValidationMessage);
@@ -344,42 +364,42 @@ namespace MeasurementSoftware.Models
         /// 缓冲区索引（1=缓存1，2=缓存2）
         /// </summary>
         [ObservableProperty]
-        [property: System.Text.Json.Serialization.JsonIgnore]
+        [JsonIgnore]
         private int cacheIndex = 1;
 
         /// <summary>
         /// 组索引（0-based，用于展开后的多组显示）
         /// </summary>
         [ObservableProperty]
-        [property: System.Text.Json.Serialization.JsonIgnore]
+        [JsonIgnore]
         private int groupIndex;
 
         /// <summary>
         /// 显示名称（多组时带组号后缀，如"测量值1_G2"）
         /// </summary>
         [ObservableProperty]
-        [property: System.Text.Json.Serialization.JsonIgnore]
+        [JsonIgnore]
         private string displayName = string.Empty;
 
         /// <summary>
         /// 缓存字段键（格式：CACHE:C{缓存}:G{组}:{字段名}，用于关联通道/点位）
         /// </summary>
         [ObservableProperty]
-        [property: System.Text.Json.Serialization.JsonIgnore]
+        [JsonIgnore]
         private string cacheFieldKey = string.Empty;
 
         /// <summary>
         /// 解析后的当前值（实时更新）
         /// </summary>
         [ObservableProperty]
-        [property: System.Text.Json.Serialization.JsonIgnore]
+        [JsonIgnore]
         private object? parsedValue;
 
         /// <summary>
         /// 最后更新时间
         /// </summary>
         [ObservableProperty]
-        [property: System.Text.Json.Serialization.JsonIgnore]
+        [JsonIgnore]
         private DateTime lastUpdateTime;
     }
 }

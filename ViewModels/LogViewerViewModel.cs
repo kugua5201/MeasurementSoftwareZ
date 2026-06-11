@@ -1,9 +1,11 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HandyControl.Controls;
 using MeasurementSoftware.Models;
 using MeasurementSoftware.Services.Logs;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Windows;
 
 namespace MeasurementSoftware.ViewModels
 {
@@ -214,5 +216,21 @@ namespace MeasurementSoftware.ViewModels
         {
             await LoadLogLinesAsync();
         }
+
+        [RelayCommand]
+        private void CopyLog(LogEntry entry)
+        {
+            if (entry == null)
+            {
+                Growl.Warning("请先选择需要复制的内容");
+                return;
+            }
+
+            var text = $@"时间: {entry.Timestamp:yyyy-MM-dd HH:mm:ss}级别: {entry.Level}来源: {entry.Source}内容: {entry.Message}".Trim();
+            Clipboard.SetText(text);
+            Growl.Success("复制成功");
+        }
+
+
     }
 }

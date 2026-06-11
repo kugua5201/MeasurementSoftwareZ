@@ -336,6 +336,21 @@
 
 
                         <Button
+                            x:Name="ZeroingButton"
+                            Click="MenuButton_Click"
+                            Command="{Binding NavigateToZeroingCommand}"
+                            Style="{StaticResource MainMenuButtonStyle}">
+                            <StackPanel Margin="10,0,0,0" Orientation="Horizontal">
+                                <TextBlock
+                                    Margin="0,0,12,0"
+                                    FontFamily="{StaticResource MenuDesignIcon}"
+                                    FontSize="16"
+                                    Text="&#xE65A;" />
+                                <TextBlock FontSize="14" Text="置零" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button
                             x:Name="SpcButton"
                             Click="MenuButton_Click"
                             Command="{Binding NavigateToSpcCommand}"
@@ -643,7 +658,14 @@
                                 FontSize="14"
                                 Text="{Binding Icon}" />
                         </DataTemplate>
-
+                        <DataTemplate x:Key="MenuDesignIconTemplate">
+                            <TextBlock
+                                Margin="0,0,5,0"
+                                VerticalAlignment="Center"
+                                FontFamily="{StaticResource MenuDesignIcon}"
+                                FontSize="14"
+                                Text="{Binding Icon}" />
+                        </DataTemplate>
                         <!--  FontAwesome 模板  -->
                         <DataTemplate x:Key="FontawesomeIconTemplate">
                             <ctls:FontAwesomeIcon
@@ -891,32 +913,62 @@
                         </Style>
                     </hc:TabControl.ItemContainerStyle>
 
-                    <hc:TabControl.ItemTemplate>
+                    <!--<hc:TabControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel
                                 VerticalAlignment="Center"
                                 Orientation="Horizontal"
                                 ToolTip="{Binding Header}">
 
-                                <!--  ContentControl：动态选择图标模板  -->
+                    -->
+                    <!--  ContentControl：动态选择图标模板  -->
+                    <!--
                                 <ContentControl>
                                     <ContentControl.Style>
                                         <Style TargetType="ContentControl">
-                                            <!--  默认模板（AntDesign）  -->
+                    -->
+                    <!--  默认模板（AntDesign）  -->
+                    <!--
                                             <Setter Property="ContentTemplate" Value="{StaticResource AntDesignIconTemplate}" />
-                                            <!--  绑定数据上下文  -->
+                    -->
+                    <!--  绑定数据上下文  -->
+                    <!--
                                             <Setter Property="Content" Value="{Binding}" />
                                         </Style>
                                     </ContentControl.Style>
                                 </ContentControl>
 
-                                <!--  文本标题  -->
+                    -->
+                    <!--  文本标题  -->
+                    <!--
                                 <TextBlock VerticalAlignment="Center" Text="{Binding Header}" />
 
                             </StackPanel>
                         </DataTemplate>
-                    </hc:TabControl.ItemTemplate>
+                    </hc:TabControl.ItemTemplate>-->
+                    <hc:TabControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal"
+                                ToolTip="{Binding Header}">
+                                <ContentControl Content="{Binding}">
+                                    <ContentControl.Style>
+                                        <Style TargetType="ContentControl">
+                                            <Setter Property="ContentTemplate" Value="{StaticResource AntDesignIconTemplate}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Header}" Value="置零">
+                                                    <Setter Property="ContentTemplate" Value="{StaticResource MenuDesignIconTemplate}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ContentControl.Style>
+                                </ContentControl>
 
+                                <TextBlock VerticalAlignment="Center" Text="{Binding Header}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </hc:TabControl.ItemTemplate>
                     <!--  内容模板绑定到 TabItemModel.Content  -->
                     <hc:TabControl.ContentTemplate>
                         <DataTemplate>

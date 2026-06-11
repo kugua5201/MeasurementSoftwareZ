@@ -42,6 +42,7 @@
             <DataGrid
                 Grid.Row="1"
                 Margin="12"
+                AllowDrop="True"
                 AutoGenerateColumns="False"
                 CanUserAddRows="False"
                 HeadersVisibility="Column"
@@ -221,12 +222,12 @@
                         Binding="{Binding Unit, Mode=OneWay}"
                         Header="单位"
                         IsReadOnly="True" />
-                    <DataGridTextColumn
+                    <!--<DataGridTextColumn
                         Width="200"
                         MinWidth="200"
                         Binding="{Binding DisplayDescription, Mode=OneWay}"
                         Header="说明"
-                        IsReadOnly="True" />
+                        IsReadOnly="True" />-->
                 </DataGrid.Columns>
             </DataGrid>
         </Grid>

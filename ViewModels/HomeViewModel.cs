@@ -11,15 +11,18 @@ using MeasurementSoftware.Services.Logs;
 using MeasurementSoftware.Services.Measurements;
 using MeasurementSoftware.Services.QrCodes;
 using MeasurementSoftware.Services.StepOperations;
-using MultiProtocol.Model;
+using MeasurementSoftware.Windows;
 using Microsoft.Win32;
+using MultiProtocol.Model;
 using ScottPlot.ArrowShapes;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Threading.Channels;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -31,6 +34,7 @@ namespace MeasurementSoftware.ViewModels
         private readonly IRecipeConfigService _recipeConfigService;
         private readonly IDeviceConfigService _deviceConfigService;
         private readonly IDataRecordService _dataRecordService;
+        private readonly ICalibrationService _calibrationService;
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
         private readonly IKeyboardQrCodeInputService _keyboardQrCodeInputService;
         private readonly IQrCodeScanService _qrCodeScanService;
@@ -42,6 +46,7 @@ namespace MeasurementSoftware.ViewModels
         private Task? _optionalQrCodeListeningTask;
         private string _scannedBarcode = string.Empty;
         private DateTime? _barcodeScanTime;
+        private readonly List<(DataPoint Point, PropertyChangedEventHandler Handler)> _automaticTriggerSubscriptions = [];
 
         [ObservableProperty]
         private string? productImagePath;
@@ -168,18 +173,21 @@ namespace MeasurementSoftware.ViewModels
         private const int MaxCsvRowsPerFile = 900000;
         private CancellationTokenSource? _cts;
         private ObservableCollection<MeasurementChannel>? _channels;
+        //public IRelayCommand<MeasurementChannel?> ShowChannelTrendCommand { get; }
 
-        public HomeViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IDataRecordService dataRecordService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService, IEnumerable<IMeasurementChannelHandler> channelHandlers)
+        public HomeViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IDataRecordService dataRecordService, ICalibrationService calibrationService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IStepOperationMonitorService stepOperationMonitorService, IQrCodeScanService qrCodeScanService, IKeyboardQrCodeInputService keyboardQrCodeInputService, IEnumerable<IMeasurementChannelHandler> channelHandlers)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
             _deviceConfigService = deviceConfigService;
             _dataRecordService = dataRecordService;
+            _calibrationService = calibrationService;
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
             _stepOperationMonitorService = stepOperationMonitorService;
             _qrCodeScanService = qrCodeScanService;
             _keyboardQrCodeInputService = keyboardQrCodeInputService;
             _channelHandlers = channelHandlers.ToDictionary(handler => handler.Mode);
+            //ShowChannelTrendCommand = new RelayCommand<MeasurementChannel?>(ShowChannelTrend);
             _stepOperationMonitorService.OperationTriggered += StepOperationMonitorService_OperationTriggered;
 
 
@@ -468,6 +476,7 @@ namespace MeasurementSoftware.ViewModels
             PreviousStepCommand.NotifyCanExecuteChanged();
             NextStepCommand.NotifyCanExecuteChanged();
             ClearDataCommand.NotifyCanExecuteChanged();
+            ShowChannelTrendCommand.NotifyCanExecuteChanged();
             ExportChannelDataCsvCommand.NotifyCanExecuteChanged();
             ExportAllChannelDataCsvCommand.NotifyCanExecuteChanged();
         }
@@ -655,10 +664,9 @@ namespace MeasurementSoftware.ViewModels
         /// <summary>
         /// 将同步的上下步切换统一包装为任务，便于事件入口复用。
         /// </summary>
-        private static Task ExecuteTriggeredStepSwitchAsync(Action action)
+        private static Task ExecuteTriggeredStepSwitchAsync(Func<Task> action)
         {
-            action();
-            return Task.CompletedTask;
+            return action();
         }
 
         #endregion
@@ -695,6 +703,7 @@ namespace MeasurementSoftware.ViewModels
             ResetAllChannelStates();
             ResetMeasurementHandlerRuntimeStates();
             ResetStepOperationRuntimeStates();
+            ResetAutomaticTriggerRuntimeStates();
             UpdateAnnotationActiveState();
 
             if (CurrentRecipe.QrCodeConfig.RequireQrCodeBeforeMeasurement)
@@ -783,7 +792,17 @@ namespace MeasurementSoftware.ViewModels
                 }
             }
 
+            try
+            {
+                await ApplyAcquisitionDelayForCurrentContextAsync(_cts.Token, includeStartDelay: true);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
             SubscribeRuntimeEvents();
+            SubscribeAutomaticTriggerEvents();
             PrepareCurrentStepForAcquisition();
             UpdateMeasurementStatusForCurrentContext();
         }
@@ -918,6 +937,8 @@ namespace MeasurementSoftware.ViewModels
             }
 
             UnsubscribeRuntimeEvents();
+            UnsubscribeAutomaticTriggerEvents();
+            bool qrCodeCompleted = await EnsureOptionalQrCodeCompletedAsync();
             _cts?.Cancel();
             var optionalQrCodeListeningTask = _optionalQrCodeListeningTask;
             if (optionalQrCodeListeningTask != null)
@@ -939,11 +960,18 @@ namespace MeasurementSoftware.ViewModels
             _recipeConfigService.SetCollect(false);
             RefreshCommandStates();
             ResetStepOperationRuntimeStates();
+            ResetAutomaticTriggerRuntimeStates();
 
             var relevantChannels = Channels.Where(c => c.IsMeasuredValueAvailable || c.IsResultValueAvailable || (c.IsVirtualMeasurementMode && c.IsChannelFormula)).ToList();
             if (!relevantChannels.Any())
             {
-                //查找通道备注不为空的
+                foreach (var c in Channels)
+                {
+                    if (!c.IsMeasuredValueAvailable && string.IsNullOrEmpty(c.ChannelDescription))
+                    {
+                        c.ChannelDescription = "未采集到数据";
+                    }
+                }
                 var findInfoChannel = Channels.Where(c => !string.IsNullOrEmpty(c.ChannelDescription));
                 SetChannelDisplayState(findInfoChannel, MeasurementResult.Waiting);
 
@@ -957,6 +985,10 @@ namespace MeasurementSoftware.ViewModels
             ResetMeasurementHandlerRuntimeStates();
 
             OverallResult = relevantChannels.All(c => c.Result == MeasurementResult.Pass) ? MeasurementResult.Pass : MeasurementResult.Fail;
+            if (!qrCodeCompleted)
+            {
+                OverallResult = MeasurementResult.Fail;
+            }
 
             TotalCount++;
             if (OverallResult == MeasurementResult.Pass)
@@ -1224,8 +1256,10 @@ namespace MeasurementSoftware.ViewModels
             }
 
             UnsubscribeRuntimeEvents();
+            UnsubscribeAutomaticTriggerEvents();
             _cts?.Cancel();
             ResetMeasurementHandlerRuntimeStates();
+            ResetAutomaticTriggerRuntimeStates();
             var optionalQrCodeListeningTask = _optionalQrCodeListeningTask;
             if (optionalQrCodeListeningTask != null)
             {
@@ -1274,6 +1308,61 @@ namespace MeasurementSoftware.ViewModels
             _plcDeviceRuntimeService.ConnectionStateChanged -= PlcDeviceRuntimeService_ConnectionStateChanged;
         }
 
+        private void SubscribeAutomaticTriggerEvents()
+        {
+            UnsubscribeAutomaticTriggerEvents();
+
+            var otherSettings = CurrentRecipe?.OtherSettings;
+            if (otherSettings == null)
+            {
+                return;
+            }
+
+            SubscribeAutomaticTriggerBinding(otherSettings.EnableAutoZero, otherSettings.AutoZeroBinding);
+        }
+
+        private void SubscribeAutomaticTriggerBinding(bool enabled, PlcTriggerBindingConfig binding)
+        {
+            if (!enabled || binding.RuntimeDataPoint == null)
+            {
+                return;
+            }
+
+            PropertyChangedEventHandler handler = (_, args) =>
+            {
+                if (args.PropertyName != nameof(DataPoint.CurrentValue) || !_recipeConfigService.IsCollecting)
+                {
+                    return;
+                }
+
+                if (!ShouldTriggerBinding(binding))
+                {
+                    return;
+                }
+                foreach (var channel in GetActiveChannels())
+                {
+                    if (channel.ApplyCurrentValueAsZeroOffset())
+                    {
+                        channel.ChannelDescription = $"已自动置零，偏移={channel.DisplayZeroOffsetValue}";
+                        _log.Info($"通道 {channel.ChannelName} 自动置零成功，偏移={channel.DisplayZeroOffsetValue}");
+                    }
+                }
+            };
+
+            binding.RuntimeDataPoint.PropertyChanged += handler;
+            _automaticTriggerSubscriptions.Add((binding.RuntimeDataPoint, handler));
+        }
+
+        private void UnsubscribeAutomaticTriggerEvents()
+        {
+            foreach (var item in _automaticTriggerSubscriptions)
+            {
+                item.Point.PropertyChanged -= item.Handler;
+            }
+
+            _automaticTriggerSubscriptions.Clear();
+        }
+
         /// <summary>
         /// 获取当前应参与测量轮询的通道。
         /// 分步模式下只采当前工步，同时模式下采所有已启用且已绑定的通道。
@@ -1314,7 +1403,7 @@ namespace MeasurementSoftware.ViewModels
         /// 如果当前处于测量中，会先完成当前工步的结果结算，再切到目标工步继续测量。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanNextStep))]
-        private void NextStep()
+        private async Task NextStep()
         {
             if (CurrentRecipe == null)
             {
@@ -1328,7 +1417,7 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            SwitchStep(CurrentStep + 1, maxStep);
+            await SwitchStepAsync(CurrentStep + 1, maxStep);
         }
 
         /// <summary>
@@ -1336,7 +1425,7 @@ namespace MeasurementSoftware.ViewModels
         /// 如果当前处于测量中，会先完成当前工步的结果结算，再切到目标工步继续测量。
         /// </summary>
         [RelayCommand(CanExecute = nameof(CanPreviousStep))]
-        private void PreviousStep()
+        private async Task PreviousStep()
         {
             if (CurrentRecipe == null)
             {
@@ -1349,14 +1438,14 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            SwitchStep(CurrentStep - 1, GetMaxStep());
+            await SwitchStepAsync(CurrentStep - 1, GetMaxStep());
         }
 
         /// <summary>
         /// 执行实际工步切换。
         /// 这里统一收口上下步的共享逻辑，避免两边后续调试时出现修一边漏一边的情况。
         /// </summary>
-        private void SwitchStep(int targetStep, int maxStep)
+        private async Task SwitchStepAsync(int targetStep, int maxStep)
         {
             if (!CanSwitchStepDuringAcquisition(targetStep))
             {
@@ -1373,6 +1462,18 @@ namespace MeasurementSoftware.ViewModels
             if (_recipeConfigService.IsCollecting)
             {
                 ResetStepChannels(CurrentStep);
+                if (_cts != null)
+                {
+                    try
+                    {
+                        await ApplyAcquisitionDelayForCurrentContextAsync(_cts.Token, includeStartDelay: false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+                }
+
                 PrepareCurrentStepForAcquisition();
             }
 
@@ -1516,6 +1617,258 @@ namespace MeasurementSoftware.ViewModels
             {
                 GetChannelHandler(channel).ResetRuntimeState(channel);
             }
+        }
+
+        /// <summary>
+        /// 重置通道自动校准/自动置零触发的边沿观测状态。
+        /// </summary>
+        private void ResetAutomaticTriggerRuntimeStates()
+        {
+            CurrentRecipe?.OtherSettings.AutoZeroBinding.ResetObservedValue();
+        }
+
+        /// <summary>
+        /// 根据当前模式返回开始采集前需要等待的延时。
+        /// </summary>
+        private int GetCurrentAcquisitionDelayMs(bool includeStartDelay)
+        {
+            if (CurrentRecipe == null)
+            {
+                return 0;
+            }
+
+            int totalDelayMs = includeStartDelay
+                ? Math.Max(0, CurrentRecipe.OtherSettings.MeasurementStartDelayMs)
+                : 0;
+
+            if (IsStepModeEnabled())
+            {
+                totalDelayMs += Math.Max(0, CurrentRecipe.OtherSettings.StepDelaySettings.FirstOrDefault(item => item.StepNumber == CurrentStep)?.DelayMs ?? 0);
+            }
+
+            return totalDelayMs;
+        }
+
+        /// <summary>
+        /// 在真正进入采集前执行启动/工步延时。
+        /// </summary>
+        private async Task ApplyAcquisitionDelayForCurrentContextAsync(CancellationToken cancellationToken, bool includeStartDelay)
+        {
+            int startDelayMs = includeStartDelay && CurrentRecipe != null
+                ? Math.Max(0, CurrentRecipe.OtherSettings.MeasurementStartDelayMs)
+                : 0;
+            int stepDelayMs = IsStepModeEnabled() && CurrentRecipe != null
+                ? Math.Max(0, CurrentRecipe.OtherSettings.StepDelaySettings.FirstOrDefault(item => item.StepNumber == CurrentStep)?.DelayMs ?? 0)
+                : 0;
+            int delayMs = GetCurrentAcquisitionDelayMs(includeStartDelay);
+            if (delayMs <= 0)
+            {
+                return;
+            }
+
+            if (startDelayMs > 0 && stepDelayMs > 0)
+            {
+                MeasurementStatus = $"启动延时 {startDelayMs}ms，工步 {CurrentStep} 延时 {stepDelayMs}ms...";
+            }
+            else if (stepDelayMs > 0)
+            {
+                MeasurementStatus = $"工步 {CurrentStep} 延时 {stepDelayMs}ms...";
+            }
+            else
+            {
+                MeasurementStatus = $"启动测量延时 {startDelayMs}ms...";
+            }
+
+            await Task.Delay(delayMs, cancellationToken);
+        }
+
+        /// <summary>
+        /// 非必须扫码模式下，测量完成时检查扫码是否在允许延时内完成。
+        /// </summary>
+        private async Task<bool> EnsureOptionalQrCodeCompletedAsync()
+        {
+            if (CurrentRecipe == null)
+            {
+                return true;
+            }
+
+            var config = CurrentRecipe.QrCodeConfig;
+            if (!config.IsEnabled || config.RequireQrCodeBeforeMeasurement || !config.EnableMeasurementCompletedScanTimeoutRule)
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_scannedBarcode))
+            {
+                return true;
+            }
+
+            int timeoutMs = Math.Max(0, config.MeasurementCompletedScanTimeoutMs);
+            MeasurementStatus = timeoutMs > 0
+                ? $"测量完成，等待扫码 {timeoutMs}ms..."
+                : "测量完成，检查扫码结果...";
+
+            if (_optionalQrCodeListeningTask != null && timeoutMs > 0)
+            {
+                var completedTask = await Task.WhenAny(_optionalQrCodeListeningTask, Task.Delay(timeoutMs));
+                if (completedTask == _optionalQrCodeListeningTask && !string.IsNullOrWhiteSpace(_scannedBarcode))
+                {
+                    return true;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(_scannedBarcode))
+            {
+                return true;
+            }
+
+            CurrentBarcodeValidationPassed = false;
+            CurrentBarcodeValidationMessage = timeoutMs > 0
+                ? $"测量完成后 {timeoutMs}ms 内未扫码，已强制判定为 NG"
+                : "测量完成时未检测到扫码结果，已强制判定为 NG";
+            MeasurementStatus = "测量完成，扫码超时";
+            _log.Warn(CurrentBarcodeValidationMessage);
+            return false;
+        }
+
+
+        private static bool ShouldTriggerBinding(PlcTriggerBindingConfig binding)
+        {
+            if (!TryGetBindingCurrentValue(binding, out var currentValue))
+            {
+                return false;
+            }
+
+            var hasPreviousValue = binding.HasObservedValue;
+            var previousValue = binding.LastObservedValue;
+            binding.LastObservedValue = currentValue;
+            binding.HasObservedValue = true;
+
+            if (!hasPreviousValue)
+            {
+                return false;
+            }
+
+            return binding.TriggerMode switch
+            {
+                StepOperationTriggerMode.ValueEquals => !MatchesConfiguredValue(previousValue, binding.TriggerValue) && MatchesConfiguredValue(currentValue, binding.TriggerValue),
+                StepOperationTriggerMode.RisingEdge => TryConvertToBool(previousValue, out var previousBool) && TryConvertToBool(currentValue, out var currentBool) && !previousBool && currentBool,
+                StepOperationTriggerMode.FallingEdge => TryConvertToBool(previousValue, out var oldBool) && TryConvertToBool(currentValue, out var newBool) && oldBool && !newBool,
+                StepOperationTriggerMode.AnyChange => !AreEquivalentValues(previousValue, currentValue),
+                _ => false
+            };
+        }
+
+        private static bool TryGetBindingCurrentValue(PlcTriggerBindingConfig binding, out object? currentValue)
+        {
+            currentValue = null;
+            if (binding.RuntimeDevice == null || binding.RuntimeDataPoint == null)
+            {
+                return false;
+            }
+
+            if (!binding.RuntimeDevice.IsEnabled || !binding.RuntimeDevice.IsConnected || !binding.RuntimeDataPoint.IsEnabled || !binding.RuntimeDataPoint.IsSuccess)
+            {
+                return false;
+            }
+
+            currentValue = binding.RuntimeDataPoint.CurrentValue;
+            return currentValue != null;
+        }
+
+        private static bool MatchesConfiguredValue(object? value, string configuredValue)
+        {
+            if (value == null)
+            {
+                return false;
+            }
+
+            if (value is bool boolValue)
+            {
+                return TryConvertToBool(configuredValue, out var parsedBool) && boolValue == parsedBool;
+            }
+
+            if (TryConvertToDecimal(value, out var currentDecimal) && decimal.TryParse(configuredValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var configuredDecimal))
+            {
+                return currentDecimal == configuredDecimal;
+            }
+
+            return string.Equals(Convert.ToString(value, CultureInfo.InvariantCulture), configuredValue, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool AreEquivalentValues(object? left, object? right)
+        {
+            if (left == null || right == null)
+            {
+                return left == right;
+            }
+
+            if (TryConvertToDecimal(left, out var leftDecimal) && TryConvertToDecimal(right, out var rightDecimal))
+            {
+                return leftDecimal == rightDecimal;
+            }
+
+            return string.Equals(Convert.ToString(left, CultureInfo.InvariantCulture), Convert.ToString(right, CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool TryConvertToBool(object? value, out bool result)
+        {
+            switch (value)
+            {
+                case bool boolValue:
+                    result = boolValue;
+                    return true;
+                case string text when bool.TryParse(text, out var parsedBool):
+                    result = parsedBool;
+                    return true;
+                case string text when text == "1":
+                    result = true;
+                    return true;
+                case string text when text == "0":
+                    result = false;
+                    return true;
+                default:
+                    if (TryConvertToDecimal(value, out var number))
+                    {
+                        result = number != 0m;
+                        return true;
+                    }
+
+                    result = false;
+                    return false;
+            }
+        }
+
+        private static bool TryConvertToDecimal(object? value, out decimal result)
+        {
+            switch (value)
+            {
+                case null:
+                    result = 0m;
+                    return false;
+                case decimal decimalValue:
+                    result = decimalValue;
+                    return true;
+                case IConvertible convertible:
+                    try
+                    {
+                        result = convertible.ToDecimal(CultureInfo.InvariantCulture);
+                        return true;
+                    }
+                    catch
+                    {
+                        break;
+                    }
+
+            }
+
+            if (decimal.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Any, CultureInfo.InvariantCulture, out result))
+            {
+                return true;
+            }
+
+            result = 0m;
+            return false;
         }
 
         /// <summary>
@@ -1710,6 +2063,7 @@ namespace MeasurementSoftware.ViewModels
             ResetAllChannelStates();
             ResetMeasurementHandlerRuntimeStates();
             ResetStepOperationRuntimeStates();
+            ResetAutomaticTriggerRuntimeStates();
             _recipeConfigService.ResetRecipeStatistics(CurrentRecipe);
             CurrentStep = 1;
             UpdateAnnotationActiveState();
@@ -1726,10 +2080,28 @@ namespace MeasurementSoftware.ViewModels
             return CurrentRecipe != null && !_recipeConfigService.IsCollecting && Channels.Any();
         }
 
+
+        [RelayCommand]
         /// <summary>
         /// 将当前首页通道表格数据导出为 CSV。
         /// 支持导出通道当前缓存/寄存器测量后的显示结果，便于现场右键留档。
         /// </summary>
+        private void ShowChannelTrend(MeasurementChannel? channel)
+        {
+
+
+            var owner = Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(window => window.IsActive)
+                ?? Application.Current?.MainWindow;
+
+            var trendWindow = new ChannelTrendWindow(channel!);
+            if (owner != null && !ReferenceEquals(owner, trendWindow))
+            {
+                trendWindow.Owner = owner;
+            }
+
+            trendWindow.ShowDialog();
+        }
+
         [RelayCommand(CanExecute = nameof(CanExportChannelDataCsv))]
         private async Task ExportChannelDataCsvAsync(MeasurementChannel channel)
         {

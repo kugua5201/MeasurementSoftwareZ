@@ -551,6 +551,7 @@
 
                     <!--  数据表格  -->
                     <DataGrid
+                        x:Name="MeasurementChannelDataGrid"
                         Grid.Row="1"
                         AlternationCount="2"
                         AutoGenerateColumns="False"
@@ -566,6 +567,10 @@
                         SelectionMode="Single">
                         <DataGrid.ContextMenu>
                             <ContextMenu>
+                                <MenuItem
+                                    Command="{Binding ShowChannelTrendCommand}"
+                                    CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                    Header="查看趋势图" />
                                 <MenuItem
                                     Command="{Binding ExportChannelDataCsvCommand}"
                                     CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"

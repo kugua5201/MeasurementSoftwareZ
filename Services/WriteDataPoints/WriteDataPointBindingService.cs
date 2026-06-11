@@ -237,11 +237,20 @@ namespace MeasurementSoftware.Services.WriteDataPoints
                     .Where(dp => dp.IsEnabled)
                     .OrderBy(dp => dp.PointName));
 
-            var selectedDataPoint = config.RuntimeDataPoint != null && config.AvailableDataPoints.Contains(config.RuntimeDataPoint)
-                ? config.RuntimeDataPoint
-                : string.IsNullOrWhiteSpace(config.DataPointId)
-                    ? config.AvailableDataPoints.FirstOrDefault()
-                    : config.AvailableDataPoints.FirstOrDefault(dp => dp.PointId == config.DataPointId) ?? config.AvailableDataPoints.FirstOrDefault();
+            DataPoint? selectedDataPoint;
+            if (preservePersistedDataPointId && !string.IsNullOrWhiteSpace(config.DataPointId))
+            {
+                selectedDataPoint = config.AvailableDataPoints.FirstOrDefault(dp => dp.PointId == config.DataPointId)
+                    ?? config.AvailableDataPoints.FirstOrDefault();
+            }
+            else
+            {
+                selectedDataPoint = config.RuntimeDataPoint != null && config.AvailableDataPoints.Contains(config.RuntimeDataPoint)
+                    ? config.RuntimeDataPoint
+                    : string.IsNullOrWhiteSpace(config.DataPointId)
+                        ? config.AvailableDataPoints.FirstOrDefault()
+                        : config.AvailableDataPoints.FirstOrDefault(dp => dp.PointId == config.DataPointId) ?? config.AvailableDataPoints.FirstOrDefault();
+            }
 
             SetRuntimeDataPoint(config, context, selectedDataPoint, updatePersistedDataPointId: !preservePersistedDataPointId, syncDataTypeFromPoint: true);
         }

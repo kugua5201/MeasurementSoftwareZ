@@ -1,19 +1,23 @@
-﻿<Application x:Class="MeasurementSoftware.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:MeasurementSoftware"
-             xmlns:converters="clr-namespace:MeasurementSoftware.Converters">
+﻿<Application
+    x:Class="MeasurementSoftware.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:MeasurementSoftware.Converters"
+    xmlns:local="clr-namespace:MeasurementSoftware">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/SkinDefault.xaml"/>
-                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml"/>
-                <ResourceDictionary Source="Resources/MainResources.xaml"/>
+                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/SkinDefault.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/HandyControl;component/Themes/Theme.xaml" />
+                <ResourceDictionary Source="Resources/MainResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-         
+
             <FontFamily x:Key="AntDesignIcon">
                 pack://application:,,,/MeasurementSoftware;component/Resources/iconfont.ttf#iconfont
+            </FontFamily>
+            <FontFamily x:Key="MenuDesignIcon">
+                /Resources/iconfontIcon.ttf#iconfont
             </FontFamily>
             <FontFamily x:Key="SystemIconFont">Segoe MDL2 Assets</FontFamily>
         </ResourceDictionary>

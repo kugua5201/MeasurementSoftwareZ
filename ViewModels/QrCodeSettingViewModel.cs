@@ -311,6 +311,24 @@ namespace MeasurementSoftware.ViewModels
             {
                 UpdateSelectedPointSubscription();
             }
+            else if (e.PropertyName is nameof(Config.RequireQrCodeBeforeMeasurement)
+                or nameof(Config.EnableMeasurementCompletedScanTimeoutRule))
+            {
+                if (e.PropertyName == nameof(Config.RequireQrCodeBeforeMeasurement)
+                    && Config.RequireQrCodeBeforeMeasurement
+                    && Config.EnableMeasurementCompletedScanTimeoutRule)
+                {
+                    Config.EnableMeasurementCompletedScanTimeoutRule = false;
+                }
+                else if (e.PropertyName == nameof(Config.EnableMeasurementCompletedScanTimeoutRule)
+                    && Config.EnableMeasurementCompletedScanTimeoutRule
+                    && Config.RequireQrCodeBeforeMeasurement)
+                {
+                    Config.RequireQrCodeBeforeMeasurement = false;
+                }
+
+                OnPropertyChanged(nameof(CanStartListenValidation));
+            }
 
             if (!IsListeningValidation
                 && e.PropertyName != nameof(Config.TestRawData)

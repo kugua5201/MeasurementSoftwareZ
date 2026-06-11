@@ -69,7 +69,16 @@ namespace MeasurementSoftware.Models
         /// <summary>
         /// 齿跳动值
         /// </summary>
-        齿跳动值
+        齿跳动值,
+
+        /// <summary>
+        /// 拟合圆半径
+        /// </summary>
+        拟合圆半径,
+        /// <summary>
+        /// 拟合圆直径
+        /// </summary>
+        拟合圆直径,
     }
 
     /// <summary>
@@ -81,7 +90,13 @@ namespace MeasurementSoftware.Models
         /// 平均滤波。
         /// </summary>
         [Description("平均滤波")]
-        Average
+        Average,
+
+        /// <summary>
+        /// 高速滤波。
+        /// </summary>
+        [Description("高速滤波")]
+        HighSpeed
     }
 
     /// <summary>
@@ -247,7 +262,7 @@ namespace MeasurementSoftware.Models
         [Description("下一步")]
         NextStep,
 
-       
+
     }
 
     /// <summary>

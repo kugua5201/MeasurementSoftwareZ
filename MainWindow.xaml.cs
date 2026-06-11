@@ -526,6 +526,7 @@ namespace MeasurementSoftware
                 "日志" => LogViewerButton,
                 "参数监控"=> WriteDataPointDisplayButton,
                 "参数监控配置"=> WriteDataPointButton,
+                "置零"=> ZeroingButton,
 
                 _ => null
             };

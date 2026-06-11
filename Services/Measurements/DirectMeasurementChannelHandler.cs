@@ -129,7 +129,7 @@ namespace MeasurementSoftware.Services.Measurements
                 return false;
             }
 
-            channel.AppendMeasuredValues(update.NumericValues, rawValue);
+            channel.AppendMeasuredCacheSiemensValues(update.NumericValues, rawValue);
             channel.DisplayState = MeasurementResult.Acquiring;
             channel.ChannelDescription = string.Empty;
             return true;
