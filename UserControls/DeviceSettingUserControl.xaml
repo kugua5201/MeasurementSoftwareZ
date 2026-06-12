@@ -898,11 +898,35 @@
                                 <DataGridTextColumn
                                     Width="100"
                                     Binding="{Binding PointName}"
-                                    Header="点位名称" />
+                                    Header="点位名称">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style BasedOn="{StaticResource TextBlockBaseStyle}" TargetType="TextBlock">
+                                            <Setter Property="ToolTip" Value="{Binding PointName}" />
+                                            <Setter Property="Foreground" Value="Black" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridCell}, Path=IsSelected}" Value="True">
+                                                    <Setter Property="Foreground" Value="White" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridTextColumn
                                     Width="100"
                                     Binding="{Binding Address}"
-                                    Header="数据地址" />
+                                    Header="数据地址">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style BasedOn="{StaticResource TextBlockBaseStyle}" TargetType="TextBlock">
+                                            <Setter Property="ToolTip" Value="{Binding Address}" />
+                                            <Setter Property="Foreground" Value="Black" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridCell}, Path=IsSelected}" Value="True">
+                                                    <Setter Property="Foreground" Value="White" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
                                 <DataGridComboBoxColumn
                                     Width="80"
                                     Header="字节顺序"

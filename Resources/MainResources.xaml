@@ -1,10 +1,9 @@
-﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
         主资源聚合文件 — 仅负责按顺序合并子字典。
         加载顺序很重要：后面的字典可以引用前面字典中的 StaticResource。
-
+        
         Resources/
         ├── GlobalSizes.xaml          尺寸变量（FormInputWidth 等）
         ├── GlobalColors.xaml         颜色 / 阴影
@@ -15,13 +14,14 @@
     -->
 
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="GlobalSizes.xaml"/>
-        <ResourceDictionary Source="GlobalColors.xaml"/>
-        <ResourceDictionary Source="GlobalConverters.xaml"/>
-        <ResourceDictionary Source="GlobalEnumSources.xaml"/>
-        <ResourceDictionary Source="PlcConfigTemplates.xaml"/>
-        <ResourceDictionary Source="PageToolbarStyles.xaml"/>
-        <ResourceDictionary Source="GlobalDataGrid.xaml"/>
+        <ResourceDictionary Source="GlobalSizes.xaml" />
+        <ResourceDictionary Source="GlobalColors.xaml" />
+        <ResourceDictionary Source="GlobalConverters.xaml" />
+        <ResourceDictionary Source="GlobalEnumSources.xaml" />
+        <ResourceDictionary Source="PlcConfigTemplates.xaml" />
+        <ResourceDictionary Source="PageToolbarStyles.xaml" />
+        <ResourceDictionary Source="GlobalDataGrid.xaml" />
+        <ResourceDictionary Source="GlobalValitdationStyle.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
 </ResourceDictionary>

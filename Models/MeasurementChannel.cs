@@ -195,6 +195,42 @@ namespace MeasurementSoftware.Models
         [ObservableProperty]
         private IndirectMeasurementTriggerMode indirectTriggerMode = IndirectMeasurementTriggerMode.AllValuesChanged;
 
+
+        /// <summary>
+        /// 是否启用超限预设。
+        /// 启用后，当测量值低于下限值或高于上限值时，使用对应的预设值替代。
+        /// </summary>
+        [ObservableProperty]
+        private bool enableLimitPreset;
+
+        /// <summary>
+        /// 下限值。
+        /// 当测量值小于该值时，认为发生超下限。
+        /// </summary>
+        [ObservableProperty]
+        private double limitLowerValue = -3;
+
+        /// <summary>
+        /// 超下限时使用的预设值。
+        /// 当测量值小于 <see cref="LimitLowerValue"/> 时，使用该值进行替代。
+        /// </summary>
+        [ObservableProperty]
+        private double presetValueWhenBelowLimit = -5;
+
+        /// <summary>
+        /// 上限值。
+        /// 当测量值大于该值时，认为发生超上限。
+        /// </summary>
+        [ObservableProperty]
+        private double limitUpperValue = 3;
+
+        /// <summary>
+        /// 超上限时使用的预设值。
+        /// 当测量值大于 <see cref="LimitUpperValue"/> 时，使用该值进行替代。
+        /// </summary>
+        [ObservableProperty]
+        private double presetValueWhenAboveLimit = 5;
+
         #endregion
 
         #region 虚拟测量配置与显示属性
@@ -1056,15 +1092,68 @@ namespace MeasurementSoftware.Models
                 if (columnName == nameof(FilterSampleCount))
                 {
                     if (!EnableFilter)
-                    {
                         return string.Empty;
-                    }
 
-                    if (FilterSampleCount < 3) return "滤波点数最小值为 3";
-                    if (FilterSampleCount % 2 == 0) return "滤波点数只能为奇数";
+                    if (FilterSampleCount < 3)
+                        return "滤波点数最小值为 3";
+
+                    if (FilterSampleCount % 2 == 0)
+                        return "滤波点数只能为奇数";
+
+                    return string.Empty;
                 }
+
+                if (IsLimitPresetProperty(columnName))
+                {
+                    if (!EnableLimitPreset)
+                        return string.Empty;
+
+                    switch (columnName)
+                    {
+                        case nameof(LimitLowerValue):
+                            if (HasFiniteLowerAndUpperLimit() && LimitLowerValue >= LimitUpperValue)
+                                return "下限值必须小于上限值";
+                            break;
+
+                        case nameof(LimitUpperValue):
+                            if (HasFiniteLowerAndUpperLimit() && LimitUpperValue <= LimitLowerValue)
+                                return "上限值必须大于下限值";
+                            break;
+
+                        case nameof(PresetValueWhenBelowLimit):
+                            if (!double.IsNegativeInfinity(LimitLowerValue) &&
+                                PresetValueWhenBelowLimit >= LimitLowerValue)
+                            {
+                                return "超下限预设值应小于下限值";
+                            }
+                            break;
+
+                        case nameof(PresetValueWhenAboveLimit):
+                            if (!double.IsPositiveInfinity(LimitUpperValue) &&
+                                PresetValueWhenAboveLimit <= LimitUpperValue)
+                            {
+                                return "超上限预设值应大于上限值";
+                            }
+                            break;
+                    }
+                }
+
                 return string.Empty;
             }
+        }
+
+        private bool IsLimitPresetProperty(string columnName)
+        {
+            return columnName == nameof(LimitLowerValue)
+                || columnName == nameof(LimitUpperValue)
+                || columnName == nameof(PresetValueWhenBelowLimit)
+                || columnName == nameof(PresetValueWhenAboveLimit);
+        }
+
+        private bool HasFiniteLowerAndUpperLimit()
+        {
+            return !double.IsNegativeInfinity(LimitLowerValue)
+                && !double.IsPositiveInfinity(LimitUpperValue);
         }
         /// <summary>
         /// 滤波采样点数。
@@ -1099,7 +1188,7 @@ namespace MeasurementSoftware.Models
         public List<HistoryRecordModel> ZeroedHistoricalRecords { get; set; } = [];
 
         [JsonIgnore]
-        public List<double> HistoricalData =>HasZeroOffsetReferenceValue
+        public List<double> HistoricalData => HasZeroOffsetReferenceValue
                 ? [.. ZeroedHistoricalRecords.SelectMany(record => record.YValues)]
                 : [.. PlcRawHistoricalRecords.SelectMany(record => record.YValues)];
 
@@ -1225,6 +1314,39 @@ namespace MeasurementSoftware.Models
             OnPropertyChanged(nameof(IsResultOutputBoolDataPoint));
         }
 
+
+        partial void OnEnableLimitPresetChanged(bool value)
+        {
+            RaiseLimitValidationChanged();
+        }
+
+        partial void OnLimitLowerValueChanged(double value)
+        {
+            RaiseLimitValidationChanged();
+        }
+
+        partial void OnLimitUpperValueChanged(double value)
+        {
+            RaiseLimitValidationChanged();
+        }
+
+        partial void OnPresetValueWhenBelowLimitChanged(double value)
+        {
+            RaiseLimitValidationChanged();
+        }
+
+        partial void OnPresetValueWhenAboveLimitChanged(double value)
+        {
+            RaiseLimitValidationChanged();
+        }
+
+        private void RaiseLimitValidationChanged()
+        {
+            OnPropertyChanged(nameof(LimitLowerValue));
+            OnPropertyChanged(nameof(LimitUpperValue));
+            OnPropertyChanged(nameof(PresetValueWhenBelowLimit));
+            OnPropertyChanged(nameof(PresetValueWhenAboveLimit));
+        }
         #endregion
 
         #region 运行时事件处理
@@ -1492,9 +1614,9 @@ namespace MeasurementSoftware.Models
 
         #endregion
 
-            #region 结果判定方法
-        }
 
+        }
+        #region 结果判定方法
         /// <summary>
         /// 根据当前结果输出设备刷新可用输出点位列表，并回填运行时输出点位引用。
         /// </summary>
@@ -1533,7 +1655,7 @@ namespace MeasurementSoftware.Models
             }
         }
 
-            #endregion
+        #endregion
 
         #region 采集与滤波方法
 
@@ -1544,7 +1666,7 @@ namespace MeasurementSoftware.Models
 
         /// <summary>
         /// 更新单个测量值。
-        /// 顺序固定为：原始值 -> 校准 -> 四舍五入 -> 写入历史数据。
+        /// 顺序固定为：原始值 → 校准 → 四舍五入 → 置零 → 超限预设 → 最终赋值
         /// 滤波仅在测量结束时统一处理。
         /// </summary>
         /// <param name="rawValue">原始测量值。</param>
@@ -1555,41 +1677,59 @@ namespace MeasurementSoftware.Models
                 int maxSamples = Math.Max(1, SampleCount);
 
                 TrimHistoryRecordListForIncoming(PlcRawHistoricalRecords, maxSamples, 1);
+
                 if (HasZeroOffsetReferenceValue)
                 {
                     TrimHistoryRecordListForIncoming(ZeroedHistoricalRecords, maxSamples, 1);
                 }
 
-                double normalizedCalibratedValue = RequiresCalibration
+                double calibratedValue = RequiresCalibration
                     ? CalibrationCoefficientA * rawValue + CalibrationCoefficientB
                     : rawValue;
 
-                double roundedCalibratedValue = Math.Round(normalizedCalibratedValue, DecimalPlaces);
+                double zeroedValue = calibratedValue;
+                if (HasZeroOffsetReferenceValue)
+                {
+                    zeroedValue = calibratedValue - ZeroOffsetValue;
+                }
 
-                PlcRawHistoricalRecords.Add(new HistoryRecordModel(null, [roundedCalibratedValue]));
+                double finalValue = ApplyLimitPreset(zeroedValue);
+
+                PlcRawHistoricalRecords.Add(new HistoryRecordModel(null, [Math.Round(calibratedValue, DecimalPlaces)]));
 
                 if (HasZeroOffsetReferenceValue)
                 {
-                    double roundedZeroedValue = Math.Round(
-                        roundedCalibratedValue - ZeroOffsetValue,
-                        DecimalPlaces);
-
-                    ZeroedHistoricalRecords.Add(new HistoryRecordModel(null, [roundedZeroedValue]));
-                    MeasuredValue = roundedZeroedValue;
-                }
-                else
-                {
-                    MeasuredValue = roundedCalibratedValue;
+                    ZeroedHistoricalRecords.Add(new HistoryRecordModel(null, [Math.Round(zeroedValue, DecimalPlaces)]));
                 }
 
+                MeasuredValue = Math.Round(finalValue, DecimalPlaces);
                 IsMeasuredValueAvailable = true;
             }
+        }
+        /// <summary>
+        /// 设置超限值
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private double ApplyLimitPreset(double value)
+        {
+            if (!EnableLimitPreset)
+                return value;
+
+            if (value < LimitLowerValue)
+                return PresetValueWhenBelowLimit;
+
+            if (value > LimitUpperValue)
+                return PresetValueWhenAboveLimit;
+
+            return value;
         }
         /// <summary>
         /// 追加西门子缓存测量值
         /// 缓存数据按结构定义分组解析：
         /// - 启用 X 时，第 1 个值是 X，后面的是 Y
         /// - 不启用 X 时，全部都是 Y
+        /// 校准 → 四舍五入 → 置零 → 超限预设 → 最终赋值
         /// </summary>
         public void AppendMeasuredCacheSiemensValues(IReadOnlyList<double> rawValues, double currentRawValue)
         {
@@ -1631,6 +1771,7 @@ namespace MeasurementSoftware.Models
                 int maxSamples = Math.Max(1, SampleCount);
 
                 TrimHistoryRecordListForIncoming(PlcRawHistoricalRecords, maxSamples, incomingCount);
+
                 if (useZeroOffset)
                 {
                     TrimHistoryRecordListForIncoming(ZeroedHistoricalRecords, maxSamples, incomingCount);
@@ -1649,8 +1790,8 @@ namespace MeasurementSoftware.Models
                         yStart = start + 1;
                     }
 
-                    var roundedRawValues = new List<double>(yCountPerGroup);
-                    List<double>? roundedZeroedValues = useZeroOffset
+                    var rawValuesAfterCalibration = new List<double>(yCountPerGroup);
+                    List<double>? zeroedProcessedValues = useZeroOffset
                         ? new List<double>(yCountPerGroup)
                         : null;
 
@@ -1658,45 +1799,41 @@ namespace MeasurementSoftware.Models
                     {
                         double rawValue = rawValues[i];
 
-                        double normalizedCalibratedValue = RequiresCalibration
+                        double calibratedValue = RequiresCalibration
                             ? CalibrationCoefficientA * rawValue + CalibrationCoefficientB
                             : rawValue;
 
-                        double roundedCalibratedValue = Math.Round(normalizedCalibratedValue, DecimalPlaces);
-                        roundedRawValues.Add(roundedCalibratedValue);
+                        rawValuesAfterCalibration.Add(Math.Round(calibratedValue, DecimalPlaces));
 
                         if (useZeroOffset)
                         {
-                            double roundedZeroedValue = Math.Round(
-                                roundedCalibratedValue - ZeroOffsetValue,
-                                DecimalPlaces);
-
-                            roundedZeroedValues!.Add(roundedZeroedValue);
+                            double zeroedValue = calibratedValue - ZeroOffsetValue;
+                            double finalValue = ApplyLimitPreset(zeroedValue);
+                            zeroedProcessedValues!.Add(Math.Round(finalValue, DecimalPlaces));
                         }
                     }
 
-                    PlcRawHistoricalRecords.Add(new HistoryRecordModel(xValue, roundedRawValues));
+                    PlcRawHistoricalRecords.Add(new HistoryRecordModel(xValue, rawValuesAfterCalibration));
 
                     if (useZeroOffset)
                     {
-                        ZeroedHistoricalRecords.Add(new HistoryRecordModel(xValue, roundedZeroedValues!));
+                        ZeroedHistoricalRecords.Add(new HistoryRecordModel(xValue, zeroedProcessedValues!));
                     }
                 }
 
-                double normalizedCurrentValue = RequiresCalibration
+                double currentValue = RequiresCalibration
                     ? CalibrationCoefficientA * currentRawValue + CalibrationCoefficientB
                     : currentRawValue;
 
-                double roundedCurrentValue = Math.Round(normalizedCurrentValue, DecimalPlaces);
-
                 if (useZeroOffset)
                 {
-                    roundedCurrentValue = Math.Round(
-                        roundedCurrentValue - ZeroOffsetValue,
-                        DecimalPlaces);
+                    currentValue -= ZeroOffsetValue;
                 }
 
-                MeasuredValue = roundedCurrentValue;
+                currentValue = ApplyLimitPreset(currentValue);
+                currentValue = Math.Round(currentValue, DecimalPlaces);
+
+                MeasuredValue = currentValue;
                 IsMeasuredValueAvailable = true;
             }
         }
@@ -1736,30 +1873,6 @@ namespace MeasurementSoftware.Models
             }
         }
 
-
-
-
-        /// <summary>
-        /// 单个点位采集数据
-        /// </summary>
-        /// <param name="rawValue"></param>
-        private void AppendMeasurementSeries(double rawValue)
-        {
-            double normalizedCalibratedValue = RequiresCalibration
-                ? CalibrationCoefficientA * rawValue + CalibrationCoefficientB
-                : rawValue;
-
-            double roundedCalibratedValue = Math.Round(normalizedCalibratedValue, DecimalPlaces);
-            double roundedZeroedValue = Math.Round(
-                roundedCalibratedValue - (HasZeroOffsetReferenceValue ? ZeroOffsetValue : 0d),
-                DecimalPlaces);
-
-            PlcRawHistoricalRecords.Add(new HistoryRecordModel(null, [roundedCalibratedValue]));
-            ZeroedHistoricalRecords.Add(new HistoryRecordModel(null, [roundedZeroedValue]));
-
-            IsMeasuredValueAvailable = true;
-            MeasuredValue = roundedZeroedValue;
-        }
 
         /// <summary>
         /// 将当前采样值设为置零参考点。

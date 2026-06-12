@@ -21,7 +21,7 @@
             TargetType="ComboBoxItem">
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-        <Style
+        <!--<Style
             x:Key="WriteDataPointValidationTextBoxStyle"
             BasedOn="{StaticResource TextBoxExtend}"
             TargetType="TextBox">
@@ -45,7 +45,7 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-        </Style>
+        </Style>-->
     </UserControl.Resources>
 
     <hc:SimplePanel>

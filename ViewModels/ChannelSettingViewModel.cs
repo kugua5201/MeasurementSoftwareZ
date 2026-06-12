@@ -536,7 +536,12 @@ namespace MeasurementSoftware.ViewModels
                 VirtualWaveformPeriodSeconds = channel.VirtualWaveformPeriodSeconds,
                 VirtualWaveformDutyCycle = channel.VirtualWaveformDutyCycle,
                 VirtualWaveformOffset = channel.VirtualWaveformOffset,
-                VirtualFormula = channel.VirtualFormula
+                VirtualFormula = channel.VirtualFormula,
+                EnableLimitPreset=channel.EnableLimitPreset,
+                LimitLowerValue=channel.LimitLowerValue,
+                PresetValueWhenBelowLimit=channel.PresetValueWhenBelowLimit,
+                LimitUpperValue=channel.LimitUpperValue,
+                PresetValueWhenAboveLimit=channel.PresetValueWhenAboveLimit,
             };
 
             EditingChannel.ReplaceIndirectSourceBindings(channel.IndirectSourceBindings.Select(binding => binding.Clone()));
@@ -1038,6 +1043,36 @@ namespace MeasurementSoftware.ViewModels
                     return;
                 }
             }
+            if (EditingChannel.EnableLimitPreset)
+            {
+                string limitLowerValueError = EditingChannel[nameof(MeasurementChannel.LimitLowerValue)];
+                if (!string.IsNullOrWhiteSpace(limitLowerValueError))
+                {
+                    Growl.Warning($"下限值配置无效：{limitLowerValueError}");
+                    return;
+                }
+
+                string limitUpperValueError = EditingChannel[nameof(MeasurementChannel.LimitUpperValue)];
+                if (!string.IsNullOrWhiteSpace(limitUpperValueError))
+                {
+                    Growl.Warning($"上限值配置无效：{limitUpperValueError}");
+                    return;
+                }
+
+                string presetValueWhenBelowLimitError = EditingChannel[nameof(MeasurementChannel.PresetValueWhenBelowLimit)];
+                if (!string.IsNullOrWhiteSpace(presetValueWhenBelowLimitError))
+                {
+                    Growl.Warning($"超下限预设值配置无效：{presetValueWhenBelowLimitError}");
+                    return;
+                }
+
+                string presetValueWhenAboveLimitError = EditingChannel[nameof(MeasurementChannel.PresetValueWhenAboveLimit)];
+                if (!string.IsNullOrWhiteSpace(presetValueWhenAboveLimitError))
+                {
+                    Growl.Warning($"超上限预设值配置无效：{presetValueWhenAboveLimitError}");
+                    return;
+                }
+            }
 
             //如果启用工步测量，则需要检查已经启用的通道是否跟添加或者编辑的通道的工步练习，
             if (CurrentRecipe.OtherSettings.EnableStepMode)
@@ -1115,7 +1150,11 @@ namespace MeasurementSoftware.ViewModels
                     originalChannel.ResultOutputNgValue = EditingChannel.ResultOutputNgValue;
                     originalChannel.ReplaceIndirectSourceBindings(EditingChannel.IndirectSourceBindings.Select(binding => binding.Clone()));
                     originalChannel.ReplaceVirtualSourceBindings(EditingChannel.VirtualSourceBindings.Select(binding => binding.Clone()));
-
+                    originalChannel.EnableLimitPreset = EditingChannel.EnableLimitPreset;
+                    originalChannel.LimitLowerValue = EditingChannel.LimitLowerValue;
+                    originalChannel.PresetValueWhenBelowLimit = EditingChannel.PresetValueWhenBelowLimit;
+                    originalChannel.LimitUpperValue = EditingChannel.LimitUpperValue;
+                    originalChannel.PresetValueWhenAboveLimit = EditingChannel.PresetValueWhenAboveLimit;
                     if (EditingChannel.IsDirectMeasurementMode)
                     {
                         if (EditingChannel.PlcDeviceId == 0)

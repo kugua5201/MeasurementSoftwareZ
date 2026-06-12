@@ -606,7 +606,8 @@
                                     Foreground="{DynamicResource PrimaryBrush}"
                                     Text="测量参数" />
 
-                                <Grid Margin="0,0,0,20">
+                                <Grid>
+
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="90" />
                                         <ColumnDefinition Width="*" />
@@ -628,15 +629,7 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
+
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
 
@@ -825,7 +818,7 @@
 
                                             <TextBlock
                                                 Grid.Column="0"
-                                                Margin="0,0,0,0"
+                                                Margin="0,0,0,25"
                                                 VerticalAlignment="Center"
                                                 Text="滤波点数：" />
 
@@ -834,24 +827,32 @@
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto" />
+                                                    <RowDefinition Height="auto" />
+                                                </Grid.RowDefinitions>
 
                                                 <hc:NumericUpDown
+                                                    Grid.Row="0"
                                                     Grid.Column="0"
                                                     Width="{StaticResource FormInputWidth}"
                                                     HorizontalAlignment="Left"
                                                     Increment="2"
                                                     Maximum="{Binding EditingChannel.SampleCount, Converter={StaticResource FilterSampleCountMaximumConverter}}"
                                                     Minimum="3"
+                                                    Style="{StaticResource DataPointValidationNumericUpDownStyle}"
                                                     Value="{Binding EditingChannel.FilterSampleCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, NotifyOnValidationError=True}" />
-
                                                 <TextBlock
-                                                    Grid.Column="1"
-                                                    Margin="8,0,0,0"
+                                                    Grid.Row="1"
+                                                    Grid.Column="0"
+                                                    Margin="0,10,0,0"
+                                                    HorizontalAlignment="Left"
                                                     VerticalAlignment="Center"
                                                     FontSize="12"
                                                     Foreground="{StaticResource PlaceholderTextBrush}"
                                                     Text="{Binding EditingChannel.SampleCount, Converter={StaticResource FilterSampleCountHintConverter}}"
                                                     TextWrapping="Wrap" />
+
                                             </Grid>
                                         </Grid>
 
@@ -878,7 +879,7 @@
 
                                             <TextBlock
                                                 Grid.Column="0"
-                                                Margin="0,0,0,0"
+                                                Margin="0,0,0,25"
                                                 VerticalAlignment="Center"
                                                 Text="响应系数：" />
 
@@ -887,8 +888,12 @@
                                                     <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
-
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="auto" />
+                                                    <RowDefinition Height="auto" />
+                                                </Grid.RowDefinitions>
                                                 <hc:NumericUpDown
+                                                    Grid.Row="0"
                                                     Grid.Column="0"
                                                     Width="{StaticResource FormInputWidth}"
                                                     HorizontalAlignment="Left"
@@ -899,8 +904,10 @@
                                                     Value="{Binding EditingChannel.HighSpeedAlpha, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                                                 <TextBlock
-                                                    Grid.Column="1"
-                                                    Margin="8,0,0,0"
+                                                    Grid.Row="1"
+                                                    Grid.Column="0"
+                                                    Margin="0,10,0,0"
+                                                    HorizontalAlignment="Left"
                                                     VerticalAlignment="Center"
                                                     FontSize="12"
                                                     Foreground="{StaticResource PlaceholderTextBrush}"
@@ -909,16 +916,134 @@
                                             </Grid>
                                         </Grid>
                                     </Grid>
+
+
                                 </Grid>
 
-                                <Separator Margin="0,5,0,15" />
+                                <Separator Margin="0,0,0,15" />
+                                <TextBlock
+                                    Margin="0,0,0,15"
+                                    FontSize="13"
+                                    FontWeight="Bold"
+                                    Foreground="{DynamicResource PrimaryBrush}"
+                                    Text="超限参数" />
+                                <Grid
+                                    Grid.Row="17"
+                                    Grid.Column="0"
+                                    Grid.ColumnSpan="2">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
 
+                                    <!--  超限设置开关  -->
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="超限设置：" />
+
+                                        <ToggleButton
+                                            Grid.Column="1"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            IsChecked="{Binding EditingChannel.EnableLimitPreset, Mode=TwoWay}"
+                                            Style="{StaticResource ToggleButtonSwitch}" />
+                                    </Grid>
+
+                                    <!--  超限详细设置  -->
+                                    <Grid Grid.Row="1" Visibility="{Binding EditingChannel.EnableLimitPreset, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock
+                                            Grid.Row="0"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="下限值：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="0"
+                                            Grid.Column="1"
+                                            Width="{StaticResource FormInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            hc:InfoElement.Placeholder="请输入下限值"
+                                            Style="{StaticResource DataPointValidationNumericUpDownStyle}"
+                                            Value="{Binding EditingChannel.LimitLowerValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, Delay=100, NotifyOnValidationError=True}" />
+                                        <TextBlock
+                                            Grid.Row="1"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="超下限预设：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="1"
+                                            Grid.Column="1"
+                                            Width="{StaticResource FormInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            hc:InfoElement.Placeholder="请输入超下限预设"
+                                            Style="{StaticResource DataPointValidationNumericUpDownStyle}"
+                                            Value="{Binding EditingChannel.PresetValueWhenBelowLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, Delay=100, NotifyOnValidationError=True}" />
+                                        <TextBlock
+                                            Grid.Row="2"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="上限值：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="2"
+                                            Grid.Column="1"
+                                            Width="{StaticResource FormInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            hc:InfoElement.Placeholder="请输入上限值"
+                                            Style="{StaticResource DataPointValidationNumericUpDownStyle}"
+                                            Value="{Binding EditingChannel.LimitUpperValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, Delay=100, NotifyOnValidationError=True}" />
+                                        <TextBlock
+                                            Grid.Row="3"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            VerticalAlignment="Center"
+                                            Text="超上限预设：" />
+                                        <hc:NumericUpDown
+                                            Grid.Row="3"
+                                            Grid.Column="1"
+                                            Width="{StaticResource FormInputWidth}"
+                                            Margin="0,0,0,8"
+                                            HorizontalAlignment="Left"
+                                            hc:InfoElement.Placeholder="请输入超上限预设"
+                                            Style="{StaticResource DataPointValidationNumericUpDownStyle}"
+                                            Value="{Binding EditingChannel.PresetValueWhenAboveLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, Delay=100, NotifyOnValidationError=True}" />
+
+
+
+                                    </Grid>
+                                </Grid>
+                                <Separator Margin="0,5,0,15" />
                                 <TextBlock
                                     Margin="0,0,0,15"
                                     FontSize="13"
                                     FontWeight="Bold"
                                     Foreground="{DynamicResource PrimaryBrush}"
                                     Text="数据源配置" />
+
 
                                 <Grid>
                                     <Grid.ColumnDefinitions>
