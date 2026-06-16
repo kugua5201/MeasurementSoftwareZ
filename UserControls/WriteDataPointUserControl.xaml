@@ -208,7 +208,11 @@
                                                     <Border
                                                         Background="Transparent"
                                                         Cursor="Hand"
+                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
                                                         PreviewMouseLeftButtonDown="TextBoxValueBorder_PreviewMouseLeftButtonDown">
+                                                        <Border.ToolTip>
+                                                            <TextBlock Text="{Binding WriteRestrictionBlockedReason}" />
+                                                        </Border.ToolTip>
                                                         <TextBlock VerticalAlignment="Center" Text="{Binding PendingWriteValueText}" />
                                                     </Border>
                                                 </ContentControl>
@@ -223,7 +227,8 @@
                                                                 Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
                                                                 CommandParameter="{Binding}"
                                                                 Content="{Binding ButtonDisplayText}"
-                                                                Style="{StaticResource ButtonDefault}">
+                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                Style="{StaticResource ButtonDanger}">
 
                                                                 <Button.ToolTip>
                                                                     <TextBlock Text="{Binding ButtonDisplayText}" />
@@ -245,7 +250,8 @@
                                                                 Padding="10,4"
                                                                 HorizontalContentAlignment="Left"
                                                                 Content="{Binding ButtonDisplayText}"
-                                                                Style="{StaticResource ButtonDefault}">
+                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                Style="{StaticResource ButtonDanger}">
                                                                 <i:Interaction.Triggers>
                                                                     <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
                                                                         <i:InvokeCommandAction Command="{Binding Data.SubmitButtonPressWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
@@ -290,6 +296,7 @@
                                                         Width="110"
                                                         Margin="0,0,6,0"
                                                         hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
+                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
                                                         Style="{StaticResource TextBoxExtend}"
                                                         Text="{Binding EditingWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, Mode=TwoWay, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
                                                         ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}">
@@ -310,6 +317,7 @@
                                                         Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
                                                         CommandParameter="{Binding}"
                                                         Content="写入"
+                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
                                                         Style="{StaticResource ButtonDanger}" />
                                                     <Button
                                                         Padding="10,4"
@@ -333,11 +341,11 @@
                                 Binding="{Binding Unit, Mode=OneWay}"
                                 Header="单位"
                                 IsReadOnly="True" />
-                            <!--<DataGridTextColumn
+                            <DataGridTextColumn
                                 MinWidth="200"
                                 Binding="{Binding DisplayDescription, Mode=OneWay}"
                                 Header="说明"
-                                IsReadOnly="True" />-->
+                                IsReadOnly="True" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -420,6 +428,7 @@
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -524,6 +533,8 @@
                                         HorizontalAlignment="Left"
                                         IsChecked="{Binding IsEnabled}"
                                         Style="{StaticResource ToggleButtonSwitch}" />
+
+
                                 </Grid>
 
                                 <Separator Margin="0,5,0,15" />
@@ -705,7 +716,6 @@
                                         ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}"
                                         Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}" />
                                 </Grid>
-
                                 <StackPanel Margin="0,0,0,0" Visibility="{Binding UsesRuleDisplay, Converter={StaticResource Boolean2VisibilityConverter}}">
                                     <TextBlock
                                         Margin="0,0,0,10"
@@ -752,6 +762,219 @@
                                         </TextBlock.Style>
                                     </TextBlock>
                                 </StackPanel>
+                                <Grid Visibility="{Binding EditorMode, Converter={StaticResource WriteDataPointEditorModeExcludeVisibilityConverter}, ConverterParameter=Label}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Separator Grid.Row="0" Margin="0,25,0,15" />
+
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Margin="0,0,0,12"
+                                        FontSize="13"
+                                        FontWeight="Bold"
+                                        Foreground="{DynamicResource DangerBrush}"
+                                        Text="限制模式" />
+
+                                    <Grid Grid.Row="2">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <!--  限制开关  -->
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="{StaticResource FormGridWidthWide}" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                VerticalAlignment="Center"
+                                                Text="限制开关：" />
+
+                                            <ToggleButton
+                                                Grid.Column="1"
+                                                HorizontalAlignment="Left"
+                                                IsChecked="{Binding EnableWriteRestriction, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource ToggleButtonSwitch}" />
+                                        </Grid>
+
+                                        <!--  限制详细设置  -->
+                                        <StackPanel
+                                            Grid.Row="1"
+                                            Margin="0,0,0,0"
+                                            Visibility="{Binding UsesWriteRestriction, Converter={StaticResource Boolean2VisibilityConverter}}">
+
+                                            <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
+                                                <TextBlock
+                                                    Width="{StaticResource FormLabelWidthWide}"
+                                                    Margin="0,10,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Text="公式脚本:" />
+                                                <!--  操作按钮  -->
+                                                <StackPanel
+                                                    Grid.Row="0"
+                                                    Margin="0,10,0,0"
+                                                    DataContext="{Binding Data, Source={StaticResource VmProxy}}"
+                                                    Orientation="Horizontal">
+
+                                                    <Button
+                                                        Width="95"
+                                                        Margin="0,0,8,0"
+                                                        Command="{Binding AddRestrictionVariableCommand}"
+                                                        Content="添加数据源"
+                                                        Style="{StaticResource ButtonPrimary}" />
+                                                    <Button
+                                                        Width="95"
+                                                        Margin="0,0,8,0"
+                                                        Command="{Binding RemoveRestrictionVariableCommand}"
+                                                        Content="删除数据源"
+                                                        Style="{StaticResource ButtonDanger}" />
+                                                    <Button
+                                                        Width="95"
+                                                        Command="{Binding CheckRestrictionVariablesCommand}"
+                                                        Content="检查脚本"
+                                                        Style="{StaticResource ButtonInfo}" />
+                                                </StackPanel>
+                                            </StackPanel>
+
+
+                                            <!--  表达式说明  -->
+                                            <StackPanel Grid.Row="3">
+                                                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Text="脚本支持多行赋值，每行格式都是 变量名 = 表达式。" />
+                                                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Text="如果变量绑定的是布尔点位，系统会自动按 TRUE=1、FALSE=0 参与判断。" />
+                                                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Text="如果绑定的是字符串点位，可以直接用双引号做相等/不等比较。" />
+                                                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Text="最后一行必须写 result = 条件表达式。" />
+                                                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Text="支持比较符：==、!=、&gt;、&gt;=、&lt;、&lt;=，支持逻辑运算：&amp;&amp;、||，支持括号，也支持 TRUE / FALSE。" />
+                                                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Text="示例1：result = V1 == TRUE&#x0a;示例2：result = V1 == &quot;DSFDFSFD&quot;&#x0a;示例3：A = V2 &gt; 10&#x0a;B = V1 == TRUE&#x0a;result = A &amp;&amp; B" />
+
+                                            </StackPanel>
+
+                                            <!--  脚本编辑器  -->
+                                            <Border
+                                                Grid.Row="4"
+                                                Margin="0,10,20,0"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="4">
+                                                <avalonedit:TextEditor
+                                                    Height="120"
+                                                    Loaded="IndirectFormulaEditorTextBox_Loaded"
+                                                    ShowLineNumbers="True">
+                                                    <i:Interaction.Behaviors>
+                                                        <behaviors:AvalonEditTextBindingBehavior Text="{Binding WriteRestrictionScriptText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                                    </i:Interaction.Behaviors>
+                                                </avalonedit:TextEditor>
+                                            </Border>
+
+                                            <!--<TextBlock
+                                                Grid.Row="5"
+                                                Margin="0,10,20,0"
+                                                Foreground="{DynamicResource DangerBrush}"
+                                                Text="{Binding WriteRestrictionStatusText}"
+                                                TextWrapping="Wrap">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsWriteRestrictionScriptValid}" Value="False">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>-->
+
+                                            <!--  变量表格  -->
+                                            <DataGrid
+                                                Grid.Row="1"
+                                                MinHeight="150"
+                                                MaxHeight="200"
+                                                Margin="0,10,20,0"
+                                                AutoGenerateColumns="False"
+                                                CanUserAddRows="False"
+                                                HeadersVisibility="Column"
+                                                ItemsSource="{Binding RestrictionVariables}"
+                                                SelectedItem="{Binding Data.SelectedRestrictionVariable, Source={StaticResource VmProxy}, Mode=TwoWay}"
+                                                SelectionMode="Single">
+                                                <DataGrid.RowStyle>
+                                                    <Style BasedOn="{StaticResource MeasurementDataGridRowStyle}" TargetType="DataGridRow">
+                                                        <Setter Property="ContextMenu">
+                                                            <Setter.Value>
+                                                                <ContextMenu>
+                                                                    <!--<ContextMenu.DataContext>
+                                                                        <Binding Path="PlacementTarget.DataContext" RelativeSource="{RelativeSource Self}" />
+                                                                    </ContextMenu.DataContext>-->
+                                                                    <MenuItem
+                                                                        Command="{Binding Data.AddRestrictionVariableCommand, Source={StaticResource VmProxy}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Header="添加数据源" />
+                                                                    <MenuItem
+                                                                        Command="{Binding Data.RemoveRestrictionVariableCommand, Source={StaticResource VmProxy}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Header="删除数据源" />
+                                                                    <MenuItem
+                                                                        Command="{Binding Data.CheckRestrictionVariablesCommand, Source={StaticResource VmProxy}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Header="检查脚本" />
+
+
+                                                                </ContextMenu>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </DataGrid.RowStyle>
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn
+                                                        Width="100"
+                                                        Binding="{Binding VariableName, UpdateSourceTrigger=PropertyChanged}"
+                                                        Header="变量名" />
+
+                                                    <DataGridTemplateColumn Width="100" Header="设备">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding SelectedDeviceName}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                        <DataGridTemplateColumn.CellEditingTemplate>
+                                                            <DataTemplate>
+                                                                <hc:ComboBox
+                                                                    DisplayMemberPath="DeviceName"
+                                                                    ItemContainerStyle="{StaticResource WriteDataPointComboBoxItemStyle}"
+                                                                    ItemsSource="{Binding AvailableDevicesSource}"
+                                                                    SelectedItem="{Binding RuntimeDevice, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    Style="{StaticResource ComboBoxExtend}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellEditingTemplate>
+                                                    </DataGridTemplateColumn>
+
+                                                    <DataGridTemplateColumn Width="150" Header="点位">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <TextBlock Text="{Binding SelectedPointName}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                        <DataGridTemplateColumn.CellEditingTemplate>
+                                                            <DataTemplate>
+                                                                <hc:ComboBox
+                                                                    DisplayMemberPath="PointName"
+                                                                    ItemContainerStyle="{StaticResource WriteDataPointComboBoxItemStyle}"
+                                                                    ItemsSource="{Binding AvailableDataPoints}"
+                                                                    SelectedItem="{Binding RuntimeDataPoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                    Style="{StaticResource ComboBoxExtend}" />
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellEditingTemplate>
+                                                    </DataGridTemplateColumn>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+                                    </Grid>
+                                </Grid>
                             </StackPanel>
                         </ScrollViewer>
                     </Grid>

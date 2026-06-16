@@ -737,8 +737,8 @@
                 IsOpen="{Binding IsPointSettingOpen, Mode=TwoWay}"
                 ShowMode="Cover">
                 <Border
-                    MinWidth="700"
-                    MaxWidth="900"
+                    MinWidth="1200"
+                    MaxWidth="1500"
                     Background="{DynamicResource RegionBrush}"
                     BorderBrush="{DynamicResource BorderBrush}"
                     BorderThickness="1,0,0,0"
@@ -840,7 +840,6 @@
                             RowHeight="35"
                             SelectedItem="{Binding SelectedDataPoint}"
                             SelectionMode="Single">
-
                             <DataGrid.RowStyle>
                                 <Style BasedOn="{StaticResource DataGridRowStyle}" TargetType="DataGridRow">
                                     <Setter Property="ToolTip" Value="{Binding ErrorMessage}" />
@@ -852,6 +851,7 @@
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
+
                             </DataGrid.RowStyle>
 
                             <DataGrid.CellStyle>
@@ -936,7 +936,7 @@
                                     Width="80"
                                     Header="数据类型"
                                     ItemsSource="{Binding Source={StaticResource DataTypeEnumValues}}"
-                                    SelectedItemBinding="{Binding DataType}" />
+                                    SelectedItemBinding="{Binding DataType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <DataGridTextColumn Width="90" Header="长度">
                                     <DataGridTextColumn.Binding>
                                         <MultiBinding
@@ -998,6 +998,98 @@
                                     CanUserSort="False"
                                     Header="当前值"
                                     IsReadOnly="True" />
+                                <DataGridTemplateColumn Width="100" Header="启用预设">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                IsChecked="{Binding EnableLimitPreset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                IsEnabled="{Binding CanUseLimitPreset}"
+                                                ToolTip="{Binding LimitPresetToolTip}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Width="100" Header="下限值">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Text="{Binding LimitLowerValue}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <hc:NumericUpDown
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                IsEnabled="{Binding EnableLimitPreset, Converter={StaticResource BooleanConverter}}"
+                                                Value="{Binding LimitLowerValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, Delay=100, NotifyOnValidationError=True}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Width="120" Header="下限预设值">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Text="{Binding PresetValueWhenBelowLimit}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <hc:NumericUpDown
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                IsEnabled="{Binding EnableLimitPreset, Converter={StaticResource BooleanConverter}}"
+                                                Value="{Binding PresetValueWhenBelowLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, Delay=100, NotifyOnValidationError=True}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Width="100" Header="上限值">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Text="{Binding LimitUpperValue}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <hc:NumericUpDown
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                IsEnabled="{Binding EnableLimitPreset, Converter={StaticResource BooleanConverter}}"
+                                                Value="{Binding LimitUpperValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, Delay=100, NotifyOnValidationError=True}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Width="120" Header="上限预设值">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Text="{Binding PresetValueWhenAboveLimit}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                    <DataGridTemplateColumn.CellEditingTemplate>
+                                        <DataTemplate>
+                                            <hc:NumericUpDown
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Center"
+                                                IsEnabled="{Binding EnableLimitPreset, Converter={StaticResource BooleanConverter}}"
+                                                Value="{Binding PresetValueWhenAboveLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, Delay=100, NotifyOnValidationError=True}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellEditingTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Width="80" Header="验证状态">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>

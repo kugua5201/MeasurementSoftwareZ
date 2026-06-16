@@ -1803,14 +1803,19 @@ namespace MeasurementSoftware.Models
                             ? CalibrationCoefficientA * rawValue + CalibrationCoefficientB
                             : rawValue;
 
-                        rawValuesAfterCalibration.Add(Math.Round(calibratedValue, DecimalPlaces));
-
+                    
+                        double finalValue;
                         if (useZeroOffset)
                         {
                             double zeroedValue = calibratedValue - ZeroOffsetValue;
-                            double finalValue = ApplyLimitPreset(zeroedValue);
+                            finalValue = ApplyLimitPreset(zeroedValue);
                             zeroedProcessedValues!.Add(Math.Round(finalValue, DecimalPlaces));
                         }
+                        else
+                        {
+                            finalValue = ApplyLimitPreset(calibratedValue);
+                        }
+                        rawValuesAfterCalibration.Add(Math.Round(finalValue, DecimalPlaces));
                     }
 
                     PlcRawHistoricalRecords.Add(new HistoryRecordModel(xValue, rawValuesAfterCalibration));

@@ -57,6 +57,7 @@ namespace MeasurementSoftware
             builder.RegisterSingleton<IMeasurementFormulaEvaluator, MeasurementFormulaEvaluator>();
             builder.RegisterSingleton<IMeasurementFormulaScriptEvaluator, MeasurementFormulaScriptEvaluator>();
             builder.RegisterSingleton<IWriteValueLabelRuleService, WriteValueLabelRuleService>();
+            builder.RegisterSingleton<IWriteRestrictionScriptEvaluator, WriteRestrictionScriptEvaluator>();
             builder.RegisterSingleton<IWriteDataPointBindingService, WriteDataPointBindingService>();
             builder.RegisterSingleton<IMeasurementChannelHandler, DirectMeasurementChannelHandler>();
             builder.RegisterSingleton<IMeasurementChannelHandler, IndirectMeasurementChannelHandler>();

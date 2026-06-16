@@ -7,123 +7,109 @@ namespace MeasurementSoftware.Services.WriteDataPoints
 {
     /// <summary>
     /// 写入点位运行时绑定服务实现。
-    /// 执行“引用优先、Id 回填、否则不执行”的绑定策略。
+    /// 直接在配置对象上维护可用设备引用、运行时设备/点位引用以及订阅关系。
     /// </summary>
     public sealed class WriteDataPointBindingService : IWriteDataPointBindingService
     {
-        private readonly Dictionary<WriteDataPointConfig, BindingContext> contexts = [];
-
         public void AttachAvailableDevices(WriteDataPointConfig config, ObservableCollection<PlcDevice>? devices)
         {
-            var context = GetOrCreateContext(config);
-            if (ReferenceEquals(context.AvailableDevices, devices))
+            EnsureHandlers(config);
+            if (ReferenceEquals(config.AttachedAvailableDevices, devices))
             {
-                SyncRuntimeDeviceFromAvailableDevices(config, context);
+                SyncRuntimeDeviceFromAvailableDevices(config);
                 return;
             }
 
-            if (context.AvailableDevices != null)
+            if (config.AttachedAvailableDevices != null && config.AvailableDevicesCollectionChangedHandler != null)
             {
-                context.AvailableDevices.CollectionChanged -= context.AvailableDevicesCollectionChangedHandler;
+                config.AttachedAvailableDevices.CollectionChanged -= config.AvailableDevicesCollectionChangedHandler;
             }
 
-            context.AvailableDevices = devices;
-            if (context.AvailableDevices != null)
+            config.AttachedAvailableDevices = devices;
+            if (config.AttachedAvailableDevices != null && config.AvailableDevicesCollectionChangedHandler != null)
             {
-                context.AvailableDevices.CollectionChanged += context.AvailableDevicesCollectionChangedHandler;
+                config.AttachedAvailableDevices.CollectionChanged += config.AvailableDevicesCollectionChangedHandler;
             }
 
-            SyncRuntimeDeviceFromAvailableDevices(config, context);
+            SyncRuntimeDeviceFromAvailableDevices(config);
         }
 
         public void DetachAvailableDevices(WriteDataPointConfig config)
         {
-            if (!contexts.TryGetValue(config, out var context))
+            EnsureHandlers(config);
+            if (config.AttachedAvailableDevices != null && config.AvailableDevicesCollectionChangedHandler != null)
             {
-                return;
+                config.AttachedAvailableDevices.CollectionChanged -= config.AvailableDevicesCollectionChangedHandler;
+                config.AttachedAvailableDevices = null;
             }
 
-            if (context.AvailableDevices != null)
-            {
-                context.AvailableDevices.CollectionChanged -= context.AvailableDevicesCollectionChangedHandler;
-                context.AvailableDevices = null;
-            }
-
-            SetRuntimeDevice(config, context, null, updatePersistedDeviceId: false, preservePersistedDataPointId: true);
-            contexts.Remove(config);
+            SetRuntimeDevice(config, null, updatePersistedDeviceId: false, preservePersistedDataPointId: true);
+            config.AttachedAvailableDevices = null;
         }
 
         public void HydrateRuntimeBindings(WriteDataPointConfig config, PlcDevice? device)
         {
-            var context = GetOrCreateContext(config);
-            SetRuntimeDevice(config, context, device, updatePersistedDeviceId: false, preservePersistedDataPointId: true);
+            EnsureHandlers(config);
+            SetRuntimeDevice(config, device, updatePersistedDeviceId: false, preservePersistedDataPointId: true);
         }
 
         public void BindRuntimeDevice(WriteDataPointConfig config, PlcDevice? device)
         {
-            var context = GetOrCreateContext(config);
-            SetRuntimeDevice(config, context, device, updatePersistedDeviceId: true, preservePersistedDataPointId: false);
+            EnsureHandlers(config);
+            SetRuntimeDevice(config, device, updatePersistedDeviceId: true, preservePersistedDataPointId: false);
         }
 
         public void BindRuntimeDataPoint(WriteDataPointConfig config, DataPoint? dataPoint)
         {
-            var context = GetOrCreateContext(config);
-            SetRuntimeDataPoint(config, context, dataPoint, updatePersistedDataPointId: true, syncDataTypeFromPoint: true);
+            EnsureHandlers(config);
+            SetRuntimeDataPoint(config, dataPoint, updatePersistedDataPointId: true, syncDataTypeFromPoint: true);
         }
 
-        private BindingContext GetOrCreateContext(WriteDataPointConfig config)
+        private static void EnsureHandlers(WriteDataPointConfig config)
         {
-            if (contexts.TryGetValue(config, out var context))
-            {
-                return context;
-            }
-
-            context = new BindingContext();
-            context.AvailableDevicesCollectionChangedHandler = (_, _) => SyncRuntimeDeviceFromAvailableDevices(config, context);
-            context.RuntimeDevicePropertyChangedHandler = (_, e) => RuntimeDevice_PropertyChanged(config, context, e);
-            context.RuntimeDeviceDataPointsCollectionChangedHandler = (_, e) => RuntimeDeviceDataPoints_CollectionChanged(config, context, e);
-            context.RuntimeDataPointPropertyChangedHandler = (_, e) => RuntimeDataPointSource_PropertyChanged(config, context, e);
-            contexts[config] = context;
-            return context;
+            config.AvailableDevicesCollectionChangedHandler ??= (_, _) => SyncRuntimeDeviceFromAvailableDevices(config);
+            config.RuntimeDevicePropertyChangedHandler ??= (_, e) => RuntimeDevice_PropertyChanged(config, e);
+            config.RuntimeDeviceDataPointsCollectionChangedHandler ??= (_, e) => RuntimeDeviceDataPoints_CollectionChanged(config, e);
+            config.RuntimeDataPointPropertyChangedHandler ??= (_, e) => RuntimeDataPointSource_PropertyChanged(config, e);
         }
 
-        private void RuntimeDevice_PropertyChanged(WriteDataPointConfig config, BindingContext context, PropertyChangedEventArgs e)
+        private static void RuntimeDevice_PropertyChanged(WriteDataPointConfig config, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(PlcDevice.IsEnabled) && config.RuntimeDevice?.IsEnabled != true)
             {
-                HydrateRuntimeBindings(config, null);
+                SyncRuntimeDeviceFromAvailableDevices(config);
                 return;
             }
 
             if (e.PropertyName is nameof(PlcDevice.DeviceName) or nameof(PlcDevice.DeviceId) or nameof(PlcDevice.IsEnabled))
             {
-                RefreshAvailableDataPoints(config, context, preservePersistedDataPointId: true);
+                RefreshAvailableDataPoints(config, preservePersistedDataPointId: true);
             }
         }
 
-        private void RuntimeDeviceDataPoints_CollectionChanged(WriteDataPointConfig config, BindingContext context, NotifyCollectionChangedEventArgs e)
+        private static void RuntimeDeviceDataPoints_CollectionChanged(WriteDataPointConfig config, NotifyCollectionChangedEventArgs e)
         {
-            if (e.OldItems != null)
+            if (e.OldItems != null && config.RuntimeDataPointPropertyChangedHandler != null)
             {
                 foreach (DataPoint dataPoint in e.OldItems)
                 {
-                    dataPoint.PropertyChanged -= context.RuntimeDataPointPropertyChangedHandler;
+                    dataPoint.PropertyChanged -= config.RuntimeDataPointPropertyChangedHandler;
                 }
             }
 
-            if (e.NewItems != null)
+            if (e.NewItems != null && config.RuntimeDataPointPropertyChangedHandler != null)
             {
                 foreach (DataPoint dataPoint in e.NewItems)
                 {
-                    dataPoint.PropertyChanged -= context.RuntimeDataPointPropertyChangedHandler;
-                    dataPoint.PropertyChanged += context.RuntimeDataPointPropertyChangedHandler;
+                    dataPoint.PropertyChanged -= config.RuntimeDataPointPropertyChangedHandler;
+                    dataPoint.PropertyChanged += config.RuntimeDataPointPropertyChangedHandler;
                 }
             }
 
-            RefreshAvailableDataPoints(config, context, preservePersistedDataPointId: true);
+            RefreshAvailableDataPoints(config, preservePersistedDataPointId: true);
         }
 
-        private void RuntimeDataPointSource_PropertyChanged(WriteDataPointConfig config, BindingContext context, PropertyChangedEventArgs e)
+        private static void RuntimeDataPointSource_PropertyChanged(WriteDataPointConfig config, PropertyChangedEventArgs e)
         {
             if (config.RuntimeDataPoint is not DataPoint dataPoint)
             {
@@ -148,41 +134,46 @@ namespace MeasurementSoftware.Services.WriteDataPoints
 
             if (e.PropertyName is nameof(DataPoint.IsEnabled) or nameof(DataPoint.PointId) or nameof(DataPoint.PointName) or nameof(DataPoint.DataType))
             {
-                RefreshAvailableDataPoints(config, context, preservePersistedDataPointId: true);
+                RefreshAvailableDataPoints(config, preservePersistedDataPointId: true);
             }
         }
 
-        private void SyncRuntimeDeviceFromAvailableDevices(WriteDataPointConfig config, BindingContext context)
+        private static void SyncRuntimeDeviceFromAvailableDevices(WriteDataPointConfig config)
         {
-            if (context.AvailableDevices == null)
+            if (config.AttachedAvailableDevices == null)
             {
-                HydrateRuntimeBindings(config, null);
+                HydrateRuntimeBindingsCore(config, null);
                 return;
             }
 
-            if (config.RuntimeDevice != null && context.AvailableDevices.Contains(config.RuntimeDevice))
+            if (config.RuntimeDevice != null && config.AttachedAvailableDevices.Contains(config.RuntimeDevice))
             {
-                RefreshAvailableDataPoints(config, context, preservePersistedDataPointId: true);
+                RefreshAvailableDataPoints(config, preservePersistedDataPointId: true);
                 return;
             }
 
             var device = config.PlcDeviceId == 0
                 ? null
-                : context.AvailableDevices.FirstOrDefault(d => d.DeviceId == config.PlcDeviceId);
-            HydrateRuntimeBindings(config, device);
+                : config.AttachedAvailableDevices.FirstOrDefault(d => d.DeviceId == config.PlcDeviceId);
+            HydrateRuntimeBindingsCore(config, device);
         }
 
-        private void SetRuntimeDevice(WriteDataPointConfig config, BindingContext context, PlcDevice? device, bool updatePersistedDeviceId, bool preservePersistedDataPointId)
+        private static void HydrateRuntimeBindingsCore(WriteDataPointConfig config, PlcDevice? device)
+        {
+            SetRuntimeDevice(config, device, updatePersistedDeviceId: false, preservePersistedDataPointId: true);
+        }
+
+        private static void SetRuntimeDevice(WriteDataPointConfig config, PlcDevice? device, bool updatePersistedDeviceId, bool preservePersistedDataPointId)
         {
             var normalizedDevice = device?.IsEnabled == true ? device : null;
-            var deviceChanged = !ReferenceEquals(context.BoundRuntimeDevice, normalizedDevice);
+            var deviceChanged = !ReferenceEquals(config.SubscribedRuntimeDevice, normalizedDevice);
 
             if (deviceChanged)
             {
-                UnsubscribeRuntimeDevice(config, context);
+                UnsubscribeRuntimeDevice(config);
                 config.RuntimeDevice = normalizedDevice;
-                context.BoundRuntimeDevice = normalizedDevice;
-                SubscribeRuntimeDevice(config, context);
+                config.SubscribedRuntimeDevice = normalizedDevice;
+                SubscribeRuntimeDevice(config);
             }
             else if (!ReferenceEquals(config.RuntimeDevice, normalizedDevice))
             {
@@ -194,23 +185,23 @@ namespace MeasurementSoftware.Services.WriteDataPoints
                 config.PlcDeviceId = normalizedDevice?.DeviceId ?? 0;
             }
 
-            RefreshAvailableDataPoints(config, context, preservePersistedDataPointId);
+            RefreshAvailableDataPoints(config, preservePersistedDataPointId);
         }
 
-        private void SetRuntimeDataPoint(WriteDataPointConfig config, BindingContext context, DataPoint? dataPoint, bool updatePersistedDataPointId, bool syncDataTypeFromPoint)
+        private static void SetRuntimeDataPoint(WriteDataPointConfig config, DataPoint? dataPoint, bool updatePersistedDataPointId, bool syncDataTypeFromPoint)
         {
             var normalizedDataPoint = dataPoint != null && dataPoint.IsEnabled && config.AvailableDataPoints.Contains(dataPoint)
                 ? dataPoint
                 : null;
-            var dataPointChanged = !ReferenceEquals(context.BoundRuntimeDataPoint, normalizedDataPoint);
+            var dataPointChanged = !ReferenceEquals(config.SubscribedRuntimeDataPoint, normalizedDataPoint);
 
-            if (dataPointChanged && context.BoundRuntimeDataPoint != null)
+            if (dataPointChanged && config.SubscribedRuntimeDataPoint != null && config.RuntimeDataPointPropertyChangedHandler != null)
             {
-                context.BoundRuntimeDataPoint.PropertyChanged -= context.RuntimeDataPointPropertyChangedHandler;
+                config.SubscribedRuntimeDataPoint.PropertyChanged -= config.RuntimeDataPointPropertyChangedHandler;
             }
 
             config.RuntimeDataPoint = normalizedDataPoint;
-            context.BoundRuntimeDataPoint = normalizedDataPoint;
+            config.SubscribedRuntimeDataPoint = normalizedDataPoint;
 
             if (updatePersistedDataPointId)
             {
@@ -222,14 +213,14 @@ namespace MeasurementSoftware.Services.WriteDataPoints
                 config.DataType = normalizedDataPoint.DataType;
             }
 
-            if (dataPointChanged && context.BoundRuntimeDataPoint != null)
+            if (dataPointChanged && config.SubscribedRuntimeDataPoint != null && config.RuntimeDataPointPropertyChangedHandler != null)
             {
-                context.BoundRuntimeDataPoint.PropertyChanged -= context.RuntimeDataPointPropertyChangedHandler;
-                context.BoundRuntimeDataPoint.PropertyChanged += context.RuntimeDataPointPropertyChangedHandler;
+                config.SubscribedRuntimeDataPoint.PropertyChanged -= config.RuntimeDataPointPropertyChangedHandler;
+                config.SubscribedRuntimeDataPoint.PropertyChanged += config.RuntimeDataPointPropertyChangedHandler;
             }
         }
 
-        private void RefreshAvailableDataPoints(WriteDataPointConfig config, BindingContext context, bool preservePersistedDataPointId)
+        private static void RefreshAvailableDataPoints(WriteDataPointConfig config, bool preservePersistedDataPointId)
         {
             config.AvailableDataPoints = config.RuntimeDevice == null || !config.RuntimeDevice.IsEnabled
                 ? []
@@ -252,57 +243,62 @@ namespace MeasurementSoftware.Services.WriteDataPoints
                         : config.AvailableDataPoints.FirstOrDefault(dp => dp.PointId == config.DataPointId) ?? config.AvailableDataPoints.FirstOrDefault();
             }
 
-            SetRuntimeDataPoint(config, context, selectedDataPoint, updatePersistedDataPointId: !preservePersistedDataPointId, syncDataTypeFromPoint: true);
+            SetRuntimeDataPoint(config, selectedDataPoint, updatePersistedDataPointId: !preservePersistedDataPointId, syncDataTypeFromPoint: true);
         }
 
-        private void SubscribeRuntimeDevice(WriteDataPointConfig config, BindingContext context)
+        private static void SubscribeRuntimeDevice(WriteDataPointConfig config)
         {
-            if (context.BoundRuntimeDevice == null)
+            if (config.SubscribedRuntimeDevice == null)
             {
                 return;
             }
 
-            context.BoundRuntimeDevice.PropertyChanged += context.RuntimeDevicePropertyChangedHandler;
-            context.BoundRuntimeDevice.DataPoints.CollectionChanged += context.RuntimeDeviceDataPointsCollectionChangedHandler;
-            foreach (var dataPoint in context.BoundRuntimeDevice.DataPoints)
+            if (config.RuntimeDevicePropertyChangedHandler != null)
             {
-                dataPoint.PropertyChanged -= context.RuntimeDataPointPropertyChangedHandler;
-                dataPoint.PropertyChanged += context.RuntimeDataPointPropertyChangedHandler;
+                config.SubscribedRuntimeDevice.PropertyChanged += config.RuntimeDevicePropertyChangedHandler;
+            }
+
+            if (config.RuntimeDeviceDataPointsCollectionChangedHandler != null)
+            {
+                config.SubscribedRuntimeDevice.DataPoints.CollectionChanged += config.RuntimeDeviceDataPointsCollectionChangedHandler;
+            }
+
+            if (config.RuntimeDataPointPropertyChangedHandler != null)
+            {
+                foreach (var dataPoint in config.SubscribedRuntimeDevice.DataPoints)
+                {
+                    dataPoint.PropertyChanged -= config.RuntimeDataPointPropertyChangedHandler;
+                    dataPoint.PropertyChanged += config.RuntimeDataPointPropertyChangedHandler;
+                }
             }
         }
 
-        private void UnsubscribeRuntimeDevice(WriteDataPointConfig config, BindingContext context)
+        private static void UnsubscribeRuntimeDevice(WriteDataPointConfig config)
         {
-            if (context.BoundRuntimeDevice == null)
+            if (config.SubscribedRuntimeDevice == null)
             {
                 return;
             }
 
-            context.BoundRuntimeDevice.PropertyChanged -= context.RuntimeDevicePropertyChangedHandler;
-            context.BoundRuntimeDevice.DataPoints.CollectionChanged -= context.RuntimeDeviceDataPointsCollectionChangedHandler;
-            foreach (var dataPoint in context.BoundRuntimeDevice.DataPoints)
+            if (config.RuntimeDevicePropertyChangedHandler != null)
             {
-                dataPoint.PropertyChanged -= context.RuntimeDataPointPropertyChangedHandler;
+                config.SubscribedRuntimeDevice.PropertyChanged -= config.RuntimeDevicePropertyChangedHandler;
             }
 
-            context.BoundRuntimeDevice = null;
-        }
+            if (config.RuntimeDeviceDataPointsCollectionChangedHandler != null)
+            {
+                config.SubscribedRuntimeDevice.DataPoints.CollectionChanged -= config.RuntimeDeviceDataPointsCollectionChangedHandler;
+            }
 
-        private sealed class BindingContext
-        {
-            public ObservableCollection<PlcDevice>? AvailableDevices { get; set; }
+            if (config.RuntimeDataPointPropertyChangedHandler != null)
+            {
+                foreach (var dataPoint in config.SubscribedRuntimeDevice.DataPoints)
+                {
+                    dataPoint.PropertyChanged -= config.RuntimeDataPointPropertyChangedHandler;
+                }
+            }
 
-            public PlcDevice? BoundRuntimeDevice { get; set; }
-
-            public DataPoint? BoundRuntimeDataPoint { get; set; }
-
-            public NotifyCollectionChangedEventHandler AvailableDevicesCollectionChangedHandler { get; set; } = default!;
-
-            public PropertyChangedEventHandler RuntimeDevicePropertyChangedHandler { get; set; } = default!;
-
-            public NotifyCollectionChangedEventHandler RuntimeDeviceDataPointsCollectionChangedHandler { get; set; } = default!;
-
-            public PropertyChangedEventHandler RuntimeDataPointPropertyChangedHandler { get; set; } = default!;
+            config.SubscribedRuntimeDevice = null;
         }
     }
 }

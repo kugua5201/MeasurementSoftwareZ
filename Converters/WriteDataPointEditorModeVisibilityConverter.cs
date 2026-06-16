@@ -27,4 +27,24 @@ namespace MeasurementSoftware.Converters
             throw new NotSupportedException();
         }
     }
+
+    public class WriteDataPointEditorModeExcludeVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is not WriteValueEditorMode mode || parameter is not string parameterText)
+            {
+                return Visibility.Collapsed;
+            }
+
+            return Enum.TryParse<WriteValueEditorMode>(parameterText, true, out var excludedMode) && excludedMode == mode
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotSupportedException();
+        }
+    }
 }

@@ -2,6 +2,7 @@
 using MeasurementSoftware.ViewModels;
 using MultiProtocol.Model;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
@@ -98,6 +99,137 @@ namespace MeasurementSoftware.Models
     }
 
     /// <summary>
+    /// 写入限制模式中的变量定义。
+    /// 用于把某个设备点位映射为表达式里的变量名。
+    /// </summary>
+    public class WriteValueRestrictionVariable : ObservableViewModel
+    {
+        private string variableName = string.Empty;
+        private long plcDeviceId;
+        private string dataPointId = string.Empty;
+        private ObservableCollection<DataPoint> availableDataPoints = [];
+        private ObservableCollection<PlcDevice>? availableDevicesSource;
+        private PlcDevice? runtimeDevice;
+        private DataPoint? runtimeDataPoint;
+
+        public string VariableName
+        {
+            get => variableName;
+            set => SetProperty(ref variableName, value);
+        }
+
+        public long PlcDeviceId
+        {
+            get => plcDeviceId;
+            set => SetProperty(ref plcDeviceId, value);
+        }
+
+        public string DataPointId
+        {
+            get => dataPointId;
+            set => SetProperty(ref dataPointId, value);
+        }
+
+        [JsonIgnore]
+        public ObservableCollection<PlcDevice>? AvailableDevicesSource
+        {
+            get => availableDevicesSource;
+            set
+            {
+                availableDevicesSource = value;
+                RefreshRuntimeBindings();
+            }
+        }
+
+        public ObservableCollection<DataPoint> AvailableDataPoints
+        {
+            get => availableDataPoints;
+            set => SetProperty(ref availableDataPoints, value ?? [], () => OnPropertyChanged(nameof(SelectedPointName)));
+        }
+
+        [JsonIgnore]
+        public PlcDevice? RuntimeDevice
+        {
+            get => runtimeDevice;
+            set => SetRuntimeDevice(value, preservePersistedDataPointId: false);
+        }
+
+        [JsonIgnore]
+        public DataPoint? RuntimeDataPoint
+        {
+            get => runtimeDataPoint;
+            set => SetRuntimeDataPoint(value);
+        }
+
+        [JsonIgnore]
+        public string SelectedDeviceName => RuntimeDevice?.DeviceName ?? string.Empty;
+
+        [JsonIgnore]
+        public string SelectedPointName => RuntimeDataPoint?.PointName ?? string.Empty;
+
+        public void RefreshRuntimeBindings()
+        {
+            var device = AvailableDevicesSource == null
+                ? null
+                : AvailableDevicesSource.FirstOrDefault(d => d.IsEnabled && d.DeviceId == PlcDeviceId);
+            SetRuntimeDevice(device, preservePersistedDataPointId: true);
+        }
+
+        private void SetRuntimeDevice(PlcDevice? device, bool preservePersistedDataPointId)
+        {
+            var normalizedDevice = device?.IsEnabled == true ? device : null;
+            if (!ReferenceEquals(runtimeDevice, normalizedDevice))
+            {
+                runtimeDevice = normalizedDevice;
+                OnPropertyChanged(nameof(RuntimeDevice));
+                OnPropertyChanged(nameof(SelectedDeviceName));
+            }
+
+            PlcDeviceId = normalizedDevice?.DeviceId ?? 0;
+            RefreshAvailableDataPoints(preservePersistedDataPointId);
+        }
+
+        private void RefreshAvailableDataPoints(bool preservePersistedDataPointId)
+        {
+            AvailableDataPoints = runtimeDevice == null
+                ? []
+                : new ObservableCollection<DataPoint>(runtimeDevice.DataPoints.Where(dp => dp.IsEnabled).OrderBy(dp => dp.PointName));
+
+            DataPoint? selectedPoint;
+            if (preservePersistedDataPointId && !string.IsNullOrWhiteSpace(DataPointId))
+            {
+                selectedPoint = AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId)
+                    ?? AvailableDataPoints.FirstOrDefault();
+            }
+            else
+            {
+                selectedPoint = runtimeDataPoint != null && AvailableDataPoints.Contains(runtimeDataPoint)
+                    ? runtimeDataPoint
+                    : string.IsNullOrWhiteSpace(DataPointId)
+                        ? AvailableDataPoints.FirstOrDefault()
+                        : AvailableDataPoints.FirstOrDefault(dp => dp.PointId == DataPointId) ?? AvailableDataPoints.FirstOrDefault();
+            }
+
+            SetRuntimeDataPoint(selectedPoint);
+        }
+
+        private void SetRuntimeDataPoint(DataPoint? dataPoint)
+        {
+            var normalizedDataPoint = dataPoint != null && dataPoint.IsEnabled && AvailableDataPoints.Contains(dataPoint)
+                ? dataPoint
+                : null;
+            if (!ReferenceEquals(runtimeDataPoint, normalizedDataPoint))
+            {
+                runtimeDataPoint = normalizedDataPoint;
+                OnPropertyChanged(nameof(RuntimeDataPoint));
+                OnPropertyChanged(nameof(SelectedPointName));
+            }
+
+            DataPointId = normalizedDataPoint?.PointId ?? string.Empty;
+        }
+    }
+
+    /// <summary>
     /// 写入点位配置。
     /// 用于定义写入目标、展示风格和标签模式下的规则映射。
     /// </summary>
@@ -122,6 +254,12 @@ namespace MeasurementSoftware.Models
         private string buttonWriteValueText = string.Empty;
         private string buttonReleaseWriteValueText = string.Empty;
         private string buttonDisplayText = "按钮1";
+        private bool enableWriteRestriction;
+        private string writeRestrictionScriptText = string.Empty;
+        private string writeRestrictionStatusText = string.Empty;
+        private bool isWriteRestrictionScriptValid = true;
+        private bool isWriteRestrictionSatisfied = true;
+        private string writeRestrictionBlockedReason = string.Empty;
         private string editingWriteValueText = string.Empty;
         private bool isValueEditing;
         private string writeStatusText = string.Empty;
@@ -327,6 +465,58 @@ namespace MeasurementSoftware.Models
             set => SetProperty(ref buttonDisplayText, value);
         }
 
+        /// <summary>
+        /// 是否启用写入限制模式。
+        /// 启用后仅当限制表达式满足时，才允许输入与点击写入。
+        /// </summary>
+        public bool EnableWriteRestriction
+        {
+            get => enableWriteRestriction;
+            set => SetProperty(ref enableWriteRestriction, value, () =>
+            {
+                OnPropertyChanged(nameof(UsesWriteRestriction));
+                OnPropertyChanged(nameof(IsWriteInteractionEnabled));
+                OnPropertyChanged(nameof(RestrictionSectionVisibilityHint));
+            });
+        }
+
+        /// <summary>
+        /// 写入限制表达式脚本。
+        /// </summary>
+        public string WriteRestrictionScriptText
+        {
+            get => writeRestrictionScriptText;
+            set => SetProperty(ref writeRestrictionScriptText, value);
+        }
+
+        [JsonIgnore]
+        public string WriteRestrictionStatusText
+        {
+            get => writeRestrictionStatusText;
+            set => SetProperty(ref writeRestrictionStatusText, value);
+        }
+
+        [JsonIgnore]
+        public bool IsWriteRestrictionScriptValid
+        {
+            get => isWriteRestrictionScriptValid;
+            set => SetProperty(ref isWriteRestrictionScriptValid, value);
+        }
+
+        [JsonIgnore]
+        public bool IsWriteRestrictionSatisfied
+        {
+            get => isWriteRestrictionSatisfied;
+            set => SetProperty(ref isWriteRestrictionSatisfied, value, () => OnPropertyChanged(nameof(IsWriteInteractionEnabled)));
+        }
+
+        [JsonIgnore]
+        public string WriteRestrictionBlockedReason
+        {
+            get => writeRestrictionBlockedReason;
+            set => SetProperty(ref writeRestrictionBlockedReason, value);
+        }
+
         [JsonIgnore]
         public string EditingWriteValueText
         {
@@ -352,13 +542,7 @@ namespace MeasurementSoftware.Models
             set => SetProperty(ref writeStatusText, value, () => OnPropertyChanged(nameof(HasWriteStatus)));
         }
 
-        [JsonIgnore]
-        public bool? IsWriteStatusSuccess
-        {
-            get => isWriteStatusSuccess;
-            set => SetProperty(ref isWriteStatusSuccess, value);
-        }
-
+      
         /// <summary>
         /// 是否允许外部页面直接显示原始值。
         /// </summary>
@@ -416,6 +600,15 @@ namespace MeasurementSoftware.Models
         public bool CanEditValue => EditorMode != WriteValueEditorMode.Label;
 
         [JsonIgnore]
+        public bool UsesWriteRestriction => EditorMode != WriteValueEditorMode.Label && EnableWriteRestriction;
+
+        [JsonIgnore]
+        public bool IsWriteInteractionEnabled => !UsesWriteRestriction || IsWriteRestrictionSatisfied;
+
+        [JsonIgnore]
+        public string RestrictionSectionVisibilityHint => UsesWriteRestriction ? string.Empty : "限制模式仅在输入输出和按钮模式下生效";
+
+        [JsonIgnore]
         public bool IsValueDisplayMode => !IsValueEditing;
 
         [JsonIgnore]
@@ -461,8 +654,34 @@ namespace MeasurementSoftware.Models
         /// </summary>
         public ObservableCollection<WriteValueDisplayRule> DisplayRules { get; set; } = [];
 
+        /// <summary>
+        /// 写入限制变量列表。
+        /// </summary>
+        public ObservableCollection<WriteValueRestrictionVariable> RestrictionVariables { get; set; } = [];
+
         private PlcDevice? runtimeDevice;
         private DataPoint? runtimeDataPoint;
+
+        [JsonIgnore]
+        public ObservableCollection<PlcDevice>? AttachedAvailableDevices { get; set; }
+
+        [JsonIgnore]
+        public PlcDevice? SubscribedRuntimeDevice { get; set; }
+
+        [JsonIgnore]
+        public DataPoint? SubscribedRuntimeDataPoint { get; set; }
+
+        [JsonIgnore]
+        public NotifyCollectionChangedEventHandler? AvailableDevicesCollectionChangedHandler { get; set; }
+
+        [JsonIgnore]
+        public PropertyChangedEventHandler? RuntimeDevicePropertyChangedHandler { get; set; }
+
+        [JsonIgnore]
+        public NotifyCollectionChangedEventHandler? RuntimeDeviceDataPointsCollectionChangedHandler { get; set; }
+
+        [JsonIgnore]
+        public PropertyChangedEventHandler? RuntimeDataPointPropertyChangedHandler { get; set; }
 
         /// <summary>
         /// 当前绑定的运行时设备实例。
@@ -506,7 +725,7 @@ namespace MeasurementSoftware.Models
 
         public bool BeginValueEdit()
         {
-            if (!CanEditValue)
+            if (!CanEditValue || !IsWriteInteractionEnabled)
             {
                 return false;
             }
@@ -541,21 +760,34 @@ namespace MeasurementSoftware.Models
             PendingWriteValueText = RuntimeDataPoint?.CurrentValue?.ToString() ?? string.Empty;
         }
 
-        public void SetWriteStatus(string text, bool? success)
-        {
-            WriteStatusText = text;
-            IsWriteStatusSuccess = success;
-            OnPropertyChanged(nameof(DisplayDescription));
-            OnPropertyChanged(nameof(IsDisplayDescriptionStatus));
-        }
+        //public void SetWriteStatus(string text, bool? success)
+        //{
+        //    WriteStatusText = text;
+        //    IsWriteStatusSuccess = success;
+        //    OnPropertyChanged(nameof(DisplayDescription));
+        //    OnPropertyChanged(nameof(IsDisplayDescriptionStatus));
+        //}
 
         public void ClearWriteStatus()
         {
             WriteStatusText = string.Empty;
-            IsWriteStatusSuccess = null;
             OnPropertyChanged(nameof(DisplayDescription));
             OnPropertyChanged(nameof(IsDisplayDescriptionStatus));
         }
+
+        public void SetWriteRestrictionValidationState(bool isValid, string statusText)
+        {
+            IsWriteRestrictionScriptValid = isValid;
+            WriteRestrictionStatusText = statusText;
+        }
+
+        public void SetWriteRestrictionEvaluationState(bool isSatisfied, string blockedReason)
+        {
+            IsWriteRestrictionSatisfied = isSatisfied;
+            WriteRestrictionBlockedReason = blockedReason;
+            OnPropertyChanged(nameof(IsWriteInteractionEnabled));
+        }
+
 
         [JsonIgnore]
         public string Error => string.Empty;

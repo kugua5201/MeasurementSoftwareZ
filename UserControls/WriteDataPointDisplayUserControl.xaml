@@ -96,7 +96,11 @@
                                             <Border
                                                 Background="Transparent"
                                                 Cursor="Hand"
+                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
                                                 PreviewMouseLeftButtonDown="TextBoxValueBorder_PreviewMouseLeftButtonDown">
+                                                <Border.ToolTip>
+                                                    <TextBlock Text="{Binding WriteRestrictionBlockedReason}" />
+                                                </Border.ToolTip>
                                                 <TextBlock VerticalAlignment="Center" Text="{Binding PendingWriteValueText}" />
                                             </Border>
                                         </ContentControl>
@@ -111,7 +115,8 @@
                                                         Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
                                                         CommandParameter="{Binding}"
                                                         Content="{Binding ButtonDisplayText}"
-                                                        Style="{StaticResource ButtonDefault}">
+                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                        Style="{StaticResource ButtonDanger}">
 
                                                         <Button.ToolTip>
                                                             <TextBlock Text="{Binding ButtonDisplayText}" />
@@ -134,7 +139,8 @@
                                                         Padding="10,4"
                                                         HorizontalContentAlignment="Left"
                                                         Content="{Binding ButtonDisplayText}"
-                                                        Style="{StaticResource ButtonDefault}">
+                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                        Style="{StaticResource ButtonDanger}">
                                                         <i:Interaction.Triggers>
                                                             <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
                                                                 <i:InvokeCommandAction Command="{Binding Data.SubmitButtonPressWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
@@ -179,6 +185,7 @@
                                                 Width="110"
                                                 Margin="0,0,6,0"
                                                 hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
+                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
                                                 Style="{StaticResource TextBoxExtend}"
                                                 Text="{Binding EditingWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, Mode=TwoWay, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
                                                 ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}">
@@ -199,6 +206,7 @@
                                                 Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
                                                 CommandParameter="{Binding}"
                                                 Content="写入"
+                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
                                                 Style="{StaticResource ButtonDanger}" />
                                             <Button
                                                 Padding="10,4"
@@ -221,6 +229,11 @@
                         Width="80"
                         Binding="{Binding Unit, Mode=OneWay}"
                         Header="单位"
+                        IsReadOnly="True" />
+                    <DataGridTextColumn
+                        MinWidth="200"
+                        Binding="{Binding DisplayDescription, Mode=OneWay}"
+                        Header="说明"
                         IsReadOnly="True" />
                 </DataGrid.Columns>
             </DataGrid>

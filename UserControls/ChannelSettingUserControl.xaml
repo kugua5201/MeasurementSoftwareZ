@@ -1387,13 +1387,14 @@
                                                                     CommandParameter="{Binding}"
                                                                     Header="添加数据源" />
                                                                 <MenuItem
+                                                                    Command="{Binding Data.RemoveIndirectSourceBindingCommand, Source={StaticResource VmProxy}}"
+                                                                    CommandParameter="{Binding}"
+                                                                    Header="删除数据源" />
+                                                                <MenuItem
                                                                     Command="{Binding Data.CheckIndirectFormulaCommand, Source={StaticResource VmProxy}}"
                                                                     CommandParameter="{Binding}"
                                                                     Header="检查脚本" />
-                                                                <MenuItem
-                                                                    Command="{Binding Data.RemoveIndirectSourceBindingCommand, Source={StaticResource VmProxy}}"
-                                                                    CommandParameter="{Binding}"
-                                                                    Header="删除" />
+
 
                                                             </ContextMenu>
                                                         </Setter.Value>
@@ -1404,7 +1405,7 @@
                                                 <DataGridTextColumn
                                                     Width="130"
                                                     Binding="{Binding SourceKey, UpdateSourceTrigger=PropertyChanged}"
-                                                    Header="变量名（X可空，Y1..Yn必填）" />
+                                                    Header="变量名" />
                                                 <DataGridTemplateColumn Width="200" Header="PLC设备">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>

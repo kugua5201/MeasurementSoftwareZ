@@ -297,7 +297,32 @@ namespace MeasurementSoftware.Services.Devices
 
                     if (fieldInfo.IsSuccess)
                     {
-                        dataPoint.CurrentValue = fieldInfo.Value;
+
+                        //dataPoint.CurrentValue = fieldInfo.Value;
+                        //dataPoint.ErrorMessage = null;
+
+                        object value = fieldInfo.Value!;
+
+                        if (dataPoint.EnableLimitPreset && TryConvertToDouble(value!, out double numericValue))
+                        {
+                            if (numericValue < dataPoint.LimitLowerValue)
+                            {
+                                dataPoint.CurrentValue = dataPoint.PresetValueWhenBelowLimit;
+                            }
+                            else if (numericValue > dataPoint.LimitUpperValue)
+                            {
+                                dataPoint.CurrentValue = dataPoint.PresetValueWhenAboveLimit;
+                            }
+                            else
+                            {
+                                dataPoint.CurrentValue = value;
+                            }
+                        }
+                        else
+                        {
+                            dataPoint.CurrentValue = value;
+                        }
+
                         dataPoint.ErrorMessage = null;
                     }
                     else
@@ -314,7 +339,23 @@ namespace MeasurementSoftware.Services.Devices
                 DataPointsUpdated?.Invoke(this, new PlcDataPointsUpdatedEventArgs(Device, updatedPoints, updateTime));
             }
         }
+        private bool TryConvertToDouble(object value, out double result)
+        {
+            result = 0;
 
+            if (value == null)
+                return false;
+
+            try
+            {
+                result = Convert.ToDouble(value);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         /// <summary>
         /// 协议连接状态变化默认处理。
         /// </summary>
@@ -360,7 +401,7 @@ namespace MeasurementSoftware.Services.Devices
             };
         }
 
-    
+
         private void Protocol_OnDataRead(object? sender, DataEventArgs e)
         {
             OnProtocolDataRead(e);

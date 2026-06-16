@@ -24,6 +24,7 @@ namespace MeasurementSoftware.ViewModels
         private readonly IPlcDeviceRuntimeService _plcDeviceRuntimeService;
         private readonly IWriteValueLabelRuleService _writeValueLabelRuleService;
         private readonly IWriteDataPointBindingService _writeDataPointBindingService;
+        private readonly IWriteRestrictionScriptEvaluator _writeRestrictionScriptEvaluator;
         private readonly EnabledPlcDevicesObserver _enabledDevicesObserver;
 
         private ObservableCollection<WriteDataPointConfig>? _observedWriteDataPoints;
@@ -32,6 +33,7 @@ namespace MeasurementSoftware.ViewModels
         private WriteDataPointConfig? selectedWriteDataPoint;
         private WriteDataPointConfig? editingWriteDataPoint;
         private WriteValueDisplayRule? selectedDisplayRule;
+        private WriteValueRestrictionVariable? selectedRestrictionVariable;
         private bool isEditorOpen;
         private bool isEditMode;
         public MeasurementRecipe? CurrentRecipe => _recipeConfigService.CurrentRecipe;
@@ -90,12 +92,14 @@ namespace MeasurementSoftware.ViewModels
                     DetachEditingRuntimeDataPoint(previous);
                     previous.PropertyChanged -= EditingWriteDataPoint_PropertyChanged;
                     _writeDataPointBindingService.DetachAvailableDevices(previous);
+                    SelectedRestrictionVariable = null;
                 }
 
                 if (value != null)
                 {
                     _writeDataPointBindingService.AttachAvailableDevices(value, _enabledDevicesObserver.EnabledDevices);
                     _writeDataPointBindingService.HydrateRuntimeBindings(value, value.RuntimeDevice);
+                    AttachRestrictionVariables(value);
                     value.PropertyChanged -= EditingWriteDataPoint_PropertyChanged;
                     value.PropertyChanged += EditingWriteDataPoint_PropertyChanged;
                     AttachEditingRuntimeDataPoint(value);
@@ -104,6 +108,7 @@ namespace MeasurementSoftware.ViewModels
                 }
 
                 SelectedDisplayRule = value?.DisplayRules.FirstOrDefault();
+                SelectedRestrictionVariable = value?.RestrictionVariables.FirstOrDefault();
             }
         }
 
@@ -111,6 +116,12 @@ namespace MeasurementSoftware.ViewModels
         {
             get => selectedDisplayRule;
             set => SetProperty(ref selectedDisplayRule, value);
+        }
+
+        public WriteValueRestrictionVariable? SelectedRestrictionVariable
+        {
+            get => selectedRestrictionVariable;
+            set => SetProperty(ref selectedRestrictionVariable, value);
         }
 
         public bool IsEditorOpen
@@ -129,7 +140,7 @@ namespace MeasurementSoftware.ViewModels
 
         public string SelectedWriteDataPointCurrentValue => SelectedWriteDataPoint?.RuntimeDataPoint?.CurrentValue?.ToString() ?? "--";
 
-        public WriteDataPointViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IWriteValueLabelRuleService writeValueLabelRuleService, IWriteDataPointBindingService writeDataPointBindingService)
+        public WriteDataPointViewModel(ILogService log, IRecipeConfigService recipeConfigService, IDeviceConfigService deviceConfigService, IPlcDeviceRuntimeService plcDeviceRuntimeService, IWriteValueLabelRuleService writeValueLabelRuleService, IWriteDataPointBindingService writeDataPointBindingService, IWriteRestrictionScriptEvaluator writeRestrictionScriptEvaluator)
         {
             _log = log;
             _recipeConfigService = recipeConfigService;
@@ -137,6 +148,7 @@ namespace MeasurementSoftware.ViewModels
             _plcDeviceRuntimeService = plcDeviceRuntimeService;
             _writeValueLabelRuleService = writeValueLabelRuleService;
             _writeDataPointBindingService = writeDataPointBindingService;
+            _writeRestrictionScriptEvaluator = writeRestrictionScriptEvaluator;
             _enabledDevicesObserver = new EnabledPlcDevicesObserver(_deviceConfigService);
 
             if (_recipeConfigService is INotifyPropertyChanged npc)
@@ -177,6 +189,7 @@ namespace MeasurementSoftware.ViewModels
 
             if (EditingWriteDataPoint != null)
             {
+                AttachRestrictionVariables(EditingWriteDataPoint);
                 _writeDataPointBindingService.AttachAvailableDevices(EditingWriteDataPoint, _enabledDevicesObserver.EnabledDevices);
                 _writeDataPointBindingService.HydrateRuntimeBindings(EditingWriteDataPoint, EditingWriteDataPoint.RuntimeDevice);
                 RefreshCurrentValueDisplayText(EditingWriteDataPoint);
@@ -212,7 +225,9 @@ namespace MeasurementSoftware.ViewModels
                 or nameof(WriteDataPointConfig.PendingWriteValueText)
                 or nameof(WriteDataPointConfig.ButtonInteractionMode)
                 or nameof(WriteDataPointConfig.WriteStatusText)
-                or nameof(WriteDataPointConfig.RuleScriptText))
+                or nameof(WriteDataPointConfig.RuleScriptText)
+                or nameof(WriteDataPointConfig.EnableWriteRestriction)
+                or nameof(WriteDataPointConfig.WriteRestrictionScriptText))
             {
                 RefreshCurrentValueDisplayText(config);
             }
@@ -225,7 +240,8 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
-            var relatedConfigs = WriteDataPoints.Where(config => ReferenceEquals(config.RuntimeDevice, e.Device)).ToList();
+            var relatedConfigs = WriteDataPoints.Where(config => ReferenceEquals(config.RuntimeDevice, e.Device)
+                || config.RestrictionVariables.Any(variable => ReferenceEquals(variable.RuntimeDevice, e.Device))).ToList();
             if (relatedConfigs.Count == 0)
             {
                 return;
@@ -233,19 +249,32 @@ namespace MeasurementSoftware.ViewModels
 
             foreach (var config in relatedConfigs)
             {
-                if (config.RuntimeDataPoint == null)
+                if (config.RuntimeDataPoint != null)
                 {
-                    continue;
+                    var updatedPoint = e.DataPoints.FirstOrDefault(dp => ReferenceEquals(dp, config.RuntimeDataPoint) || dp.PointId == config.RuntimeDataPoint.PointId);
+                    if (updatedPoint != null)
+                    {
+                        config.RuntimeDataPoint.CurrentValue = updatedPoint.CurrentValue;
+                        config.SyncPendingWriteValueFromRuntime();
+                    }
                 }
 
-                var updatedPoint = e.DataPoints.FirstOrDefault(dp => ReferenceEquals(dp, config.RuntimeDataPoint) || dp.PointId == config.RuntimeDataPoint.PointId);
-                if (updatedPoint == null)
+                foreach (var variable in config.RestrictionVariables.Where(variable => ReferenceEquals(variable.RuntimeDevice, e.Device) && variable.RuntimeDataPoint != null))
                 {
-                    continue;
+                    var runtimeDataPoint = variable.RuntimeDataPoint;
+                    if (runtimeDataPoint == null)
+                    {
+                        continue;
+                    }
+
+                    var updatedVariablePoint = e.DataPoints.FirstOrDefault(dp => ReferenceEquals(dp, runtimeDataPoint) || dp.PointId == runtimeDataPoint.PointId);
+                    if (updatedVariablePoint != null)
+                    {
+                        runtimeDataPoint.CurrentValue = updatedVariablePoint.CurrentValue;
+                    }
                 }
 
-                config.RuntimeDataPoint.CurrentValue = updatedPoint.CurrentValue;
-                config.SyncPendingWriteValueFromRuntime();
+                RefreshCurrentValueDisplayText(config);
 
                 if (ReferenceEquals(config, SelectedWriteDataPoint))
                 {
@@ -294,6 +323,20 @@ namespace MeasurementSoftware.ViewModels
 
             EditingWriteDataPoint.SyncPendingWriteValueFromRuntime();
             RefreshCurrentValueDisplayText(EditingWriteDataPoint);
+        }
+
+        private void AttachRestrictionVariables(WriteDataPointConfig config)
+        {
+            for (int i = 0; i < config.RestrictionVariables.Count; i++)
+            {
+                var variable = config.RestrictionVariables[i];
+                if (string.IsNullOrWhiteSpace(variable.VariableName))
+                {
+                    variable.VariableName = $"V{i + 1}";
+                }
+
+                variable.AvailableDevicesSource = _enabledDevicesObserver.EnabledDevices;
+            }
         }
 
         private void RebindWriteDataPointNotifications()
@@ -384,6 +427,7 @@ namespace MeasurementSoftware.ViewModels
             {
                 _writeDataPointBindingService.AttachAvailableDevices(config, _enabledDevicesObserver.EnabledDevices);
                 _writeDataPointBindingService.HydrateRuntimeBindings(config, config.RuntimeDevice);
+                AttachRestrictionVariables(config);
                 EnsureRuleScriptInitialized(config);
                 config.SyncPendingWriteValueFromRuntime();
                 RefreshCurrentValueDisplayText(config);
@@ -558,6 +602,12 @@ namespace MeasurementSoftware.ViewModels
                 return;
             }
 
+            if (!ValidateWriteRestriction(EditingWriteDataPoint, out var writeRestrictionErrorMessage))
+            {
+                Growl.Warning(string.IsNullOrWhiteSpace(writeRestrictionErrorMessage) ? "限制模式配置无效" : writeRestrictionErrorMessage);
+                return;
+            }
+
             if (IsEditMode)
             {
                 var original = WriteDataPoints.FirstOrDefault(x => x.Index == EditingWriteDataPoint.Index);
@@ -653,6 +703,72 @@ namespace MeasurementSoftware.ViewModels
             SyncRuleScriptFromDisplayRules(EditingWriteDataPoint);
             RefreshCurrentValueDisplayText(EditingWriteDataPoint);
             SelectedDisplayRule = EditingWriteDataPoint.DisplayRules.FirstOrDefault();
+        }
+
+        [RelayCommand]
+        private void AddRestrictionVariable()
+        {
+            if (EditingWriteDataPoint == null)
+            {
+                return;
+            }
+
+            var variable = new WriteValueRestrictionVariable
+            {
+                VariableName = $"V{EditingWriteDataPoint.RestrictionVariables.Count + 1}"
+            };
+            variable.AvailableDevicesSource = _enabledDevicesObserver.EnabledDevices;
+            EditingWriteDataPoint.RestrictionVariables.Add(variable);
+            SelectedRestrictionVariable = variable;
+            RefreshCurrentValueDisplayText(EditingWriteDataPoint);
+        }
+
+        [RelayCommand]
+        private void RemoveRestrictionVariable()
+        {
+            if (EditingWriteDataPoint == null || SelectedRestrictionVariable == null)
+            {
+                return;
+            }
+
+            EditingWriteDataPoint.RestrictionVariables.Remove(SelectedRestrictionVariable);
+            SelectedRestrictionVariable = EditingWriteDataPoint.RestrictionVariables.FirstOrDefault();
+            RefreshCurrentValueDisplayText(EditingWriteDataPoint);
+        }
+
+        [RelayCommand]
+        private void CheckRestrictionVariables()
+        {
+            if (EditingWriteDataPoint == null)
+            {
+                return;
+            }
+
+            if (!EditingWriteDataPoint.UsesWriteRestriction)
+            {
+                Growl.Info("当前写入点位未启用限制模式");
+                return;
+            }
+
+            if (!TryBuildRestrictionVariables(EditingWriteDataPoint, allowMissingCurrentValue: false, out var variables, out var variableErrorMessage))
+            {
+                EditingWriteDataPoint.SetWriteRestrictionValidationState(false, variableErrorMessage);
+                EditingWriteDataPoint.SetWriteRestrictionEvaluationState(false, variableErrorMessage);
+                Growl.Warning(variableErrorMessage);
+                return;
+            }
+
+            if (!_writeRestrictionScriptEvaluator.TryEvaluateScript(EditingWriteDataPoint.WriteRestrictionScriptText, variables, out var isSatisfied, out var expressionErrorMessage))
+            {
+                EditingWriteDataPoint.SetWriteRestrictionValidationState(false, expressionErrorMessage);
+                EditingWriteDataPoint.SetWriteRestrictionEvaluationState(false, expressionErrorMessage);
+                Growl.Warning(expressionErrorMessage);
+                return;
+            }
+
+            EditingWriteDataPoint.SetWriteRestrictionValidationState(true, string.Empty);
+            EditingWriteDataPoint.SetWriteRestrictionEvaluationState(isSatisfied, isSatisfied ? string.Empty : "限制条件未满足，当前禁止写入和点击操作");
+            Growl.Success(isSatisfied ? "脚本检查通过，当前条件已满足" : "脚本检查完成，但当前条件未满足");
         }
 
         [RelayCommand]
@@ -886,35 +1002,41 @@ namespace MeasurementSoftware.ViewModels
         {
             if (config.RuntimeDevice == null || config.RuntimeDataPoint == null)
             {
-                config.SetWriteStatus("未配置完整的设备和点位", false);
+            
                 Growl.Warning("当前写入点位未配置完整的设备和点位");
                 return;
             }
 
             if (!config.IsEnabled)
             {
-                config.SetWriteStatus("当前写入点位未启用，禁止写入", false);
+            
                 Growl.Warning("当前写入点位未启用，禁止写入");
+                return;
+            }
+
+            if (config.UsesWriteRestriction && !config.IsWriteInteractionEnabled)
+            {
+              
+                Growl.Warning(string.IsNullOrWhiteSpace(config.WriteRestrictionBlockedReason) ? "限制条件未满足，禁止写入" : config.WriteRestrictionBlockedReason);
                 return;
             }
 
             if (!config.RuntimeDevice.IsEnabled || !config.RuntimeDataPoint.IsEnabled)
             {
-                config.SetWriteStatus("设备或点位未启用，禁止写入", false);
                 Growl.Warning("设备或点位未启用，禁止写入");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(rawValue) && config.DataType != FieldType.String)
             {
-                config.SetWriteStatus("请输入有效的写入值", false);
+              
                 Growl.Warning("请输入有效的写入值");
                 return;
             }
 
             if (!WriteDataPointConfig.TryConvertWriteValue(rawValue, config.DataType, out var convertedValue, out var errorMessage))
             {
-                config.SetWriteStatus(errorMessage, false);
+          
                 Growl.Warning(errorMessage);
                 return;
             }
@@ -922,14 +1044,14 @@ namespace MeasurementSoftware.ViewModels
             var (success, message) = await _plcDeviceRuntimeService.WriteDataPointValueAsync(config.RuntimeDevice, config.RuntimeDataPoint, convertedValue!);
             if (!success)
             {
-                config.SetWriteStatus(message ?? "写入失败", false);
+               
                 Growl.Warning(message ?? "写入失败");
                 return;
             }
 
             config.RuntimeDataPoint.CurrentValue = convertedValue;
             config.CompleteValueEdit(convertedValue?.ToString() ?? string.Empty);
-            config.SetWriteStatus(message ?? "写入成功", true);
+            
             RefreshCurrentValueDisplayText(config);
             Growl.Success($"{config.DisplayName} 写入成功");
             _log.Info($"写入点位 {config.DisplayName} 成功，值：{convertedValue}");
@@ -1005,7 +1127,9 @@ namespace MeasurementSoftware.ViewModels
                 ButtonWriteValueText = source.ButtonWriteValueText,
                 ButtonReleaseWriteValueText = source.ButtonReleaseWriteValueText,
                 ButtonDisplayText = source.ButtonDisplayText,
-                RuleScriptText = source.RuleScriptText
+                RuleScriptText = source.RuleScriptText,
+                EnableWriteRestriction = source.EnableWriteRestriction,
+                WriteRestrictionScriptText = source.WriteRestrictionScriptText
             };
 
             foreach (var rule in source.DisplayRules)
@@ -1017,6 +1141,17 @@ namespace MeasurementSoftware.ViewModels
                 });
             }
 
+            foreach (var variable in source.RestrictionVariables)
+            {
+                clone.RestrictionVariables.Add(new WriteValueRestrictionVariable
+                {
+                    VariableName = variable.VariableName,
+                    PlcDeviceId = variable.PlcDeviceId,
+                    DataPointId = variable.DataPointId
+                });
+            }
+
+            AttachRestrictionVariables(clone);
             EnsureRuleScriptInitialized(clone);
             RefreshCurrentValueDisplayText(clone);
 
@@ -1041,6 +1176,8 @@ namespace MeasurementSoftware.ViewModels
             target.ButtonReleaseWriteValueText = source.ButtonReleaseWriteValueText;
             target.ButtonDisplayText = source.ButtonDisplayText;
             target.RuleScriptText = source.RuleScriptText;
+            target.EnableWriteRestriction = source.EnableWriteRestriction;
+            target.WriteRestrictionScriptText = source.WriteRestrictionScriptText;
             //target.SelectedDeviceName=source.SelectedDeviceName;
             target.DisplayRules.Clear();
             foreach (var rule in source.DisplayRules)
@@ -1052,6 +1189,18 @@ namespace MeasurementSoftware.ViewModels
                 });
             }
 
+            target.RestrictionVariables.Clear();
+            foreach (var variable in source.RestrictionVariables)
+            {
+                target.RestrictionVariables.Add(new WriteValueRestrictionVariable
+                {
+                    VariableName = variable.VariableName,
+                    PlcDeviceId = variable.PlcDeviceId,
+                    DataPointId = variable.DataPointId
+                });
+            }
+
+            AttachRestrictionVariables(target);
             EnsureRuleScriptInitialized(target);
             RefreshCurrentValueDisplayText(target);
         }
@@ -1081,6 +1230,44 @@ namespace MeasurementSoftware.ViewModels
             var success = ApplyParsedRuleScript(config, config.RuleScriptText);
             errorMessage = config.RuleScriptStatusText;
             return success;
+        }
+
+        private bool ValidateWriteRestriction(WriteDataPointConfig config, out string errorMessage)
+        {
+            if (!config.UsesWriteRestriction)
+            {
+                config.SetWriteRestrictionValidationState(true, string.Empty);
+                config.SetWriteRestrictionEvaluationState(true, string.Empty);
+                errorMessage = string.Empty;
+                return true;
+            }
+
+            if (config.RestrictionVariables.Count == 0)
+            {
+                errorMessage = "限制模式至少需要配置一个变量";
+                config.SetWriteRestrictionValidationState(false, errorMessage);
+                config.SetWriteRestrictionEvaluationState(false, errorMessage);
+                return false;
+            }
+
+            if (!TryBuildRestrictionVariables(config, allowMissingCurrentValue: true, out var variables, out errorMessage))
+            {
+                config.SetWriteRestrictionValidationState(false, errorMessage);
+                config.SetWriteRestrictionEvaluationState(false, errorMessage);
+                return false;
+            }
+
+            if (!_writeRestrictionScriptEvaluator.TryEvaluateScript(config.WriteRestrictionScriptText, variables, out _, out errorMessage))
+            {
+                config.SetWriteRestrictionValidationState(false, errorMessage);
+                config.SetWriteRestrictionEvaluationState(false, errorMessage);
+                return false;
+            }
+
+            config.SetWriteRestrictionValidationState(true, string.Empty);
+            RefreshWriteRestrictionState(config);
+            errorMessage = string.Empty;
+            return true;
         }
 
         private void SyncRuleScriptFromDisplayRules(WriteDataPointConfig config)
@@ -1115,6 +1302,111 @@ namespace MeasurementSoftware.ViewModels
             return true;
         }
 
+        private void RefreshWriteRestrictionState(WriteDataPointConfig config)
+        {
+            if (!config.UsesWriteRestriction)
+            {
+                config.SetWriteRestrictionValidationState(true, string.Empty);
+                config.SetWriteRestrictionEvaluationState(true, string.Empty);
+                return;
+            }
+
+            if (!TryBuildRestrictionVariables(config, allowMissingCurrentValue: false, out var variables, out var variablesErrorMessage))
+            {
+                config.SetWriteRestrictionEvaluationState(false, variablesErrorMessage);
+                return;
+            }
+
+            if (!_writeRestrictionScriptEvaluator.TryEvaluateScript(config.WriteRestrictionScriptText, variables, out var isSatisfied, out var expressionErrorMessage))
+            {
+                config.SetWriteRestrictionValidationState(false, expressionErrorMessage);
+                config.SetWriteRestrictionEvaluationState(false, expressionErrorMessage);
+                return;
+            }
+
+            config.SetWriteRestrictionValidationState(true, string.Empty);
+            config.SetWriteRestrictionEvaluationState(isSatisfied, isSatisfied ? string.Empty : "限制条件未满足，当前禁止写入和点击操作");
+        }
+
+        private bool TryBuildRestrictionVariables(WriteDataPointConfig config, bool allowMissingCurrentValue, out Dictionary<string, object?> variables, out string errorMessage)
+        {
+            variables = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var variable in config.RestrictionVariables)
+            {
+                if (string.IsNullOrWhiteSpace(variable.VariableName))
+                {
+                    errorMessage = "限制变量名不能为空";
+                    return false;
+                }
+
+                if (!variables.TryAdd(variable.VariableName.Trim(), 0d))
+                {
+                    errorMessage = $"限制变量名重复：{variable.VariableName}";
+                    return false;
+                }
+
+                if (variable.RuntimeDevice == null)
+                {
+                    errorMessage = $"变量 {variable.VariableName} 未选择设备";
+                    return false;
+                }
+
+                if (variable.RuntimeDataPoint == null)
+                {
+                    errorMessage = $"变量 {variable.VariableName} 未选择点位";
+                    return false;
+                }
+
+                if (!TryGetRestrictionVariableValue(variable.RuntimeDataPoint.CurrentValue, allowMissingCurrentValue, out var currentValue, out errorMessage))
+                {
+                    errorMessage = $"变量 {variable.VariableName} 取值失败：{errorMessage}";
+                    return false;
+                }
+
+                variables[variable.VariableName.Trim()] = currentValue;
+            }
+
+            errorMessage = string.Empty;
+            return true;
+        }
+
+        private static bool TryGetRestrictionVariableValue(object? value, bool allowMissingCurrentValue, out object? normalizedValue, out string errorMessage)
+        {
+            normalizedValue = null;
+            if (value == null)
+            {
+                if (allowMissingCurrentValue)
+                {
+                    normalizedValue = 0d;
+                    errorMessage = string.Empty;
+                    return true;
+                }
+
+                errorMessage = "当前没有采集值";
+                return false;
+            }
+
+            switch (value)
+            {
+                case bool boolValue:
+                    normalizedValue = boolValue;
+                    errorMessage = string.Empty;
+                    return true;
+                case byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal:
+                    normalizedValue = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                    errorMessage = string.Empty;
+                    return true;
+                case string stringValue:
+                    normalizedValue = stringValue;
+                    errorMessage = string.Empty;
+                    return true;
+            }
+
+            normalizedValue = value.ToString();
+            errorMessage = string.Empty;
+            return true;
+        }
+
         private void RefreshCurrentValueDisplayText(WriteDataPointConfig config)
         {
             config.CurrentValueDisplayText = _writeValueLabelRuleService.GetDisplayText(
@@ -1122,6 +1414,7 @@ namespace MeasurementSoftware.ViewModels
                 config.UsesRuleDisplay,
                 config.DisplayRules,
                 config.DefaultDisplayText);
+            RefreshWriteRestrictionState(config);
         }
 
         private int GetNextWriteDataPointIndex()
