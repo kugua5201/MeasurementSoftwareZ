@@ -13,6 +13,7 @@
     <converters:Boolean2ColorConverter x:Key="Boolean2ColorConverter" />
     <converters:Boolean2TextConverter x:Key="Boolean2TextConverter" />
     <converters:Boolean2VisibilityConverter x:Key="Boolean2VisibilityConverter" />
+    <converters:BooleanVisibilityConverter x:Key="BooleanVisibilityConverter" />
     <converters:MeasurementFilterSettingsVisibilityConverter x:Key="MeasurementFilterSettingsVisibilityConverter" />
     <converters:FilterSampleCountMaximumConverter x:Key="FilterSampleCountMaximumConverter" />
     <converters:FilterSampleCountHintConverter x:Key="FilterSampleCountHintConverter" />

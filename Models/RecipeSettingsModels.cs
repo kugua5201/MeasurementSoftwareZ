@@ -6,6 +6,7 @@ using System.Windows.Media;
 
 namespace MeasurementSoftware.Models
 {
+
     /// <summary>
     /// 配方基本信息。
     /// 集中管理配方名称、描述、图片路径及时间元数据，便于后续统一扩展和维护。
@@ -112,6 +113,7 @@ namespace MeasurementSoftware.Models
         private PlcTriggerBindingConfig autoZeroBinding = new();
         private ObservableCollection<StepOperationBindingConfig> stepOperationBindings = CreateDefaultStepOperationBindings();
         private ObservableCollection<StepDelayConfig> stepDelaySettings = CreateDefaultStepDelaySettings(10);
+        private ObservableCollection<WriteDataPointPageConfig> writeDataPointPages = CreateDefaultWriteDataPointPages();
         private ObservableCollection<WriteDataPointConfig> writeDataPoints = [];
 
         public RecipeOtherSettingsConfig()
@@ -317,6 +319,15 @@ namespace MeasurementSoftware.Models
         }
 
         /// <summary>
+        /// 写入点位页签配置集合。
+        /// </summary>
+        public ObservableCollection<WriteDataPointPageConfig> WriteDataPointPages
+        {
+            get => writeDataPointPages;
+            set => SetProperty(ref writeDataPointPages, value ?? [], EnsureWriteDataPointPages);
+        }
+
+        /// <summary>
         /// 写入点位配置集合。
         /// </summary>
         public ObservableCollection<WriteDataPointConfig> WriteDataPoints
@@ -482,6 +493,98 @@ namespace MeasurementSoftware.Models
         public void HydrateWriteDataPoints(IEnumerable<PlcDevice> devices)
         {
             writeDataPoints ??= [];
+            EnsureWriteDataPointPages();
+
+            foreach (var point in writeDataPoints)
+            {
+                point.PageIndex = point.PageIndex <= 0 ? 1 : point.PageIndex;
+            }
+
+            var groupedPoints = writeDataPoints
+                .GroupBy(point => point.PageIndex)
+                .OrderBy(group => group.Key)
+                .ToList();
+
+            foreach (var group in groupedPoints)
+            {
+                var page = writeDataPointPages.FirstOrDefault(item => item.PageIndex == group.Key);
+                if (page == null)
+                {
+                    writeDataPointPages.Add(new WriteDataPointPageConfig
+                    {
+                        PageIndex = group.Key,
+                        PageName = $"页面{group.Key}",
+                        Order = group.Key - 1
+                    });
+                }
+
+                var orderedPoints = group
+                    .OrderBy(point => point.PageOrder <= 0 ? int.MaxValue : point.PageOrder)
+                    .ThenBy(point => point.Index)
+                    .ToList();
+
+                for (int index = 0; index < orderedPoints.Count; index++)
+                {
+                    orderedPoints[index].PageOrder = index + 1;
+                }
+            }
+
+            EnsureWriteDataPointPages();
+        }
+
+        private void EnsureWriteDataPointPages()
+        {
+            writeDataPointPages ??= [];
+
+            if (writeDataPointPages.Count == 0)
+            {
+                writeDataPointPages.Add(new WriteDataPointPageConfig
+                {
+                    PageIndex = 1,
+                    PageName = "页面1",
+                    Order = 0
+                });
+            }
+
+            var normalizedPages = writeDataPointPages
+                .GroupBy(page => page.PageIndex <= 0 ? 1 : page.PageIndex)
+                .Select(group => group.First())
+                .OrderBy(page => page.Order)
+                .ThenBy(page => page.PageIndex)
+                .ToList();
+
+            for (int index = 0; index < normalizedPages.Count; index++)
+            {
+                var page = normalizedPages[index];
+                page.PageIndex = index + 1;
+                page.Order = index;
+                if (string.IsNullOrWhiteSpace(page.PageName))
+                {
+                    page.PageName = $"页面{page.PageIndex}";
+                }
+            }
+
+            var stalePages = writeDataPointPages.Where(page => !normalizedPages.Contains(page)).ToList();
+            foreach (var stalePage in stalePages)
+            {
+                writeDataPointPages.Remove(stalePage);
+            }
+
+            for (int index = 0; index < normalizedPages.Count; index++)
+            {
+                var page = normalizedPages[index];
+                var currentIndex = writeDataPointPages.IndexOf(page);
+                if (currentIndex < 0)
+                {
+                    writeDataPointPages.Insert(index, page);
+                    continue;
+                }
+
+                if (currentIndex != index)
+                {
+                    writeDataPointPages.Move(currentIndex, index);
+                }
+            }
         }
         /// <summary>
         /// 用于确保工步操作绑定配置的完整性和正确性。
@@ -558,6 +661,19 @@ namespace MeasurementSoftware.Models
             }
 
             return settings;
+        }
+
+        private static ObservableCollection<WriteDataPointPageConfig> CreateDefaultWriteDataPointPages()
+        {
+            return
+            [
+                new WriteDataPointPageConfig
+                {
+                    PageIndex = 1,
+                    PageName = "页面1",
+                    Order = 0
+                }
+            ];
         }
 
         private static string NormalizeColorString(string? colorStr, string fallback)

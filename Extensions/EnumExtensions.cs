@@ -51,5 +51,23 @@ namespace MeasurementSoftware.Extensions
                 _ => value.GetDescription()
             };
         }
+
+        /// <summary>
+        /// 获取单个枚举值的 Description 特性值，适用于泛型枚举类型
+        /// </summary>
+        /// <typeparam name="TEnum"></typeparam>
+        /// <param name="enumValue"></param>
+        /// <returns></returns>
+        public static string GetEnumDescription<TEnum>(this TEnum enumValue) where TEnum : struct, Enum
+        {
+            var field = typeof(TEnum).GetField(enumValue.ToString());
+            var description = field?
+                .GetCustomAttributes(typeof(DescriptionAttribute), false)
+                .OfType<DescriptionAttribute>()
+                .FirstOrDefault()?
+                .Description;
+
+            return string.IsNullOrWhiteSpace(description) ? enumValue.ToString() : description;
+        }
     }
 }

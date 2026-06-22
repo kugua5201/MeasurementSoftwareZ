@@ -24,219 +24,249 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Style="{StaticResource PageToolbarBorder}">
-            <Grid>
-
-                <Button Command="{Binding SaveRecipeCommand}" Style="{StaticResource SaveRecipeButton}" />
-            </Grid>
-        </Border>
-
-
         <Grid Grid.Row="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-
-
-
-            <DataGrid
-                Grid.Row="1"
+            <hc:TabControl
                 Margin="12"
-                AllowDrop="True"
-                AutoGenerateColumns="False"
-                CanUserAddRows="False"
-                HeadersVisibility="Column"
-                ItemsSource="{Binding EnabledWriteDataPoints}"
-                SelectedItem="{Binding SelectedWriteDataPoint, Mode=TwoWay}"
-                SelectionMode="Single">
-                <DataGrid.Columns>
-                    <DataGridTextColumn
-                        Width="60"
-                        Binding="{Binding Index, Mode=OneWay}"
-                        Header="ID"
-                        IsReadOnly="True" />
-                    <DataGridTextColumn
-                        Width="160"
-                        Binding="{Binding DisplayName, Mode=OneWay}"
-                        Header="名称"
-                        IsReadOnly="True" />
-                    <DataGridTextColumn
-                        Width="130"
-                        Binding="{Binding SelectedDeviceName, Mode=OneWay}"
-                        Header="设备"
-                        IsReadOnly="True" />
-                    <DataGridTextColumn
-                        Width="180"
-                        Binding="{Binding SelectedPointName, Mode=OneWay}"
-                        Header="点位"
-                        IsReadOnly="True" />
-                    <DataGridTemplateColumn Width="240" Header="值/操作">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="Auto" />
-                                    </Grid.RowDefinitions>
-                                    <Grid>
-                                        <Grid.Style>
-                                            <Style TargetType="Grid">
+                IsDraggable="False"
+                IsScrollable="True"
+                ItemsSource="{Binding WriteDataPointPages}"
+                SelectedItem="{Binding SelectedDisplayPage, Mode=TwoWay}"
+                ShowCloseButton="False"
+                ShowContextMenu="False">
+                <hc:TabControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding PageName}" ToolTip="{Binding PageName}" />
+                    </DataTemplate>
+                </hc:TabControl.ItemTemplate>
+                <hc:TabControl.ContentTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Border Background="{DynamicResource RegionBrush}" CornerRadius="6">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Data.CurrentPageEnabledWriteDataPoints.Count, Source={StaticResource VmProxy}}" Value="0">
                                                 <Setter Property="Visibility" Value="Visible" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsValueEditing}" Value="True">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Grid.Style>
-                                        <ContentControl Visibility="{Binding IsLabelMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                            <TextBlock VerticalAlignment="Center" Text="{Binding CurrentValueDisplayText}" />
-                                        </ContentControl>
-                                        <ContentControl Visibility="{Binding IsTextBoxMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                            <Border
-                                                Background="Transparent"
-                                                Cursor="Hand"
-                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                PreviewMouseLeftButtonDown="TextBoxValueBorder_PreviewMouseLeftButtonDown">
-                                                <Border.ToolTip>
-                                                    <TextBlock Text="{Binding WriteRestrictionBlockedReason}" />
-                                                </Border.ToolTip>
-                                                <TextBlock VerticalAlignment="Center" Text="{Binding PendingWriteValueText}" />
-                                            </Border>
-                                        </ContentControl>
-                                        <ContentControl Visibility="{Binding IsButtonMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                            <StackPanel Orientation="Horizontal">
-                                                <ContentControl Visibility="{Binding IsButtonClickWriteMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                                    <Button
-                                                        MaxWidth="100"
-                                                        Margin="0,0,0,0"
-                                                        Padding="10,4"
-                                                        HorizontalContentAlignment="Left"
-                                                        Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
-                                                        CommandParameter="{Binding}"
-                                                        Content="{Binding ButtonDisplayText}"
-                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                        Style="{StaticResource ButtonDanger}">
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontFamily="Segoe MDL2 Assets"
+                                        FontSize="48"
+                                        Foreground="{DynamicResource BorderBrush}"
+                                        Text="&#xE70F;" />
+                                    <TextBlock
+                                        Margin="0,12,0,0"
+                                        HorizontalAlignment="Center"
+                                        FontSize="16"
+                                        Foreground="{DynamicResource ThirdTextBrush}"
+                                        Text="当前页面暂无启用点位" />
+                                </StackPanel>
+                            </Border>
 
-                                                        <Button.ToolTip>
-                                                            <TextBlock Text="{Binding ButtonDisplayText}" />
-                                                        </Button.ToolTip>
-                                                        <Button.ContentTemplate>
-                                                            <DataTemplate>
-                                                                <TextBlock
-                                                                    Text="{Binding}"
-                                                                    TextTrimming="CharacterEllipsis"
-                                                                    ToolTip="{Binding}" />
-                                                            </DataTemplate>
-                                                        </Button.ContentTemplate>
-                                                    </Button>
-                                                </ContentControl>
+                            <DataGrid
+                                AutoGenerateColumns="False"
+                                CanUserAddRows="False"
+                                HeadersVisibility="Column"
+                                ItemsSource="{Binding Data.CurrentPageEnabledWriteDataPoints, Source={StaticResource VmProxy}}"
+                                SelectedItem="{Binding Data.SelectedWriteDataPoint, Source={StaticResource VmProxy}, Mode=TwoWay}"
+                                SelectionMode="Single">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn
+                                        Width="60"
+                                        Binding="{Binding PageOrder, Mode=OneWay}"
+                                        Header="序号"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        Width="160"
+                                        Binding="{Binding DisplayName, Mode=OneWay}"
+                                        Header="名称"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        Width="130"
+                                        Binding="{Binding SelectedDeviceName, Mode=OneWay}"
+                                        Header="设备"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        Width="180"
+                                        Binding="{Binding SelectedPointName, Mode=OneWay}"
+                                        Header="点位"
+                                        IsReadOnly="True" />
+                                    <DataGridTemplateColumn Width="240" Header="值/操作">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <Grid>
+                                                        <Grid.Style>
+                                                            <Style TargetType="Grid">
+                                                                <Setter Property="Visibility" Value="Visible" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsValueEditing}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Grid.Style>
+                                                        <ContentControl Visibility="{Binding IsLabelMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                            <TextBlock VerticalAlignment="Center" Text="{Binding CurrentValueDisplayText}" />
+                                                        </ContentControl>
+                                                        <ContentControl Visibility="{Binding IsTextBoxMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                            <Border
+                                                                Background="Transparent"
+                                                                Cursor="Hand"
+                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                PreviewMouseLeftButtonDown="TextBoxValueBorder_PreviewMouseLeftButtonDown">
+                                                                <Border.ToolTip>
+                                                                    <TextBlock Text="{Binding WriteRestrictionBlockedReason}" />
+                                                                </Border.ToolTip>
+                                                                <TextBlock VerticalAlignment="Center" Text="{Binding PendingWriteValueText}" />
+                                                            </Border>
+                                                        </ContentControl>
+                                                        <ContentControl Visibility="{Binding IsButtonMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <ContentControl Visibility="{Binding IsButtonClickWriteMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                                    <Button
+                                                                        MaxWidth="100"
+                                                                        Margin="0,0,0,0"
+                                                                        Padding="10,4"
+                                                                        HorizontalContentAlignment="Left"
+                                                                        Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Content="{Binding ButtonDisplayText}"
+                                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                        Style="{StaticResource ButtonDanger}">
 
-                                                <ContentControl Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                                    <Button
-                                                        MaxWidth="100"
-                                                        Margin="0,0,0,0"
-                                                        Padding="10,4"
-                                                        HorizontalContentAlignment="Left"
-                                                        Content="{Binding ButtonDisplayText}"
-                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                        Style="{StaticResource ButtonDanger}">
-                                                        <i:Interaction.Triggers>
-                                                            <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
-                                                                <i:InvokeCommandAction Command="{Binding Data.SubmitButtonPressWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
-                                                            </i:EventTrigger>
-                                                            <i:EventTrigger EventName="PreviewMouseLeftButtonUp">
-                                                                <i:InvokeCommandAction Command="{Binding Data.SubmitButtonReleaseWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
-                                                            </i:EventTrigger>
-                                                        </i:Interaction.Triggers>
+                                                                        <Button.ToolTip>
+                                                                            <TextBlock Text="{Binding ButtonDisplayText}" />
+                                                                        </Button.ToolTip>
+                                                                        <Button.ContentTemplate>
+                                                                            <DataTemplate>
+                                                                                <TextBlock
+                                                                                    Text="{Binding}"
+                                                                                    TextTrimming="CharacterEllipsis"
+                                                                                    ToolTip="{Binding}" />
+                                                                            </DataTemplate>
+                                                                        </Button.ContentTemplate>
+                                                                    </Button>
+                                                                </ContentControl>
 
-                                                        <Button.ToolTip>
-                                                            <TextBlock Text="{Binding ButtonDisplayText}" />
-                                                        </Button.ToolTip>
-                                                        <Button.ContentTemplate>
-                                                            <DataTemplate>
-                                                                <TextBlock
-                                                                    Text="{Binding}"
-                                                                    TextTrimming="CharacterEllipsis"
-                                                                    ToolTip="{Binding}" />
-                                                            </DataTemplate>
-                                                        </Button.ContentTemplate>
-                                                    </Button>
-                                                </ContentControl>
-                                            </StackPanel>
-                                        </ContentControl>
-                                    </Grid>
-                                    <StackPanel Grid.Row="1">
-                                        <StackPanel Orientation="Horizontal">
-                                            <StackPanel.Style>
-                                                <Style TargetType="StackPanel">
-                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsValueEditing}" Value="True">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                        </DataTrigger>
-                                                        <DataTrigger Binding="{Binding IsButtonMode}" Value="True">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </StackPanel.Style>
-                                            <TextBox
-                                                Width="110"
-                                                Margin="0,0,6,0"
-                                                hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
-                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                Style="{StaticResource TextBoxExtend}"
-                                                Text="{Binding EditingWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, Mode=TwoWay, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
-                                                ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}">
-                                                <TextBox.InputBindings>
-                                                    <KeyBinding
-                                                        Key="Enter"
-                                                        Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
-                                                        CommandParameter="{Binding}" />
-                                                    <KeyBinding
-                                                        Key="Escape"
-                                                        Command="{Binding Data.CancelRowValueEditCommand, Source={StaticResource VmProxy}}"
-                                                        CommandParameter="{Binding}" />
-                                                </TextBox.InputBindings>
-                                            </TextBox>
-                                            <Button
-                                                Margin="0,0,6,0"
-                                                Padding="10,4"
-                                                Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
-                                                CommandParameter="{Binding}"
-                                                Content="写入"
-                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                Style="{StaticResource ButtonDanger}" />
-                                            <Button
-                                                Padding="10,4"
-                                                Command="{Binding Data.CancelRowValueEditCommand, Source={StaticResource VmProxy}}"
-                                                CommandParameter="{Binding}"
-                                                Content="取消"
-                                                Style="{StaticResource ButtonDefault}" />
-                                        </StackPanel>
-                                    </StackPanel>
-                                </Grid>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                    <DataGridTextColumn
-                        Width="180"
-                        Binding="{Binding EditorModeDisplayText, Mode=OneWay}"
-                        Header="写值方式"
-                        IsReadOnly="True" />
-                    <DataGridTextColumn
-                        Width="80"
-                        Binding="{Binding Unit, Mode=OneWay}"
-                        Header="单位"
-                        IsReadOnly="True" />
-                    <DataGridTextColumn
-                        MinWidth="200"
-                        Binding="{Binding DisplayDescription, Mode=OneWay}"
-                        Header="说明"
-                        IsReadOnly="True" />
-                </DataGrid.Columns>
-            </DataGrid>
+                                                                <ContentControl Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                                    <Button
+                                                                        MaxWidth="100"
+                                                                        Margin="0,0,0,0"
+                                                                        Padding="10,4"
+                                                                        HorizontalContentAlignment="Left"
+                                                                        Content="{Binding ButtonDisplayText}"
+                                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                        Style="{StaticResource ButtonDanger}">
+                                                                        <i:Interaction.Triggers>
+                                                                            <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                                                                                <i:InvokeCommandAction Command="{Binding Data.SubmitButtonPressWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
+                                                                            </i:EventTrigger>
+                                                                            <i:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                                                                                <i:InvokeCommandAction Command="{Binding Data.SubmitButtonReleaseWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
+                                                                            </i:EventTrigger>
+                                                                        </i:Interaction.Triggers>
+
+                                                                        <Button.ToolTip>
+                                                                            <TextBlock Text="{Binding ButtonDisplayText}" />
+                                                                        </Button.ToolTip>
+                                                                        <Button.ContentTemplate>
+                                                                            <DataTemplate>
+                                                                                <TextBlock
+                                                                                    Text="{Binding}"
+                                                                                    TextTrimming="CharacterEllipsis"
+                                                                                    ToolTip="{Binding}" />
+                                                                            </DataTemplate>
+                                                                        </Button.ContentTemplate>
+                                                                    </Button>
+                                                                </ContentControl>
+                                                            </StackPanel>
+                                                        </ContentControl>
+                                                    </Grid>
+                                                    <StackPanel Grid.Row="1">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <StackPanel.Style>
+                                                                <Style TargetType="StackPanel">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding IsValueEditing}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                        <DataTrigger Binding="{Binding IsButtonMode}" Value="True">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </StackPanel.Style>
+                                                            <TextBox
+                                                                Width="110"
+                                                                Margin="0,0,6,0"
+                                                                hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
+                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                Style="{StaticResource TextBoxExtend}"
+                                                                Text="{Binding EditingWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, Mode=TwoWay, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
+                                                                ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}">
+                                                                <TextBox.InputBindings>
+                                                                    <KeyBinding
+                                                                        Key="Enter"
+                                                                        Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
+                                                                        CommandParameter="{Binding}" />
+                                                                    <KeyBinding
+                                                                        Key="Escape"
+                                                                        Command="{Binding Data.CancelRowValueEditCommand, Source={StaticResource VmProxy}}"
+                                                                        CommandParameter="{Binding}" />
+                                                                </TextBox.InputBindings>
+                                                            </TextBox>
+                                                            <Button
+                                                                Margin="0,0,6,0"
+                                                                Padding="10,4"
+                                                                Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
+                                                                CommandParameter="{Binding}"
+                                                                Content="写入"
+                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                Style="{StaticResource ButtonDanger}" />
+                                                            <Button
+                                                                Padding="10,4"
+                                                                Command="{Binding Data.CancelRowValueEditCommand, Source={StaticResource VmProxy}}"
+                                                                CommandParameter="{Binding}"
+                                                                Content="取消"
+                                                                Style="{StaticResource ButtonDefault}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn
+                                        Width="180"
+                                        Binding="{Binding EditorModeDisplayText, Mode=OneWay}"
+                                        Header="写值方式"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        Width="80"
+                                        Binding="{Binding Unit, Mode=OneWay}"
+                                        Header="单位"
+                                        IsReadOnly="True" />
+                                    <DataGridTextColumn
+                                        MinWidth="200"
+                                        Binding="{Binding DisplayDescription, Mode=OneWay}"
+                                        Header="说明"
+                                        IsReadOnly="True" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Grid>
+                    </DataTemplate>
+                </hc:TabControl.ContentTemplate>
+            </hc:TabControl>
         </Grid>
 
     </Grid>

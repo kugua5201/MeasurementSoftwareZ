@@ -190,7 +190,7 @@
                                         FontSize="12"
                                         Foreground="White"
                                         Opacity="0.9"
-                                        Text="支持USB扫码枪或键盘直接输入，焦点位于输入框时自动接收" />
+                                        Text="支持USB扫码枪或键盘直接输入，焦点位于输入框时自动接收,键盘输入内容输入完毕时，需按下回车键" />
                                 </StackPanel>
 
                             </StackPanel>

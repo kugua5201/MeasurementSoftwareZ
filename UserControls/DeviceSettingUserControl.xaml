@@ -998,7 +998,7 @@
                                     CanUserSort="False"
                                     Header="当前值"
                                     IsReadOnly="True" />
-                                <DataGridTemplateColumn Width="100" Header="启用预设">
+                                <DataGridTemplateColumn Width="100" Header="启用替换">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <CheckBox
@@ -1031,7 +1031,7 @@
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTemplateColumn Width="120" Header="下限预设值">
+                                <DataGridTemplateColumn Width="120" Header="下限替换值">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock
@@ -1071,7 +1071,7 @@
                                     </DataGridTemplateColumn.CellEditingTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTemplateColumn Width="120" Header="上限预设值">
+                                <DataGridTemplateColumn Width="120" Header="上限替换值">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <TextBlock

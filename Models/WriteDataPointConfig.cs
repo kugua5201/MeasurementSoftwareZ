@@ -233,10 +233,12 @@ namespace MeasurementSoftware.Models
     /// 写入点位配置。
     /// 用于定义写入目标、展示风格和标签模式下的规则映射。
     /// </summary>
-    public class WriteDataPointConfig : ObservableViewModel, IDataErrorInfo
+    public partial class WriteDataPointConfig : ObservableViewModel, IDataErrorInfo
     {
         private bool isEnabled = true;
         private int index;
+        private int pageIndex = 1;
+        private int pageOrder;
         private string displayName = string.Empty;
         private long plcDeviceId;
         private string dataPointId = string.Empty;
@@ -280,6 +282,26 @@ namespace MeasurementSoftware.Models
         {
             get => index;
             set => SetProperty(ref index, value);
+        }
+
+        /// <summary>
+        /// 所属页码。
+        /// 用于在写入点位页面中按页签分组展示。
+        /// </summary>
+        public int PageIndex
+        {
+            get => pageIndex;
+            set => SetProperty(ref pageIndex, Math.Max(1, value));
+        }
+
+        /// <summary>
+        /// 页内顺序。
+        /// 仅用于当前页签内的显示与移动排序。
+        /// </summary>
+        public int PageOrder
+        {
+            get => pageOrder;
+            set => SetProperty(ref pageOrder, Math.Max(0, value));
         }
 
         /// <summary>
@@ -542,7 +564,7 @@ namespace MeasurementSoftware.Models
             set => SetProperty(ref writeStatusText, value, () => OnPropertyChanged(nameof(HasWriteStatus)));
         }
 
-      
+
         /// <summary>
         /// 是否允许外部页面直接显示原始值。
         /// </summary>
@@ -566,6 +588,9 @@ namespace MeasurementSoftware.Models
 
         [JsonIgnore]
         public bool IsButtonPressAndReleaseMode => IsButtonMode && ButtonInteractionMode == WriteValueButtonInteractionMode.PressAndRelease;
+
+        [JsonIgnore]
+        public bool IsEnableTextBoxMode => EditorMode == WriteValueEditorMode.TextBox && EnableTextBoxValidation;
 
         [JsonIgnore]
         public string ButtonPrimaryValueLabel => IsButtonPressAndReleaseMode ? "按下值：" : "点击值：";
@@ -803,12 +828,39 @@ namespace MeasurementSoftware.Models
                         return string.Empty;
                     }
 
-                    if (TryConvertWriteValue(EditingWriteValueText, DataType, out _, out var editErrorMessage))
+
+                    if (string.IsNullOrWhiteSpace(EditingWriteValueText))
                     {
-                        return string.Empty;
+                        return "验证失败：请输入写入值";
                     }
 
-                    return $"验证失败：{editErrorMessage}";
+                    if (!TryConvertWriteValue(EditingWriteValueText, DataType, out var editValue, out var editErrorMessage))
+                    {
+                        return $"验证失败：{editErrorMessage}";
+                    }
+
+
+                    if (EnableTextBoxValidation)
+                    {
+                        if (!string.IsNullOrWhiteSpace(ValidationMinValue) &&
+                            TryConvertWriteValue(ValidationMinValue, DataType, out var minValue, out _))
+                        {
+                            if (CompareWriteValue(editValue!, minValue!) < 0)
+                            {
+                                return $"验证失败：写入值不能小于下限值 {ValidationMinValue}";
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(ValidationMaxValue) &&
+                            TryConvertWriteValue(ValidationMaxValue, DataType, out var maxValue, out _))
+                        {
+                            if (CompareWriteValue(editValue!, maxValue!) > 0)
+                            {
+                                return $"验证失败：写入值不能大于上限值 {ValidationMaxValue}";
+                            }
+                        }
+                    }
+
                 }
 
                 if (columnName == nameof(ButtonWriteValueText))
@@ -850,11 +902,70 @@ namespace MeasurementSoftware.Models
 
                     return $"验证失败：{releaseErrorMessage}";
                 }
+                if (EnableTextBoxValidation)
+                {
+                    if (columnName == nameof(ValidationMaxValue))
+                    {
+                        if (string.IsNullOrWhiteSpace(ValidationMaxValue))
+                        {
+                            return "验证失败：请输入上限值";
+                        }
+
+                        if (!TryConvertWriteValue(ValidationMaxValue, DataType, out var maxValue, out var maxErrorMessage))
+                        {
+                            return $"验证失败：{maxErrorMessage}";
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(ValidationMinValue) &&
+                            TryConvertWriteValue(ValidationMinValue, DataType, out var minValue, out _))
+                        {
+                            if (CompareWriteValue(minValue!, maxValue!) > 0)
+                            {
+                                return "验证失败：下限值不能大于上限值";
+                            }
+                        }
+
+                        return string.Empty;
+                    }
+
+                    if (columnName == nameof(ValidationMinValue))
+                    {
+                        if (string.IsNullOrWhiteSpace(ValidationMinValue))
+                        {
+                            return "验证失败：请输入下限值";
+                        }
+
+                        if (!TryConvertWriteValue(ValidationMinValue, DataType, out var minValue, out var minErrorMessage))
+                        {
+                            return $"验证失败：{minErrorMessage}";
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(ValidationMaxValue) &&
+                            TryConvertWriteValue(ValidationMaxValue, DataType, out var maxValue, out _))
+                        {
+                            if (CompareWriteValue(minValue!, maxValue!) > 0)
+                            {
+                                return "验证失败：下限值不能大于上限值";
+                            }
+                        }
+
+                        return string.Empty;
+                    }
+                }
 
                 return string.Empty;
             }
         }
+        private int CompareWriteValue(object left, object right)
+        {
+            if (decimal.TryParse(left?.ToString(), out var l) &&
+                decimal.TryParse(right?.ToString(), out var r))
+            {
+                return l.CompareTo(r);
+            }
 
+            return string.Compare(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
+        }
         public static bool TryConvertWriteValue(string rawValue, FieldType dataType, out object? value, out string errorMessage)
         {
             errorMessage = string.Empty;
@@ -930,5 +1041,26 @@ namespace MeasurementSoftware.Models
             IsRuleScriptValid = isValid;
             RuleScriptStatusText = statusText;
         }
+
+        /// <summary>
+        /// 输入输出 是否启用验证
+        /// </summary>
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(ValidationMinValue))]
+        [NotifyPropertyChangedFor(nameof(ValidationMaxValue))]
+        private bool enableTextBoxValidation;
+
+        /// <summary>
+        /// 输入输出下限值
+        /// </summary>
+        [ObservableProperty]
+        private string? validationMinValue;
+        /// <summary>
+        /// 输入输出上限值
+        /// </summary>
+        [ObservableProperty]
+        private string? validationMaxValue;
+
+       
     }
 }

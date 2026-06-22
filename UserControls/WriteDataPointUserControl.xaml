@@ -5,6 +5,7 @@
     xmlns:avalonedit="clr-namespace:ICSharpCode.AvalonEdit;assembly=ICSharpCode.AvalonEdit"
     xmlns:behaviors="clr-namespace:MeasurementSoftware.Behaviors"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
     xmlns:hc="https://handyorg.github.io/handycontrol"
     xmlns:helpers="clr-namespace:MeasurementSoftware.Helpers"
     xmlns:highlighting="clr-namespace:MeasurementSoftware.Helpers"
@@ -21,31 +22,6 @@
             TargetType="ComboBoxItem">
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-        <!--<Style
-            x:Key="WriteDataPointValidationTextBoxStyle"
-            BasedOn="{StaticResource TextBoxExtend}"
-            TargetType="TextBox">
-            <Setter Property="Validation.ErrorTemplate">
-                <Setter.Value>
-                    <ControlTemplate>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="8" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <AdornedElementPlaceholder Grid.Column="0" VerticalAlignment="Top" />
-                            <TextBlock
-                                Grid.Column="2"
-                                VerticalAlignment="Center"
-                                Foreground="Red"
-                                Text="{Binding [0].ErrorContent}"
-                                TextWrapping="Wrap" />
-                        </Grid>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>-->
     </UserControl.Resources>
 
     <hc:SimplePanel>
@@ -62,28 +38,23 @@
                             Margin="0,0,8,0"
                             Padding="15,6"
                             Command="{Binding AddWriteDataPointCommand}"
-                            Content="添加点位"
+                            Content="添加通道"
                             Style="{StaticResource ButtonPrimary}" />
                         <Button
                             Margin="0,0,8,0"
                             Padding="15,6"
                             Command="{Binding DeleteWriteDataPointCommand}"
-                            Content="删除点位"
+                            Content="删除通道"
                             Style="{StaticResource ButtonDanger}" />
                         <Button
                             Margin="0,0,8,0"
                             Padding="15,6"
-                            Command="{Binding ResetWriteDataPointOrderCommand}"
-                            Content="重新编号"
-                            Style="{StaticResource ButtonPrimary}" />
-                        <Button
-                            Margin="0,0,8,0"
                             Command="{Binding UpChannelCommand}"
-                            Content="上移点位"
+                            Content="上移通道"
                             Style="{StaticResource ButtonInfo}" />
                         <Button
                             Command="{Binding DownChannelCommand}"
-                            Content="下移点位"
+                            Content="下移通道"
                             Style="{StaticResource ButtonSuccess}" />
                     </StackPanel>
                     <Button Command="{Binding SaveRecipeCommand}" Style="{StaticResource SaveRecipeButton}" />
@@ -99,255 +70,415 @@
 
 
                 <Grid Grid.Row="1">
-                    <Border Background="{DynamicResource RegionBrush}" CornerRadius="6">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Visible" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding WriteDataPoints.Count}" Value="0">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding WriteDataPoints.Count}" Value="1">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock
-                                HorizontalAlignment="Center"
-                                FontFamily="Segoe MDL2 Assets"
-                                FontSize="48"
-                                Foreground="{DynamicResource BorderBrush}"
-                                Text="&#xE70F;" />
-                            <TextBlock
-                                Margin="0,12,0,0"
-                                HorizontalAlignment="Center"
-                                FontSize="16"
-                                Foreground="{DynamicResource ThirdTextBrush}"
-                                Text="请先添加写入点位配置" />
-                        </StackPanel>
-                    </Border>
-
-                    <DataGrid
+                    <hc:TabControl
                         Margin="12"
-                        AllowDrop="True"
-                        AutoGenerateColumns="False"
-                        CanUserAddRows="False"
-                        DragOver="DataGrid_DragOver"
-                        Drop="DataGrid_Drop"
-                        HeadersVisibility="Column"
-                        ItemsSource="{Binding WriteDataPoints}"
-                        MouseMove="DataGrid_MouseMove"
-                        PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown"
-                        SelectedItem="{Binding SelectedWriteDataPoint, Mode=TwoWay}"
-                        SelectionMode="Single">
-                        <DataGrid.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Command="{Binding AddWriteDataPointCommand}" Header="添加点位" />
-                                <MenuItem Command="{Binding DeleteWriteDataPointCommand}" Header="删除点位" />
-                                <MenuItem Command="{Binding ResetWriteDataPointOrderCommand}" Header="重新编号" />
-                                <MenuItem Command="{Binding UpChannelCommand}" Header="上移点位" />
-                                <MenuItem Command="{Binding DownChannelCommand}" Header="下移点位" />
-                            </ContextMenu>
-                        </DataGrid.ContextMenu>
-                        <i:Interaction.Triggers>
-                            <i:EventTrigger EventName="MouseDoubleClick">
-                                <i:InvokeCommandAction Command="{Binding OpenWriteDataPointEditorCommand}" CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
-                            </i:EventTrigger>
-                        </i:Interaction.Triggers>
-                        <DataGrid.Columns>
-                            <DataGridTextColumn
-                                Width="60"
-                                Binding="{Binding Index, Mode=OneWay}"
-                                Header="ID"
-                                IsReadOnly="True" />
-                            <DataGridCheckBoxColumn
-                                Width="70"
-                                Binding="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                Header="启用"
-                                IsReadOnly="False" />
-                            <DataGridTextColumn
-                                Width="160"
-                                Binding="{Binding DisplayName, Mode=OneWay}"
-                                Header="名称"
-                                IsReadOnly="True" />
-                            <DataGridTextColumn
-                                Width="130"
-                                Binding="{Binding SelectedDeviceName, Mode=OneWay}"
-                                Header="设备"
-                                IsReadOnly="True" />
-                            <DataGridTextColumn
-                                Width="180"
-                                Binding="{Binding SelectedPointName, Mode=OneWay}"
-                                Header="点位"
-                                IsReadOnly="True" />
-                            <DataGridTemplateColumn Width="240" Header="值/操作">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Grid>
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="Auto" />
-                                                <RowDefinition Height="Auto" />
-                                            </Grid.RowDefinitions>
-                                            <Grid>
-                                                <Grid.Style>
-                                                    <Style TargetType="Grid">
-                                                        <Setter Property="Visibility" Value="Visible" />
+                        IsDraggable="True"
+                        IsScrollable="True"
+                        ItemsSource="{Binding WriteDataPointPages}"
+                        PreviewMouseRightButtonDown="TabControl_PreviewMouseRightButtonDown"
+                        SelectedItem="{Binding SelectedEditPage, Mode=TwoWay}"
+                        ShowCloseButton="False"
+                        ShowContextMenu="False">
+                        <hc:TabControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <ContextMenu.DataContext>
+                                                <Binding Path="PlacementTarget.DataContext" RelativeSource="{RelativeSource Self}" />
+                                            </ContextMenu.DataContext>
+                                            <MenuItem Command="{Binding Data.AddWriteDataPointPageCommand, Source={StaticResource VmProxy}}" Header="添加页面" />
+                                            <MenuItem
+                                                Command="{Binding Data.BeginEditWriteDataPointPageCommand, Source={StaticResource VmProxy}}"
+                                                CommandParameter="{Binding}"
+                                                Header="修改名称" />
+                                            <MenuItem
+                                                Command="{Binding Data.DeleteWriteDataPointPageCommand, Source={StaticResource VmProxy}}"
+                                                CommandParameter="{Binding}"
+                                                Header="删除页面">
+                                                <MenuItem.Style>
+                                                    <Style BasedOn="{StaticResource MenuItemBaseStyle}" TargetType="MenuItem">
+                                                        <Setter Property="IsEnabled" Value="True" />
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsValueEditing}" Value="True">
-                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                            <DataTrigger Binding="{Binding PageIndex}" Value="1">
+                                                                <Setter Property="IsEnabled" Value="False" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
-                                                </Grid.Style>
-                                                <ContentControl Visibility="{Binding IsLabelMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                                    <TextBlock VerticalAlignment="Center" Text="{Binding CurrentValueDisplayText}" />
-                                                </ContentControl>
-                                                <ContentControl Visibility="{Binding IsTextBoxMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                                    <Border
-                                                        Background="Transparent"
-                                                        Cursor="Hand"
-                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                        PreviewMouseLeftButtonDown="TextBoxValueBorder_PreviewMouseLeftButtonDown">
-                                                        <Border.ToolTip>
-                                                            <TextBlock Text="{Binding WriteRestrictionBlockedReason}" />
-                                                        </Border.ToolTip>
-                                                        <TextBlock VerticalAlignment="Center" Text="{Binding PendingWriteValueText}" />
-                                                    </Border>
-                                                </ContentControl>
-                                                <ContentControl Visibility="{Binding IsButtonMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <ContentControl Visibility="{Binding IsButtonClickWriteMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                                            <Button
-                                                                MaxWidth="100"
-                                                                Margin="0,0,0,0"
-                                                                Padding="10,4"
-                                                                HorizontalContentAlignment="Left"
-                                                                Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
-                                                                CommandParameter="{Binding}"
-                                                                Content="{Binding ButtonDisplayText}"
-                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                                Style="{StaticResource ButtonDanger}">
+                                                </MenuItem.Style>
+                                            </MenuItem>
+                                            <MenuItem Header="删除页面并移动通道">
+                                                <MenuItem.Style>
+                                                    <Style BasedOn="{StaticResource MenuItemBaseStyle}" TargetType="MenuItem">
+                                                        <Setter Property="IsEnabled" Value="True" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding PageIndex}" Value="1">
+                                                                <Setter Property="IsEnabled" Value="False" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </MenuItem.Style>
+                                                <MenuItem.ItemsSource>
+                                                    <Binding Path="Data.OtherEditPages" Source="{StaticResource VmProxy}" />
+                                                </MenuItem.ItemsSource>
+                                                <MenuItem.ItemContainerStyle>
+                                                    <Style BasedOn="{StaticResource MenuItemBaseStyle}" TargetType="MenuItem">
+                                                        <Setter Property="Header" Value="{Binding PageName}" />
+                                                        <Setter Property="Command" Value="{Binding Data.DeleteWriteDataPointPageAndMoveChannelsCommand, Source={StaticResource VmProxy}}" />
+                                                        <Setter Property="CommandParameter" Value="{Binding}" />
+                                                    </Style>
+                                                </MenuItem.ItemContainerStyle>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
+                                    <TextBlock
+                                        HorizontalAlignment="Stretch"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding PageName}"
+                                        ToolTip="{Binding PageName}"
+                                        Visibility="{Binding IsEditing, Converter={StaticResource BooleanVisibilityConverter}}" />
+                                    <!--  这里加这个只是为了解决hc首次编辑的时候不显示textbox里面的内容的问题，没有其他作用  -->
+                                    <Label
+                                        Width="100"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Content=""
+                                        IsHitTestVisible="False" />
+                                    <TextBox
+                                        Background="White"
+                                        BorderThickness="0"
+                                        Foreground="Black"
+                                        IsReadOnly="False"
+                                        Text="{Binding EditingPageName, UpdateSourceTrigger=PropertyChanged}"
+                                        Visibility="{Binding IsEditing, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                        <i:Interaction.Behaviors>
+                                            <behaviors:CommitWriteDataPointPageEditBehavior />
+                                        </i:Interaction.Behaviors>
+                                    </TextBox>
+                                </Grid>
+                            </DataTemplate>
+                        </hc:TabControl.ItemTemplate>
+                        <hc:TabControl.ContentTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Border Background="{DynamicResource RegionBrush}" CornerRadius="6">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Data.CurrentPageWriteDataPoints.Count, Source={StaticResource VmProxy}}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock
+                                                HorizontalAlignment="Center"
+                                                FontFamily="Segoe MDL2 Assets"
+                                                FontSize="48"
+                                                Foreground="{DynamicResource BorderBrush}"
+                                                Text="&#xE70F;" />
+                                            <TextBlock
+                                                Margin="0,12,0,0"
+                                                HorizontalAlignment="Center"
+                                                FontSize="16"
+                                                Foreground="{DynamicResource ThirdTextBrush}"
+                                                Text="当前页面暂无写入点位" />
+                                        </StackPanel>
+                                    </Border>
 
-                                                                <Button.ToolTip>
-                                                                    <TextBlock Text="{Binding ButtonDisplayText}" />
-                                                                </Button.ToolTip>
-                                                                <Button.ContentTemplate>
-                                                                    <DataTemplate>
-                                                                        <TextBlock
-                                                                            Text="{Binding}"
-                                                                            TextTrimming="CharacterEllipsis"
-                                                                            ToolTip="{Binding}" />
-                                                                    </DataTemplate>
-                                                                </Button.ContentTemplate>
-                                                            </Button>
-                                                        </ContentControl>
-                                                        <ContentControl Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}">
-                                                            <Button
-                                                                MaxWidth="100"
-                                                                Margin="0,0,0,0"
-                                                                Padding="10,4"
-                                                                HorizontalContentAlignment="Left"
-                                                                Content="{Binding ButtonDisplayText}"
-                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                                Style="{StaticResource ButtonDanger}">
-                                                                <i:Interaction.Triggers>
-                                                                    <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
-                                                                        <i:InvokeCommandAction Command="{Binding Data.SubmitButtonPressWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
-                                                                    </i:EventTrigger>
-                                                                    <i:EventTrigger EventName="PreviewMouseLeftButtonUp">
-                                                                        <i:InvokeCommandAction Command="{Binding Data.SubmitButtonReleaseWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
-                                                                    </i:EventTrigger>
-                                                                </i:Interaction.Triggers>
-                                                                <Button.ToolTip>
-                                                                    <TextBlock Text="{Binding ButtonDisplayText}" />
-                                                                </Button.ToolTip>
-                                                                <Button.ContentTemplate>
-                                                                    <DataTemplate>
-                                                                        <TextBlock
-                                                                            Text="{Binding}"
-                                                                            TextTrimming="CharacterEllipsis"
-                                                                            ToolTip="{Binding}" />
-                                                                    </DataTemplate>
-                                                                </Button.ContentTemplate>
-                                                            </Button>
-                                                        </ContentControl>
+                                    <DataGrid
+                                        Margin="0"
+                                        behaviors:DataGridSelectedItemsBehavior.SyncedSelectedItems="{Binding Data.SelectedWriteDataPoints, Source={StaticResource VmProxy}}"
+                                        AllowDrop="True"
+                                        AutoGenerateColumns="False"
+                                        CanUserAddRows="False"
+                                        DragOver="DataGrid_DragOver"
+                                        Drop="DataGrid_Drop"
+                                        HeadersVisibility="Column"
+                                        ItemsSource="{Binding Data.CurrentPageWriteDataPoints, Source={StaticResource VmProxy}}"
+                                        MouseMove="DataGrid_MouseMove"
+                                        PreviewMouseLeftButtonDown="DataGrid_PreviewMouseLeftButtonDown"
+                                        SelectedItem="{Binding Data.SelectedWriteDataPoint, Source={StaticResource VmProxy}, Mode=TwoWay}"
+                                        SelectionMode="Extended"
+                                        SelectionUnit="FullRow">
+                                        <DataGrid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Command="{Binding Data.AddWriteDataPointCommand, Source={StaticResource VmProxy}}" Header="添加通道" />
+                                                <MenuItem Command="{Binding Data.DeleteWriteDataPointCommand, Source={StaticResource VmProxy}}" Header="删除通道" />
+                                                <MenuItem Command="{Binding Data.UpChannelCommand, Source={StaticResource VmProxy}}" Header="上移通道" />
+                                                <MenuItem Command="{Binding Data.DownChannelCommand, Source={StaticResource VmProxy}}" Header="下移通道" />
+                                                <MenuItem Header="移动页面">
+                                                    <MenuItem.ItemsSource>
+                                                        <Binding Path="Data.OtherPagesForSelectedChannel" Source="{StaticResource VmProxy}" />
+                                                    </MenuItem.ItemsSource>
+                                                    <MenuItem.ItemContainerStyle>
+                                                        <Style BasedOn="{StaticResource MenuItemBaseStyle}" TargetType="MenuItem">
+                                                            <Setter Property="Header" Value="{Binding PageName}" />
+                                                            <Setter Property="Command" Value="{Binding Data.MoveChannelToPageCommand, Source={StaticResource VmProxy}}" />
+                                                            <Setter Property="CommandParameter" Value="{Binding}" />
+                                                        </Style>
+                                                    </MenuItem.ItemContainerStyle>
+                                                </MenuItem>
+                                                <MenuItem Header="批量移动页面">
 
-                                                    </StackPanel>
-                                                </ContentControl>
-                                            </Grid>
-                                            <StackPanel Grid.Row="1">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <StackPanel.Style>
-                                                        <Style TargetType="StackPanel">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                    <MenuItem Header="选中通道" ItemsSource="{Binding Data.TargetPagesForBatchEnableMove, Source={StaticResource VmProxy}}">
+                                                        <MenuItem.ItemContainerStyle>
+                                                            <Style BasedOn="{StaticResource MenuItemBaseStyle}" TargetType="MenuItem">
+                                                                <Setter Property="Header" Value="{Binding PageName}" />
+
+                                                                <Setter Property="Command" Value="{Binding Data.MoveSelectedChannelsCommand, Source={StaticResource VmProxy}}" />
+                                                                <Setter Property="CommandParameter" Value="{Binding}" />
+                                                            </Style>
+                                                        </MenuItem.ItemContainerStyle>
+                                                    </MenuItem>
+                                                </MenuItem>
+                                                <!--<MenuItem.ItemsSource>
+                                                        <Binding Path="Data.BatchMoveChannelMenus" Source="{StaticResource VmProxy}" />
+                                                    </MenuItem.ItemsSource>
+
+                                                    <MenuItem.ItemContainerStyle>
+                                                        <Style BasedOn="{StaticResource MenuItemBaseStyle}" TargetType="MenuItem">
+                                                            <Setter Property="Header" Value="{Binding Header}" />
+                                                            <Setter Property="ItemsSource" Value="{Binding Children}" />
+
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsValueEditing}" Value="True">
-                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding IsButtonMode}" Value="True">
-                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                <DataTrigger Binding="{Binding IsLeaf}" Value="True">
+                                                                    <Setter Property="ItemsSource" Value="{x:Null}" />
+                                                                    <Setter Property="Command" Value="{Binding Data.MoveBatchChannelsByMenuItemCommand, Source={StaticResource VmProxy}}" />
+                                                                    <Setter Property="CommandParameter" Value="{Binding}" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
-                                                    </StackPanel.Style>
-                                                    <TextBox
-                                                        Width="110"
-                                                        Margin="0,0,6,0"
-                                                        hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
-                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                        Style="{StaticResource TextBoxExtend}"
-                                                        Text="{Binding EditingWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, Mode=TwoWay, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
-                                                        ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}">
-                                                        <TextBox.InputBindings>
-                                                            <KeyBinding
-                                                                Key="Enter"
-                                                                Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
-                                                                CommandParameter="{Binding}" />
-                                                            <KeyBinding
-                                                                Key="Escape"
-                                                                Command="{Binding Data.CancelRowValueEditCommand, Source={StaticResource VmProxy}}"
-                                                                CommandParameter="{Binding}" />
-                                                        </TextBox.InputBindings>
-                                                    </TextBox>
-                                                    <Button
-                                                        Margin="0,0,6,0"
-                                                        Padding="10,4"
-                                                        Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
-                                                        CommandParameter="{Binding}"
-                                                        Content="写入"
-                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
-                                                        Style="{StaticResource ButtonDanger}" />
-                                                    <Button
-                                                        Padding="10,4"
-                                                        Command="{Binding Data.CancelRowValueEditCommand, Source={StaticResource VmProxy}}"
-                                                        CommandParameter="{Binding}"
-                                                        Content="取消"
-                                                        Style="{StaticResource ButtonDefault}" />
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </Grid>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                            <DataGridTextColumn
-                                Width="180"
-                                Binding="{Binding EditorModeDisplayText, Mode=OneWay}"
-                                Header="写值方式"
-                                IsReadOnly="True" />
-                            <DataGridTextColumn
-                                Width="80"
-                                Binding="{Binding Unit, Mode=OneWay}"
-                                Header="单位"
-                                IsReadOnly="True" />
-                            <DataGridTextColumn
-                                MinWidth="200"
-                                Binding="{Binding DisplayDescription, Mode=OneWay}"
-                                Header="说明"
-                                IsReadOnly="True" />
-                        </DataGrid.Columns>
-                    </DataGrid>
+                                                    </MenuItem.ItemContainerStyle>-->
+
+                                                <!--<MenuItem Header="批量移动通道">
+                                                    <MenuItem.ItemsSource>
+                                                        <Binding Path="Data.BatchMoveChannelMenus" Source="{StaticResource VmProxy}" />
+                                                    </MenuItem.ItemsSource>
+                                                    <MenuItem.ItemContainerStyle>
+                                                        <Style BasedOn="{StaticResource MenuItemBaseStyle}" TargetType="MenuItem">
+                                                            <Setter Property="Header" Value="{Binding Header}" />
+                                                            <Setter Property="ItemsSource" Value="{Binding Children}" />
+                                                            <Setter Property="Command" Value="{x:Null}" />
+                                                            <Setter Property="CommandParameter" Value="{x:Null}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsLeaf}" Value="True">
+                                                                    <Setter Property="ItemsSource" Value="{x:Null}" />
+                                                                    <Setter Property="Command" Value="{Binding Data.MoveBatchChannelsByMenuItemCommand, Source={StaticResource VmProxy}}" />
+                                                                    <Setter Property="CommandParameter" Value="{Binding}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </MenuItem.ItemContainerStyle>
+                                                </MenuItem>-->
+                                            </ContextMenu>
+                                        </DataGrid.ContextMenu>
+                                        <i:Interaction.Behaviors>
+                                            <behaviors:DataGridSelectAndScrollBehavior SelectedItem="{Binding Data.SelectedWriteDataPoint, Source={StaticResource VmProxy}}" />
+                                        </i:Interaction.Behaviors>
+                                        <i:Interaction.Triggers>
+                                            <i:EventTrigger EventName="MouseDoubleClick">
+                                                <i:InvokeCommandAction Command="{Binding Data.OpenWriteDataPointEditorCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+                                            </i:EventTrigger>
+                                        </i:Interaction.Triggers>
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn
+                                                Width="60"
+                                                Binding="{Binding PageOrder, Mode=OneWay}"
+                                                Header="序号"
+                                                IsReadOnly="True" />
+                                            <DataGridCheckBoxColumn
+                                                Width="70"
+                                                Binding="{Binding IsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Header="启用"
+                                                IsReadOnly="False" />
+                                            <DataGridTextColumn
+                                                Width="160"
+                                                Binding="{Binding DisplayName, Mode=OneWay}"
+                                                Header="名称"
+                                                IsReadOnly="True" />
+                                            <DataGridTextColumn
+                                                Width="130"
+                                                Binding="{Binding SelectedDeviceName, Mode=OneWay}"
+                                                Header="设备"
+                                                IsReadOnly="True" />
+                                            <DataGridTextColumn
+                                                Width="180"
+                                                Binding="{Binding SelectedPointName, Mode=OneWay}"
+                                                Header="点位"
+                                                IsReadOnly="True" />
+                                            <DataGridTemplateColumn Width="240" Header="值/操作">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                            </Grid.RowDefinitions>
+                                                            <Grid>
+                                                                <Grid.Style>
+                                                                    <Style TargetType="Grid">
+                                                                        <Setter Property="Visibility" Value="Visible" />
+                                                                        <Style.Triggers>
+                                                                            <DataTrigger Binding="{Binding IsValueEditing}" Value="True">
+                                                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                                            </DataTrigger>
+                                                                        </Style.Triggers>
+                                                                    </Style>
+                                                                </Grid.Style>
+                                                                <ContentControl Visibility="{Binding IsLabelMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                                    <TextBlock VerticalAlignment="Center" Text="{Binding CurrentValueDisplayText}" />
+                                                                </ContentControl>
+                                                                <ContentControl Visibility="{Binding IsTextBoxMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                                    <Border
+                                                                        Background="Transparent"
+                                                                        Cursor="Hand"
+                                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                        PreviewMouseLeftButtonDown="TextBoxValueBorder_PreviewMouseLeftButtonDown">
+                                                                        <Border.ToolTip>
+                                                                            <TextBlock Text="{Binding WriteRestrictionBlockedReason}" />
+                                                                        </Border.ToolTip>
+                                                                        <TextBlock VerticalAlignment="Center" Text="{Binding PendingWriteValueText}" />
+                                                                    </Border>
+                                                                </ContentControl>
+                                                                <ContentControl Visibility="{Binding IsButtonMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <ContentControl Visibility="{Binding IsButtonClickWriteMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                                            <Button
+                                                                                MaxWidth="100"
+                                                                                Margin="0,0,0,0"
+                                                                                Padding="10,4"
+                                                                                HorizontalContentAlignment="Left"
+                                                                                Command="{Binding Data.SubmitButtonWriteCommand, Source={StaticResource VmProxy}}"
+                                                                                CommandParameter="{Binding}"
+                                                                                Content="{Binding ButtonDisplayText}"
+                                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                                Style="{StaticResource ButtonDanger}">
+
+                                                                                <Button.ToolTip>
+                                                                                    <TextBlock Text="{Binding ButtonDisplayText}" />
+                                                                                </Button.ToolTip>
+                                                                                <Button.ContentTemplate>
+                                                                                    <DataTemplate>
+                                                                                        <TextBlock
+                                                                                            Text="{Binding}"
+                                                                                            TextTrimming="CharacterEllipsis"
+                                                                                            ToolTip="{Binding}" />
+                                                                                    </DataTemplate>
+                                                                                </Button.ContentTemplate>
+                                                                            </Button>
+                                                                        </ContentControl>
+                                                                        <ContentControl Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                                                            <Button
+                                                                                MaxWidth="100"
+                                                                                Margin="0,0,0,0"
+                                                                                Padding="10,4"
+                                                                                HorizontalContentAlignment="Left"
+                                                                                Content="{Binding ButtonDisplayText}"
+                                                                                IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                                Style="{StaticResource ButtonDanger}">
+                                                                                <i:Interaction.Triggers>
+                                                                                    <i:EventTrigger EventName="PreviewMouseLeftButtonDown">
+                                                                                        <i:InvokeCommandAction Command="{Binding Data.SubmitButtonPressWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
+                                                                                    </i:EventTrigger>
+                                                                                    <i:EventTrigger EventName="PreviewMouseLeftButtonUp">
+                                                                                        <i:InvokeCommandAction Command="{Binding Data.SubmitButtonReleaseWriteCommand, Source={StaticResource VmProxy}}" CommandParameter="{Binding}" />
+                                                                                    </i:EventTrigger>
+                                                                                </i:Interaction.Triggers>
+                                                                                <Button.ToolTip>
+                                                                                    <TextBlock Text="{Binding ButtonDisplayText}" />
+                                                                                </Button.ToolTip>
+                                                                                <Button.ContentTemplate>
+                                                                                    <DataTemplate>
+                                                                                        <TextBlock
+                                                                                            Text="{Binding}"
+                                                                                            TextTrimming="CharacterEllipsis"
+                                                                                            ToolTip="{Binding}" />
+                                                                                    </DataTemplate>
+                                                                                </Button.ContentTemplate>
+                                                                            </Button>
+                                                                        </ContentControl>
+
+                                                                    </StackPanel>
+                                                                </ContentControl>
+                                                            </Grid>
+                                                            <StackPanel Grid.Row="1">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <StackPanel.Style>
+                                                                        <Style TargetType="StackPanel">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding IsValueEditing}" Value="True">
+                                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                                </DataTrigger>
+                                                                                <DataTrigger Binding="{Binding IsButtonMode}" Value="True">
+                                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </StackPanel.Style>
+                                                                    <TextBox
+                                                                        Width="110"
+                                                                        Margin="0,0,6,0"
+                                                                        hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
+                                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                        Style="{StaticResource TextBoxExtend}"
+                                                                        Text="{Binding EditingWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, Mode=TwoWay, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
+                                                                        ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}">
+                                                                        <TextBox.InputBindings>
+                                                                            <KeyBinding
+                                                                                Key="Enter"
+                                                                                Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
+                                                                                CommandParameter="{Binding}" />
+                                                                            <KeyBinding
+                                                                                Key="Escape"
+                                                                                Command="{Binding Data.CancelRowValueEditCommand, Source={StaticResource VmProxy}}"
+                                                                                CommandParameter="{Binding}" />
+                                                                        </TextBox.InputBindings>
+                                                                    </TextBox>
+                                                                    <Button
+                                                                        Margin="0,0,6,0"
+                                                                        Padding="10,4"
+                                                                        Command="{Binding Data.CommitRowValueEditCommand, Source={StaticResource VmProxy}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Content="写入"
+                                                                        IsEnabled="{Binding IsWriteInteractionEnabled}"
+                                                                        Style="{StaticResource ButtonDanger}" />
+                                                                    <Button
+                                                                        Padding="10,4"
+                                                                        Command="{Binding Data.CancelRowValueEditCommand, Source={StaticResource VmProxy}}"
+                                                                        CommandParameter="{Binding}"
+                                                                        Content="取消"
+                                                                        Style="{StaticResource ButtonDefault}" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn
+                                                Width="180"
+                                                Binding="{Binding EditorModeDisplayText, Mode=OneWay}"
+                                                Header="写值方式"
+                                                IsReadOnly="True" />
+                                            <DataGridTextColumn
+                                                Width="80"
+                                                Binding="{Binding Unit, Mode=OneWay}"
+                                                Header="单位"
+                                                IsReadOnly="True" />
+                                            <DataGridTextColumn
+                                                MinWidth="200"
+                                                Binding="{Binding DisplayDescription, Mode=OneWay}"
+                                                Header="说明"
+                                                IsReadOnly="True" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </DataTemplate>
+                        </hc:TabControl.ContentTemplate>
+                    </hc:TabControl>
                 </Grid>
             </Grid>
 
@@ -545,13 +676,210 @@
                                     FontWeight="Bold"
                                     Foreground="{DynamicResource WarningBrush}"
                                     Text="显示风格设置" />
+                                <StackPanel Margin="0,0,0,20">
 
-                                <Grid Margin="0,0,0,20">
+                                    <!--  值模式  -->
+                                    <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                        <TextBlock
+                                            Width="90"
+                                            VerticalAlignment="Center"
+                                            Text="值模式：" />
+                                        <ComboBox
+                                            Width="{StaticResource FormInputWidth}"
+                                            HorizontalAlignment="Left"
+                                            ItemContainerStyle="{StaticResource WriteDataPointComboBoxItemStyle}"
+                                            ItemsSource="{Binding Data.EditorModes, Source={StaticResource VmProxy}}"
+                                            SelectedItem="{Binding EditorMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Style="{StaticResource ComboBoxExtend}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <!--  标签显示模式  -->
+                                    <StackPanel
+                                        Margin="0,0,0,8"
+                                        Orientation="Horizontal"
+                                        Visibility="{Binding EditorMode, Converter={StaticResource WriteDataPointEditorModeVisibilityConverter}, ConverterParameter=Label}">
+                                        <TextBlock
+                                            Width="90"
+                                            VerticalAlignment="Center"
+                                            Text="标签显示：" />
+                                        <ComboBox
+                                            Width="{StaticResource FormInputWidth}"
+                                            HorizontalAlignment="Left"
+                                            ItemContainerStyle="{StaticResource WriteDataPointComboBoxItemStyle}"
+                                            ItemsSource="{Binding Data.LabelDisplayModes, Source={StaticResource VmProxy}}"
+                                            SelectedItem="{Binding LabelDisplayMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            Style="{StaticResource ComboBoxExtend}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <!--  模式说明  -->
+                                    <!--<TextBlock
+                                        Margin="0,4,0,8"
+                                        Foreground="{DynamicResource SecondaryTextBrush}"
+                                        Text="Label 模式下可选原值显示或规则显示；TextBox 模式与 Button 模式不启用规则显示。">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding EditorMode}" Value="Label">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditorMode}" Value="TextBox">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding EditorMode}" Value="Button">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>-->
+
+                                    <!--  TextBox 模式说明块（如果你后续要加输入/输出模式，可以继续插这里）  -->
+                                    <StackPanel Margin="0,0,0,8" Visibility="{Binding EditorMode, Converter={StaticResource WriteDataPointEditorModeVisibilityConverter}, ConverterParameter=TextBox}">
+
+                                        <!--  启用验证  -->
+                                        <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                            <TextBlock
+                                                Width="90"
+                                                VerticalAlignment="Center"
+                                                Text="验证：" />
+                                            <ToggleButton
+                                                HorizontalAlignment="Left"
+                                                IsChecked="{Binding EnableTextBoxValidation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource ToggleButtonSwitch}" />
+                                        </StackPanel>
+
+                                        <!--  上下限  -->
+                                        <StackPanel Margin="0,0,0,8" Visibility="{Binding EnableTextBoxValidation, Converter={StaticResource Boolean2VisibilityConverter}}">
+
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock
+                                                    Width="90"
+                                                    VerticalAlignment="Center"
+                                                    Text="下限值：" />
+                                                <TextBox
+                                                    Width="{StaticResource FormInputWidth}"
+                                                    HorizontalAlignment="Left"
+                                                    hc:InfoElement.Placeholder="请输入下限值"
+                                                    Style="{StaticResource WriteDataPointValidationTextBoxStyle}"
+                                                    Text="{Binding ValidationMinValue, UpdateSourceTrigger=PropertyChanged, Delay=100, ValidatesOnDataErrors=True, NotifyOnValidationError=True, Mode=TwoWay}"
+                                                    ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}" />
+                                            </StackPanel>
+
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock
+                                                    Width="90"
+                                                    Margin="0,10,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Text="上限值：" />
+                                                <TextBox
+                                                    Width="{StaticResource FormInputWidth}"
+                                                    Margin="0,10,0,0"
+                                                    HorizontalAlignment="Left"
+                                                    hc:InfoElement.Placeholder="请输入上限值"
+                                                    Style="{StaticResource WriteDataPointValidationTextBoxStyle}"
+                                                    Text="{Binding ValidationMaxValue, UpdateSourceTrigger=PropertyChanged, Delay=100, ValidatesOnDataErrors=True, NotifyOnValidationError=True, Mode=TwoWay}"
+                                                    ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}" />
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!--  如果你以后要加更多验证项，可以继续放这里  -->
+                                    </StackPanel>
+
+                                    <!--  按钮模式  -->
+                                    <StackPanel Margin="0,0,0,8" Visibility="{Binding EditorMode, Converter={StaticResource WriteDataPointEditorModeVisibilityConverter}, ConverterParameter=Button}">
+
+                                        <!--  按钮文本  -->
+                                        <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                            <TextBlock
+                                                Width="90"
+                                                VerticalAlignment="Center"
+                                                Text="按钮文本：" />
+                                            <TextBox
+                                                Width="{StaticResource FormInputWidth}"
+                                                HorizontalAlignment="Left"
+                                                hc:InfoElement.Placeholder="请输入按钮显示文本"
+                                                Style="{StaticResource TextBoxExtend}"
+                                                Text="{Binding ButtonDisplayText, UpdateSourceTrigger=PropertyChanged}" />
+                                        </StackPanel>
+
+                                        <!--  按钮动作  -->
+                                        <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                            <TextBlock
+                                                Width="90"
+                                                VerticalAlignment="Center"
+                                                Text="按钮动作：" />
+                                            <ComboBox
+                                                Width="{StaticResource FormInputWidth}"
+                                                HorizontalAlignment="Left"
+                                                ItemContainerStyle="{StaticResource WriteDataPointComboBoxItemStyle}"
+                                                ItemsSource="{Binding Data.ButtonInteractionModes, Source={StaticResource VmProxy}}"
+                                                SelectedItem="{Binding ButtonInteractionMode, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Style="{StaticResource ComboBoxExtend}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </StackPanel>
+
+                                        <!--  主值  -->
+                                        <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                                            <TextBlock
+                                                Width="90"
+                                                VerticalAlignment="Center"
+                                                Text="{Binding ButtonPrimaryValueLabel}" />
+                                            <TextBox
+                                                Width="{StaticResource FormInputWidth}"
+                                                HorizontalAlignment="Left"
+                                                hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
+                                                hc:InfoElement.Placeholder="{Binding ButtonPrimaryValuePlaceholder}"
+                                                Style="{StaticResource WriteDataPointValidationTextBoxStyle}"
+                                                Text="{Binding ButtonWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
+                                                ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}" />
+                                        </StackPanel>
+
+                                        <!--  松开值  -->
+                                        <StackPanel
+                                            Margin="0,0,0,8"
+                                            Orientation="Horizontal"
+                                            Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}">
+                                            <TextBlock
+                                                Width="90"
+                                                VerticalAlignment="Center"
+                                                Text="松开值：" />
+                                            <TextBox
+                                                Width="{StaticResource FormInputWidth}"
+                                                HorizontalAlignment="Left"
+                                                hc:InfoElement.Necessary="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.HasError)}"
+                                                hc:InfoElement.Placeholder="{Binding ButtonReleaseValuePlaceholder}"
+                                                Style="{StaticResource WriteDataPointValidationTextBoxStyle}"
+                                                Text="{Binding ButtonReleaseWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
+                                                ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                </StackPanel>
+                                <!--<Grid Margin="0,0,0,20">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="90" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
@@ -715,7 +1043,7 @@
                                         Text="{Binding ButtonReleaseWriteValueText, UpdateSourceTrigger=PropertyChanged, Delay=100, ValidatesOnDataErrors=True, NotifyOnValidationError=True}"
                                         ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=(Validation.Errors).CurrentItem.ErrorContent}"
                                         Visibility="{Binding IsButtonPressAndReleaseMode, Converter={StaticResource Boolean2VisibilityConverter}}" />
-                                </Grid>
+                                </Grid>-->
                                 <StackPanel Margin="0,0,0,0" Visibility="{Binding UsesRuleDisplay, Converter={StaticResource Boolean2VisibilityConverter}}">
                                     <TextBlock
                                         Margin="0,0,0,10"

@@ -130,6 +130,21 @@ namespace MeasurementSoftware.UserControls
             e.Handled = true;
         }
 
+        private void TabControl_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var current = e.OriginalSource as DependencyObject;
+
+            while (current != null && current is not HandyControl.Controls.TabItem)
+            {
+                current = VisualTreeHelper.GetParent(current);
+            }
+
+            if (current is HandyControl.Controls.TabItem)
+            {
+                e.Handled = true;
+            }
+        }
+
         private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject
         {
             while (current != null)
